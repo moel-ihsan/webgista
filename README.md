@@ -94,6 +94,3 @@ This project does not specify a license. For open-source usage, consider adding 
 ## Support
 
 For issues, open a ticket on the [GitHub Issues](https://github.com/moel-ihsan/webgista/issues) page.
-
----
-*Generated based on public information in the repository and typical stack conventions. [Fill in missing details (project purpose, license, special setup, etc.) for a complete and personalized README.]*
