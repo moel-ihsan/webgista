@@ -93,7 +93,7 @@ Before Phase 2B, run the reset and test commands on a machine with a container r
 
 It runs for relevant changes pushed to `feat/webgista-v2`, for pull requests that change the workflow or `supabase/**`, and by manual dispatch. It contains no project reference, access token, database password, link, push, deployment, or remote flag.
 
-The workflow is prepared but has not yet run in GitHub Actions. Do not mark Phase 2A database verification complete until its `Migrations and pgTAP` job succeeds. The job log is the authoritative migration and test report.
+GitHub Actions workflow run `41661423739` completed successfully: migrations applied, function linting passed, and all pgTAP security assertions passed. The job log remains the authoritative database verification report.
 
 To trigger it from the current `feat/webgista-v2` branch after reviewing the changes:
 
@@ -118,4 +118,39 @@ These commands are documentation only; Phase 2A verification preparation did not
 - [Supabase CLI configuration](https://supabase.com/docs/guides/local-development/cli/config)
 - [Database testing and linting](https://supabase.com/docs/guides/local-development/cli/testing-and-linting)
 - [Row Level Security](https://supabase.com/docs/guides/database/postgres/row-level-security)
+
+## Manually deploy to the development project
+
+The application branch is `feat/webgista-v2`; GitHub only offers `workflow_dispatch` for a workflow file present on the repository's default branch. Keep this deployment workflow separate from the app branch: create a small workflow-only pull request into the default branch, containing `.github/workflows/deploy-webgista-dev.yml` and this documentation update only. Do not merge the WebGISTA application branch into `main`. Once the workflow exists on the default branch, its manual dispatch can target the reviewed v2 ref containing the migrations.
+
+In GitHub, create an environment named `webgista-dev` under **Settings → Environments**. Add these environment secrets:
+
+| Secret | Value |
+|---|---|
+| `SUPABASE_PROJECT_REF` | Project reference shown in the `webgista-dev` Supabase dashboard URL. |
+| `SUPABASE_ACCESS_TOKEN` | Personal access token created in Supabase account settings. Use a narrowly scoped token if Supabase offers one for the required project operations. |
+| `SUPABASE_DB_PASSWORD` | Database password for the dedicated development project. |
+
+Add this environment variable:
+
+| Variable | Value |
+|---|---|
+| `SUPABASE_DEV_PROJECT_REF` | The expected reference for `webgista-dev`; it must exactly match `SUPABASE_PROJECT_REF`. |
+
+The workflow compares the secret reference to the independently configured environment variable before invoking the CLI. Treat access tokens and database passwords as sensitive: restrict environment administration, rotate them if exposed, and never use the production project's values here.
+
+After the workflow-only change reaches the default branch:
+
+1. Open **Actions → Deploy WebGISTA development database → Run workflow**.
+2. Select the default branch as the workflow source.
+3. Select the v2 branch or commit that contains the migrations as the workflow ref, when GitHub offers the ref selector.
+4. Choose `preview`. The remote dry-run prints the migrations that would be applied and performs no migration.
+5. Review the successful run and dry-run output. Then run it again with `apply` to explicitly authorize `supabase db push` against `webgista-dev`.
+6. Review the resulting CLI output and Supabase migration history.
+
+The dispatch input defaults to `preview`; ordinary pushes and pull requests never run deployment. The job is serialized and limited to the `webgista-dev` environment. If environment protection reviewers are configured, they provide an additional GitHub approval gate before secrets are made available. The `apply` selection is still required after a dry-run; the workflow does not carry preview approval forward automatically.
+
+The workflow calls only `supabase db push --dry-run` and, when explicitly selected, `supabase db push`. It does not run `db reset`, seed data, create Auth users, create an administrator, link a stored project, or deploy application code. A dry-run verifies the migration plan, not all remote database behavior; the existing CI pgTAP suite remains the pre-deployment security check.
+
+This repository does not execute the workflow or contact `webgista-dev`. The deployment remains pending until the owner configures the environment and manually dispatches it.
 
