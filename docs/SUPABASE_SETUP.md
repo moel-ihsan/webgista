@@ -129,7 +129,7 @@ In GitHub, create an environment named `webgista-dev` under **Settings → Envir
 |---|---|
 | `SUPABASE_PROJECT_REF` | Project reference shown in the `webgista-dev` Supabase dashboard URL. |
 | `SUPABASE_ACCESS_TOKEN` | Personal access token created in Supabase account settings. Use a narrowly scoped token if Supabase offers one for the required project operations. |
-| `SUPABASE_DB_PASSWORD` | Database password for the dedicated development project. |
+| `SUPABASE_DB_URL` | Full Session Pooler connection string from the project's Connect dialog. Choose Session pooler, port 5432, database `postgres`, and username `postgres.<project-ref>`. Keep the password embedded in this GitHub secret only. |
 
 Add this environment variable:
 
@@ -137,7 +137,7 @@ Add this environment variable:
 |---|---|
 | `SUPABASE_DEV_PROJECT_REF` | The expected reference for `webgista-dev`; it must exactly match `SUPABASE_PROJECT_REF`. |
 
-The workflow compares the secret reference to the independently configured environment variable before invoking the CLI. Treat access tokens and database passwords as sensitive: restrict environment administration, rotate them if exposed, and never use the production project's values here.
+The workflow compares the project-reference secret with the environment variable and validates the connection URL before invoking the CLI. Validation requires `postgres://` or `postgresql://`, a Supabase Session Pooler hostname, port 5432, database `postgres`, and username `postgres.<expected-project-ref>`. It never prints the URL, password, or access token. Treat these secrets as sensitive, restrict environment administration, rotate them if exposed, and never use the production project's values here.
 
 After the workflow-only change reaches the default branch:
 
@@ -145,12 +145,12 @@ After the workflow-only change reaches the default branch:
 2. Select the default branch as the workflow source.
 3. Select the v2 branch or commit that contains the migrations as the workflow ref, when GitHub offers the ref selector.
 4. Choose `preview`. The remote dry-run prints the migrations that would be applied and performs no migration.
-5. Review the successful run and dry-run output. Then run it again with `apply` to explicitly authorize `supabase db push` against `webgista-dev`.
+5. Review the successful run and dry-run output. Then run it again with `apply` to explicitly authorize `supabase db push --remote="$SUPABASE_DB_URL" --yes` against `webgista-dev`.
 6. Review the resulting CLI output and Supabase migration history.
 
 The dispatch input defaults to `preview`; ordinary pushes and pull requests never run deployment. The job is serialized and limited to the `webgista-dev` environment. If environment protection reviewers are configured, they provide an additional GitHub approval gate before secrets are made available. The `apply` selection is still required after a dry-run; the workflow does not carry preview approval forward automatically.
 
-The workflow calls only `supabase db push --dry-run` and, when explicitly selected, `supabase db push`. It does not run `db reset`, seed data, create Auth users, create an administrator, link a stored project, or deploy application code. A dry-run verifies the migration plan, not all remote database behavior; the existing CI pgTAP suite remains the pre-deployment security check.
+The workflow calls `supabase db push --dry-run --remote="$SUPABASE_DB_URL"` and, when explicitly selected, `supabase db push --remote="$SUPABASE_DB_URL" --yes`. Passing the Session Pooler URL directly makes the CLI connect through the IPv4-compatible Session Pooler; `--password` is not used with a database URL. It does not run `db reset`, seed data, create Auth users, create an administrator, link a stored project, or deploy application code. A dry-run verifies the migration plan, not all remote database behavior; the existing CI pgTAP suite remains the pre-deployment security check.
 
 This repository does not execute the workflow or contact `webgista-dev`. The deployment remains pending until the owner configures the environment and manually dispatches it.
 
