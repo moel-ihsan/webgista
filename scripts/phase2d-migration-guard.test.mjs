@@ -70,9 +70,10 @@ test('accepts only chronological pending subsets of the two reviewed migrations'
 });
 
 test('requires the dry-run migration set to exactly match the reviewed pending set', () => {
-  assert.doesNotThrow(() => assertDryRunMatches('Would push these migrations:\n • 20261104000300\n • 20261104000400', approvedHashes.keys()));
-  assert.throws(() => assertDryRunMatches('Would push these migrations:\n • 20261104000300\n • 20261104000400\n • 20261105000100', approvedHashes.keys()), /differs/);
+  assert.doesNotThrow(() => assertDryRunMatches('Would push these migrations:\n • 20261104000300_profile_fields_and_private_media.sql\n • 20261104000400_application_map_settings.sql\nFinished supabase db push.', approvedHashes.keys()));
+  assert.throws(() => assertDryRunMatches('Would push these migrations:\n • 20261104000300_profile_fields_and_private_media.sql\n • 20261104000400_application_map_settings.sql\n • 20261105000100_unapproved.sql\nFinished supabase db push.', approvedHashes.keys()), /differs/);
+  assert.throws(() => assertDryRunMatches('Would push these migrations:\n • 20261104000300_profile_fields_and_private_media.sql\n • unexpected.sql\nFinished supabase db push.', approvedHashes.keys()), /Unexpected migration entry/);
   assert.doesNotThrow(() => assertDryRunMatches('Remote database is up to date.', []));
   assert.throws(() => assertDryRunMatches('No migration IDs returned', []), /did not confirm/);
-  assert.throws(() => assertDryRunMatches('Would push these migrations:\n • 20261104000400', ['20261104000300', '20261104000400']), /differs/);
+  assert.throws(() => assertDryRunMatches('Would push these migrations:\n • 20261104000400_application_map_settings.sql\nFinished supabase db push.', ['20261104000300', '20261104000400']), /differs/);
 });

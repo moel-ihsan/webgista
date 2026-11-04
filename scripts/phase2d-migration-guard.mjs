@@ -92,8 +92,17 @@ export function assessMigrationHistory({ localVersions, remoteVersions }) {
 }
 
 export function assertDryRunMatches(output, pendingVersions) {
-  const proposed = [...new Set(output.match(/\b\d{14}\b/g) ?? [])].sort();
+  const migrationList = output.match(/Would push these migrations:\s*\r?\n([\s\S]*?)(?:\r?\nFinished supabase db push\.|$)/i);
+  const proposed = [];
+  if (migrationList) {
+    for (const line of migrationList[1].split(/\r?\n/).filter((value) => value.trim())) {
+      const match = /^\s*[•*-]\s*(\d{14})_[a-z0-9_-]+\.sql\s*$/i.exec(line);
+      if (!match) throw new Error('Unexpected migration entry in Supabase dry-run; refusing deployment.');
+      proposed.push(match[1]);
+    }
+  }
   const expected = [...pendingVersions].sort();
+  if (new Set(proposed).size !== proposed.length) throw new Error('Duplicate migrations in Supabase dry-run; refusing deployment.');
   if (!expected.length && (!/\b(?:up to date|no pending migrations)\b/i.test(output) || proposed.length)) {
     throw new Error('Dry-run did not confirm that the remote database is up to date.');
   }
