@@ -9,7 +9,7 @@ This report separates disposable CI, read-only hosted verification, and hosted o
 | Stage | Status | Evidence |
 |---|---|---|
 | 1. Isolated database CI | VERIFIED | Run [41901319126](https://github.com/moel-ihsan/webgista/actions/runs/41901319126), commit `724adcc65c06dd4be04e1228b2180bc046a28b20`; six migrations, read-only schema preflight, database lint, pgTAP 119 + 36 + 20 = **175/175**, fixture validation, cleanup, and migration-guard tests passed. |
-| 2. Promote to development branch | VERIFIED | Fast-forward commits promoted from isolated worktree; latest branch commit for this run is `beb3aec45c2fd0b56933d09ee2d18e825f5bb0d8`. Main worktree was not changed. |
+| 2. Promote to development branch | VERIFIED | Fast-forward commits promoted from isolated worktree. The migration/deployment snapshot is `beb3aec45c2fd0b56933d09ee2d18e825f5bb0d8`; this report is at `39caa29`. Main worktree was not changed. |
 | 3. Hosted read-only preflight | VERIFIED | Preview run [41901846111](https://github.com/moel-ihsan/webgista/actions/runs/41901846111) passed target, hash, migration history, schema preflight, and exact dry-run checks. `verify` run [41901997001](https://github.com/moel-ihsan/webgista/actions/runs/41901997001) also passed. Both reported only 003 and 004 pending. |
 | 4. Hosted migrations | BLOCKED | No apply was attempted. The backup-list Management API request returned HTTP 403, so an approved recovery point could not be verified. |
 | 5. Hosted Storage and role-scoped authorization | BLOCKED | Migrations are not installed; no authorized profile-photo/CCTV-image QA identities or agency-editor session are available. |
