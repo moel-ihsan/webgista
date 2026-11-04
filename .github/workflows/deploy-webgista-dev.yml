@@ -108,6 +108,7 @@ jobs:
         run: |
           set -euo pipefail
           supabase migration list --remote="$SUPABASE_DB_URL" > "$RUNNER_TEMP/phase2d-migrations.txt" 2>&1
+          sed -E 's/(Target: custom Postgres )\([^)]*\)/\1([redacted])/' "$RUNNER_TEMP/phase2d-migrations.txt"
           node scripts/phase2d-migration-guard.mjs history "$RUNNER_TEMP/phase2d-migrations.txt"
 
       - name: Check targeted hosted schema preconditions (read-only)
