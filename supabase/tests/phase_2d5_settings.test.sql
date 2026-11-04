@@ -77,13 +77,17 @@ select throws_matching($$update public.app_map_settings set zoom = 19 where id =
   'app_map_settings_zoom_range', 'database rejects zoom beyond MapLibre supported range');
 select throws_matching($$insert into public.app_map_settings (id, latitude, longitude, zoom) values (2, 5.5, 95.3, 12)$$,
   'check constraint', 'database enforces one global settings row');
-insert into public.agencies (id, name)
-values ('b2000000-0000-0000-0000-000000000010', 'Phase 2D.5 agency-delete fixture');
-select is((select is_public from public.agencies where id = 'b2000000-0000-0000-0000-000000000010'), false,
+with created_agency as (
+  insert into public.agencies (name)
+  values ('Phase 2D.5 agency-delete fixture')
+  returning id
+)
+select set_config('test.phase2d5_agency_id', id::text, true) from created_agency;
+select is((select is_public from public.agencies where id = current_setting('test.phase2d5_agency_id')::uuid), false,
   'new agencies remain private by default');
 insert into public.agency_memberships (agency_id, user_id)
-values ('b2000000-0000-0000-0000-000000000010', 'b2000000-0000-0000-0000-000000000002');
-select throws_matching($$delete from public.agencies where id = 'b2000000-0000-0000-0000-000000000010'$$,
+values (current_setting('test.phase2d5_agency_id')::uuid, 'b2000000-0000-0000-0000-000000000002');
+select throws_matching($$delete from public.agencies where id = current_setting('test.phase2d5_agency_id')::uuid$$,
   'foreign key constraint', 'agency removal cannot cascade-delete existing memberships');
 reset role;
 
