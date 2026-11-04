@@ -42,7 +42,13 @@ jobs:
       - name: Run Phase 2A security tests
         run: supabase test db supabase/tests/phase_2a_security.test.sql
 
-      - name: Validate the approved Phase 2D fixture script in the disposable database
+      - name: Run Phase 2D profile and media security tests
+        run: supabase test db supabase/tests/phase_2d_profile_media.test.sql
+
+      - name: Run Phase 2D.5 settings security tests
+        run: supabase test db supabase/tests/phase_2d5_settings.test.sql
+
+      - name: Validate the approved Phase 2D fixture in the disposable database
         shell: bash
         run: |
           set -euo pipefail
