@@ -111,7 +111,11 @@ jobs:
           node scripts/phase2d-migration-guard.mjs history "$RUNNER_TEMP/phase2d-migrations.txt"
 
       - name: Check targeted hosted schema preconditions (read-only)
-        run: supabase db query "$(cat supabase/verification/phase_2d45_deployment_preflight.sql)" --read-only --remote="$SUPABASE_DB_URL"
+        run: |
+          docker run --rm -i --network host postgres:17-alpine \
+            psql "$SUPABASE_DB_URL" --set=ON_ERROR_STOP=1 --single-transaction \
+            --command='SET TRANSACTION READ ONLY' --file=/dev/stdin \
+            < supabase/verification/phase_2d45_deployment_preflight.sql
 
       - name: Preview remote migrations
         shell: bash
@@ -133,7 +137,10 @@ jobs:
           node scripts/phase2d-migration-guard.mjs snapshot
           supabase migration list --remote="$SUPABASE_DB_URL" > "$RUNNER_TEMP/phase2d-migrations-before-apply.txt"
           node scripts/phase2d-migration-guard.mjs history "$RUNNER_TEMP/phase2d-migrations-before-apply.txt"
-          supabase db query "$(cat supabase/verification/phase_2d45_deployment_preflight.sql)" --read-only --remote="$SUPABASE_DB_URL"
+          docker run --rm -i --network host postgres:17-alpine \
+            psql "$SUPABASE_DB_URL" --set=ON_ERROR_STOP=1 --single-transaction \
+            --command='SET TRANSACTION READ ONLY' --file=/dev/stdin \
+            < supabase/verification/phase_2d45_deployment_preflight.sql
           supabase db push --dry-run --remote="$SUPABASE_DB_URL" 2>&1 | tee "$RUNNER_TEMP/phase2d-dry-run-before-apply.txt"
           node scripts/phase2d-migration-guard.mjs dry-run \
             "$RUNNER_TEMP/phase2d-migrations-before-apply.txt" "$RUNNER_TEMP/phase2d-dry-run-before-apply.txt"
@@ -171,4 +178,8 @@ jobs:
 
       - name: Verify targeted schema after migration (read-only)
         if: ${{ inputs.apply_migrations == 'apply' || inputs.apply_migrations == 'verify' }}
-        run: supabase db query "$(cat supabase/verification/phase_2d45_deployment_preflight.sql)" --read-only --remote="$SUPABASE_DB_URL"
+        run: |
+          docker run --rm -i --network host postgres:17-alpine \
+            psql "$SUPABASE_DB_URL" --set=ON_ERROR_STOP=1 --single-transaction \
+            --command='SET TRANSACTION READ ONLY' --file=/dev/stdin \
+            < supabase/verification/phase_2d45_deployment_preflight.sql

@@ -44,7 +44,11 @@ jobs:
         run: supabase start
 
       - name: Verify targeted migration preflight on the disposable database
-        run: supabase db query "$(cat supabase/verification/phase_2d45_deployment_preflight.sql)" --read-only --local
+        run: |
+          docker exec -i supabase_db_webgista-v2 psql -U postgres -d postgres \
+            --set=ON_ERROR_STOP=1 --single-transaction \
+            --command='SET TRANSACTION READ ONLY' --file=/dev/stdin \
+            < supabase/verification/phase_2d45_deployment_preflight.sql
 
       - name: Lint database functions
         run: supabase db lint --schema public,private --level error --fail-on error
