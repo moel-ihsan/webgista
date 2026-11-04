@@ -42,7 +42,9 @@ export async function verifyMigrationHashes(directory, expected = approvedHashes
 export function parseMigrationList(output) {
   const clean = output.replace(/\u001b\[[0-9;]*m/g, '');
   const lines = clean.split(/\r?\n/);
-  const header = lines.findIndex((line) => line.split('│').map((cell) => cell.trim()).join('|') === 'LOCAL|REMOTE|TIME (UTC)');
+  const header = lines.findIndex((line) =>
+    line.split(/[│|]/).map((cell) => cell.trim().toLowerCase()).join('|') === 'local|remote|time (utc)',
+  );
   if (header < 0) throw new Error('Could not parse the Supabase migration-list table; refusing deployment.');
   if (lines.slice(0, header).some((line) => line.trim() && !/^Target: custom Postgres \(.+:\d+\)$/.test(line.trim()))) {
     throw new Error('Unexpected text before the migration-list table; refusing deployment.');
@@ -52,10 +54,10 @@ export function parseMigrationList(output) {
   const remote = [];
   for (const line of lines.slice(header + 1)) {
     const trimmed = line.trim();
-    if (!trimmed || /^[─┼├┤┬┴\s]+$/u.test(trimmed)) continue;
-    const cells = line.split('│');
+    if (!trimmed || /^[─┼├┤┬┴|\-\s]+$/u.test(trimmed)) continue;
+    const cells = line.split(/[│|]/);
     if (cells.length !== 3) throw new Error('Unexpected Supabase migration-list output; refusing deployment.');
-    const [localVersion, remoteVersion] = cells.slice(0, 2).map((cell) => cell.trim());
+    const [localVersion, remoteVersion] = cells.slice(0, 2).map((cell) => cell.trim().replace(/^`(.*)`$/, '$1').trim());
     if (!localVersion && !remoteVersion) throw new Error('Empty migration row in Supabase output; refusing deployment.');
     for (const [side, version] of [['local', localVersion], ['remote', remoteVersion]]) {
       if (version && !/^\d{14}$/.test(version)) throw new Error(`Invalid ${side} migration version in Supabase output.`);

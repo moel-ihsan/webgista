@@ -14,10 +14,10 @@ import {
 
 const versions = ['20261103000100', '20261103000200', '20261104000100', '20261104000200', ...approvedHashes.keys()];
 const listing = (localVersions, remoteVersions) => [
-  'LOCAL          │ REMOTE         │ TIME (UTC)',
-  '───────────────┼────────────────┼──────────────────────',
+  'Local            | Remote           | Time (UTC)',
+  '------------------|------------------|-----------------------',
   ...Array.from({ length: Math.max(localVersions.length, remoteVersions.length) }, (_, index) =>
-    `${localVersions[index] ?? ''} │ ${remoteVersions[index] ?? ''} │ ${remoteVersions[index] ? '2026-11-04 10:00:00' : ''}`),
+    `\`${localVersions[index] ?? ' '}\` | \`${remoteVersions[index] ?? ' '}\` | \`${remoteVersions[index] ? '2026-11-04 10:00:00' : ' '}\``),
 ].join('\n');
 
 test('accepts the protected branch and configured 20-character development reference only', () => {
@@ -54,7 +54,7 @@ test('parses complete migration-list output and fails closed for inspection erro
   const parsed = parseMigrationList(listing(versions, versions.slice(0, 4)));
   assert.deepEqual(parsed.local, versions);
   assert.deepEqual(parsed.remote, versions.slice(0, 4));
-  assert.deepEqual(parseMigrationList(`Target: custom Postgres (db.example.invalid:5432)\n${listing(versions, versions.slice(0, 4))}`), parsed);
+  assert.deepEqual(parseMigrationList(`Target: custom Postgres (db.example.invalid:5432)\n\n${listing(versions, versions.slice(0, 4))}`), parsed);
   assert.throws(() => parseMigrationList('connection refused'), /Could not parse/);
   assert.throws(() => parseMigrationList(`warning\n${listing(versions, versions.slice(0, 4))}`), /Unexpected text/);
   assert.throws(() => parseMigrationList(listing(versions, versions.slice(0, 4)).replace('20261103000100', 'broken')), /Invalid local/);
