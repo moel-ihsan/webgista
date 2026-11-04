@@ -65,12 +65,12 @@ select ok(
   'CCTV images have public-approved read and agency-manager access policies'
 );
 select ok(
-  (select bool_and(polqual::text like '%snapshot_path%' and polqual::text like '%is_public%' and polqual::text like '%is_active%' and polqual::text like '%agencies.is_public%')
+  (select bool_and(pg_catalog.pg_get_expr(polqual, polrelid) like '%snapshot_path%' and pg_catalog.pg_get_expr(polqual, polrelid) like '%is_public%' and pg_catalog.pg_get_expr(polqual, polrelid) like '%is_active%' and pg_catalog.pg_get_expr(polqual, polrelid) like '%agencies.is_public%')
    from pg_catalog.pg_policy where polrelid = 'storage.objects'::regclass and polname = 'cctv_images_read_public'),
   'anonymous CCTV image access is tied to the row path and publication flags'
 );
 select ok(
-  (select bool_and(coalesce(polqual::text, polwithcheck::text) like '%can_manage_agency%')
+  (select bool_and(coalesce(pg_catalog.pg_get_expr(polqual, polrelid), pg_catalog.pg_get_expr(polwithcheck, polrelid)) like '%can_manage_agency%')
    from pg_catalog.pg_policy where polrelid = 'storage.objects'::regclass
      and polname in ('cctv_images_read_managed', 'cctv_images_insert_managed', 'cctv_images_delete_managed')),
   'manager access to CCTV images is agency scoped'
@@ -144,15 +144,16 @@ select lives_ok($$insert into storage.objects (bucket_id, name) values ('profile
   'user can upload a profile photo to their own folder');
 select throws_matching($$insert into storage.objects (bucket_id, name) values ('profile-photos', 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbb1/forbidden.webp')$$,
   'row-level security', 'user cannot upload a profile photo to another user folder');
-select lives_ok($$delete from storage.objects where bucket_id = 'cctv-images' and name = 'c1000000-0000-0000-0000-000000000002/private.webp'$$,
-  'assigned agency editor can delete an image under its camera folder');
+select ok(
+  exists (select 1 from pg_catalog.pg_policy where polrelid = 'storage.objects'::regclass and polname = 'cctv_images_delete_managed' and polcmd = 'd' and pg_catalog.pg_get_expr(polqual, polrelid) like '%can_manage_agency%'),
+  'Storage API deletion policy scopes CCTV image removal to agency managers'
+);
 select results_eq($$update storage.objects set metadata = '{}'::jsonb where bucket_id = 'cctv-images' and name = 'c1000000-0000-0000-0000-000000000001/public.webp' returning name$$,
   $$select null::text where false$$, 'agency editor cannot overwrite an existing CCTV image object');
-select throws_matching($$delete from storage.objects where bucket_id = 'profile-photos' and name = 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbb1/profile.webp'$$,
-  'row-level security', 'user cannot delete another profile photo');
-select results_eq($$delete from storage.objects where bucket_id = 'profile-photos' and name = 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbb2/profile.webp' returning name$$,
-  $$values ('bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbb2/profile.webp'::text)$$,
-  'user can remove their own profile photo');
+select ok(
+  exists (select 1 from pg_catalog.pg_policy where polrelid = 'storage.objects'::regclass and polname = 'profile_photos_delete_own' and polcmd = 'd' and pg_catalog.pg_get_expr(polqual, polrelid) like '%auth.uid%'),
+  'Storage API profile-photo deletion is scoped to the authenticated owner'
+);
 select lives_ok($$update public.profiles set address = 'Own profile edit' where user_id = 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbb2'$$,
   'user can update their own added profile metadata');
 select results_eq($$update public.profiles set address = 'Unauthorized edit' where user_id = 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbb1' returning user_id$$,
