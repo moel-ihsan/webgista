@@ -51,10 +51,10 @@ select ok(
 );
 select ok(
   not exists (select 1 from pg_catalog.pg_policy
-              where polrelid = 'storage.objects'::regclass and cmd = 'w'
+              where polrelid = 'storage.objects'::regclass and polcmd = 'w'
                 and polname like 'profile_photos_%')
     and not exists (select 1 from pg_catalog.pg_policy
-                    where polrelid = 'storage.objects'::regclass and cmd = 'w'
+                    where polrelid = 'storage.objects'::regclass and polcmd = 'w'
                       and polname like 'cctv_images_%'),
   'replacement uses new objects; no Storage object UPDATE policy permits overwrite'
 );
