@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - feat/webgista-v2
+      - ci/phase2d5-settings-verification-20261104
     paths:
       - "supabase/**"
       - ".github/workflows/phase2a-db-test.yml"

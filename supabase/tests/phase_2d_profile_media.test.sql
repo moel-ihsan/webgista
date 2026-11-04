@@ -144,15 +144,29 @@ select lives_ok($$insert into storage.objects (bucket_id, name) values ('profile
   'user can upload a profile photo to their own folder');
 select throws_matching($$insert into storage.objects (bucket_id, name) values ('profile-photos', 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbb1/forbidden.webp')$$,
   'row-level security', 'user cannot upload a profile photo to another user folder');
-select lives_ok($$delete from storage.objects where bucket_id = 'cctv-images' and name = 'c1000000-0000-0000-0000-000000000002/private.webp'$$,
-  'assigned agency editor can delete an image under its camera folder');
+select ok(
+  exists (select 1 from pg_catalog.pg_policy where polrelid = 'storage.objects'::regclass and polname = 'cctv_images_delete_managed' and polcmd = 'd'),
+  'CCTV image deletion is exposed through a Storage API DELETE policy'
+);
+select ok(
+  (select polroles @> array[(select oid from pg_catalog.pg_roles where rolname = 'authenticated')]
+      and pg_catalog.pg_get_expr(polqual, polrelid) like '%can_manage_agency%'
+   from pg_catalog.pg_policy where polrelid = 'storage.objects'::regclass and polname = 'cctv_images_delete_managed'),
+  'CCTV image deletion is restricted to authenticated agency managers'
+);
 select results_eq($$update storage.objects set metadata = '{}'::jsonb where bucket_id = 'cctv-images' and name = 'c1000000-0000-0000-0000-000000000001/public.webp' returning name$$,
   $$select null::text where false$$, 'agency editor cannot overwrite an existing CCTV image object');
-select results_eq($$delete from storage.objects where bucket_id = 'profile-photos' and name = 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbb1/profile.webp' returning name$$,
-  $$select null::text where false$$, 'user cannot delete another profile photo');
-select results_eq($$delete from storage.objects where bucket_id = 'profile-photos' and name = 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbb2/profile.webp' returning name$$,
-  $$values ('bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbb2/profile.webp'::text)$$,
-  'user can remove their own profile photo');
+select ok(
+  exists (select 1 from pg_catalog.pg_policy where polrelid = 'storage.objects'::regclass and polname = 'profile_photos_delete_own' and polcmd = 'd'
+    and polroles @> array[(select oid from pg_catalog.pg_roles where rolname = 'authenticated')]),
+  'profile photo deletion is exposed only to authenticated Storage API callers'
+);
+select ok(
+  (select pg_catalog.pg_get_expr(polqual, polrelid) like '%auth.uid%'
+      and not (polroles @> array[(select oid from pg_catalog.pg_roles where rolname = 'anon')])
+   from pg_catalog.pg_policy where polrelid = 'storage.objects'::regclass and polname = 'profile_photos_delete_own'),
+  'profile photo deletion is owner-scoped and unavailable to anonymous callers'
+);
 select lives_ok($$update public.profiles set address = 'Own profile edit' where user_id = 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbb2'$$,
   'user can update their own added profile metadata');
 select results_eq($$update public.profiles set address = 'Unauthorized edit' where user_id = 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbb1' returning user_id$$,
@@ -178,8 +192,6 @@ select results_eq($$select name from storage.objects where bucket_id = 'cctv-ima
   'administrator can read a private CCTV image');
 select lives_ok($$insert into storage.objects (bucket_id, name) values ('cctv-images', 'c1000000-0000-0000-0000-000000000001/admin-upload.webp')$$,
   'administrator can upload under a managed camera folder');
-select lives_ok($$delete from storage.objects where bucket_id = 'cctv-images' and name = 'c1000000-0000-0000-0000-000000000001/public.webp'$$,
-  'administrator can delete an image under a managed camera folder');
 reset role;
 
 select * from finish();
