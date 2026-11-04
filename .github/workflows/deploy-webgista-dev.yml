@@ -108,10 +108,22 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          curl --fail --silent --show-error \
+          http_status="$(curl --silent --show-error --output "$RUNNER_TEMP/phase2d-backups.json" --write-out '%{http_code}' \
             -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
-            "https://api.supabase.com/v1/projects/$SUPABASE_PROJECT_REF/database/backups" \
-            > "$RUNNER_TEMP/phase2d-backups.json"
+            "https://api.supabase.com/v1/projects/$SUPABASE_PROJECT_REF/database/backups")"
+          if [[ "$http_status" != "200" ]]; then
+            BACKUP_HTTP_STATUS="$http_status" node --input-type=module - "$RUNNER_TEMP/phase2d-backups.json" <<'NODE'
+          import { readFileSync } from 'node:fs';
+          let body = {};
+          try { body = JSON.parse(readFileSync(process.argv[2], 'utf8')); } catch {}
+          const code = typeof body.code === 'string' && /^[a-z0-9_-]+$/i.test(body.code) ? body.code : null;
+          const missing = Array.isArray(body.missing_permissions)
+            ? body.missing_permissions.filter((item) => typeof item === 'string' && /^[a-z0-9_-]+$/i.test(item))
+            : [];
+          console.error(JSON.stringify({ http_status: Number(process.env.BACKUP_HTTP_STATUS), code, missing_permissions: missing }));
+          NODE
+            exit 1
+          fi
           node scripts/phase2d-migration-guard.mjs backup "$RUNNER_TEMP/phase2d-backups.json"
 
       - name: Inspect remote migration history
