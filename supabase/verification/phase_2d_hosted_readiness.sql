@@ -91,5 +91,29 @@ select jsonb_pretty(jsonb_build_object(
     'administrators', (select count(*) from public.user_roles where role = 'administrator'),
     'agency_editors', (select count(*) from public.user_roles where role = 'agency_editor'),
     'cameras_total', (select count(*) from public.cctv_locations)
+  ),
+  'phase_2d_test_fixture_preflight', jsonb_build_object(
+    'matching_agencies', coalesce((
+      select jsonb_agg(jsonb_build_object('id', id, 'name', name, 'is_public', is_public))
+      from public.agencies
+      where lower(trim(name)) = lower(trim('WebGISTA DEV — Testing'))
+    ), '[]'::jsonb),
+    'matching_cameras', coalesce((
+      select jsonb_agg(jsonb_build_object(
+        'id', camera.id,
+        'name', camera.name,
+        'address', camera.address,
+        'category', camera.category,
+        'latitude', camera.latitude,
+        'longitude', camera.longitude,
+        'is_active', camera.is_active,
+        'is_public', camera.is_public,
+        'agency_name', agency.name,
+        'agency_is_public', agency.is_public
+      ))
+      from public.cctv_locations as camera
+      join public.agencies as agency on agency.id = camera.agency_id
+      where lower(trim(camera.name)) = lower(trim('TEST — CCTV Simpang Jambo Tape'))
+    ), '[]'::jsonb)
   )
 )) as phase_2d_read_only_verification;
