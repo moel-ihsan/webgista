@@ -1109,9 +1109,6 @@ select throws_matching(
   'permission denied',
   'agency editors cannot publish a newly created private camera'
 );
-update public.cctv_locations
-set is_active = false
-where name = 'Editor Camera';
 
 reset role;
 select results_eq(
@@ -1141,6 +1138,16 @@ select ok(
   ),
   'new camera rows default to active and private'
 );
+select set_config(
+  'request.jwt.claims',
+  '{"sub":"aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa2","role":"authenticated"}',
+  true
+);
+set local role authenticated;
+update public.cctv_locations
+set is_active = false
+where name = 'Editor Camera';
+reset role;
 select ok(
   (
     select not is_active and not is_public
@@ -1212,20 +1219,15 @@ select throws_matching(
   'row-level security',
   'agency editors cannot insert a camera for another agency'
 );
-select is(
-  (
-    with deleted as (
-      delete from public.cctv_locations
-      where name = 'Editor Camera'
-      returning id
-    )
-    select count(*)::bigint from deleted
-  ),
-  0::bigint,
+delete from public.cctv_locations
+where name = 'Editor Camera';
+reset role;
+select results_eq(
+  $$select count(*)::bigint from public.cctv_locations where name = 'Editor Camera'$$,
+  array[1::bigint],
   'agency editors cannot delete camera metadata'
 );
 
-reset role;
 select set_config(
   'request.jwt.claims',
   '{"sub":"aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa3","role":"authenticated"}',
