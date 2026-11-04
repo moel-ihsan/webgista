@@ -103,6 +103,16 @@ jobs:
       - name: Verify approved migration snapshot
         run: node scripts/phase2d-migration-guard.mjs snapshot
 
+      - name: Verify a completed development database recovery point (read-only)
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --silent --show-error \
+            -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
+            "https://api.supabase.com/v1/projects/$SUPABASE_PROJECT_REF/database/backups" \
+            > "$RUNNER_TEMP/phase2d-backups.json"
+          node scripts/phase2d-migration-guard.mjs backup "$RUNNER_TEMP/phase2d-backups.json"
+
       - name: Inspect remote migration history
         shell: bash
         run: |

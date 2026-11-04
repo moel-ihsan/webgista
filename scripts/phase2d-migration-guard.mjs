@@ -111,6 +111,15 @@ export function assertDryRunMatches(output, pendingVersions) {
   }
 }
 
+export function assertRecoveryAvailable(payload, now = Date.now()) {
+  if (!Array.isArray(payload?.backups)) throw new Error('Supabase backup API returned an invalid response.');
+  const available = payload.backups.filter((backup) =>
+    backup?.status === 'COMPLETED' && Number.isFinite(Date.parse(backup.inserted_at)) && Date.parse(backup.inserted_at) <= now,
+  );
+  if (!available.length) throw new Error('No completed, available database backup was reported for recovery.');
+  return available.length;
+}
+
 async function inspectHistory(file) {
   const directory = path.resolve('supabase/migrations');
   await verifyMigrationHashes(directory);
@@ -145,8 +154,11 @@ if (process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.ar
       const dryRun = await readFile(second, 'utf8');
       assertDryRunMatches(dryRun, pending);
       console.log(`Dry-run matches the approved migration set: ${pending.join(', ') || 'none'}`);
+    } else if (command === 'backup' && first) {
+      const count = assertRecoveryAvailable(JSON.parse(await readFile(first, 'utf8')));
+      console.log(`Confirmed ${count} completed recovery backup(s); backup identifiers withheld.`);
     } else {
-      throw new Error('Usage: snapshot | history <migration-list-output> | applied <migration-list-output> | dry-run <migration-list-output> <dry-run-output>');
+      throw new Error('Usage: snapshot | history <migration-list-output> | applied <migration-list-output> | dry-run <migration-list-output> <dry-run-output> | backup <backup-api-json>');
     }
   } catch (error) {
     console.error(error.message);

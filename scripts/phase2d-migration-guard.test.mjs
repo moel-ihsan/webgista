@@ -7,6 +7,7 @@ import {
   approvedHashes,
   assessMigrationHistory,
   assertDryRunMatches,
+  assertRecoveryAvailable,
   parseMigrationList,
   verifyContext,
   verifyMigrationHashes,
@@ -76,4 +77,14 @@ test('requires the dry-run migration set to exactly match the reviewed pending s
   assert.doesNotThrow(() => assertDryRunMatches('Remote database is up to date.', []));
   assert.throws(() => assertDryRunMatches('No migration IDs returned', []), /did not confirm/);
   assert.throws(() => assertDryRunMatches('Would push these migrations:\n • 20261104000400_application_map_settings.sql\nFinished supabase db push.', ['20261104000300', '20261104000400']), /differs/);
+});
+
+test('requires at least one completed backup with a valid, nonfuture timestamp', () => {
+  const now = Date.parse('2026-11-05T00:00:00Z');
+  assert.equal(assertRecoveryAvailable({ backups: [{ status: 'COMPLETED', inserted_at: '2026-11-04T20:00:00Z' }] }, now), 1);
+  assert.throws(() => assertRecoveryAvailable({ backups: [] }, now), /No completed/);
+  assert.throws(() => assertRecoveryAvailable({ backups: [{ status: 'FAILED', inserted_at: '2026-11-04T20:00:00Z' }] }, now), /No completed/);
+  assert.throws(() => assertRecoveryAvailable({ backups: [{ status: 'COMPLETED', inserted_at: 'not-a-date' }] }, now), /No completed/);
+  assert.throws(() => assertRecoveryAvailable({ backups: [{ status: 'COMPLETED', inserted_at: '2026-11-06T00:00:00Z' }] }, now), /No completed/);
+  assert.throws(() => assertRecoveryAvailable({}, now), /invalid response/);
 });
