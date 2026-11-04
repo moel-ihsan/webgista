@@ -11,7 +11,18 @@ select jsonb_pretty(jsonb_build_object(
         and 'security_invoker=true' = any(coalesce(c.reloptions, '{}'::text[]))
     ),
     'public_view_select_grant', has_table_privilege('anon', 'public.public_cctv_locations', 'SELECT'),
-    'anonymous_base_camera_select', has_table_privilege('anon', 'public.cctv_locations', 'SELECT'),
+    'anonymous_base_table_select', has_table_privilege('anon', 'public.cctv_locations', 'SELECT'),
+    'anonymous_base_column_select', jsonb_build_object(
+      'id', has_column_privilege('anon', 'public.cctv_locations', 'id', 'SELECT'),
+      'agency_id', has_column_privilege('anon', 'public.cctv_locations', 'agency_id', 'SELECT'),
+      'name', has_column_privilege('anon', 'public.cctv_locations', 'name', 'SELECT'),
+      'address', has_column_privilege('anon', 'public.cctv_locations', 'address', 'SELECT'),
+      'category', has_column_privilege('anon', 'public.cctv_locations', 'category', 'SELECT'),
+      'longitude', has_column_privilege('anon', 'public.cctv_locations', 'longitude', 'SELECT'),
+      'latitude', has_column_privilege('anon', 'public.cctv_locations', 'latitude', 'SELECT'),
+      'is_active', has_column_privilege('anon', 'public.cctv_locations', 'is_active', 'SELECT'),
+      'is_public', has_column_privilege('anon', 'public.cctv_locations', 'is_public', 'SELECT')
+    ),
     'anonymous_camera_select_policies', coalesce((
       select jsonb_agg(jsonb_build_object(
         'name', policyname,
