@@ -48,6 +48,9 @@ jobs:
         with:
           persist-credentials: false
 
+      - name: Test the deployment migration guard
+        run: node --test scripts/phase2d-migration-guard.test.mjs
+
       - name: Install Supabase CLI
         uses: supabase/setup-cli@v3
         with:
@@ -97,11 +100,26 @@ jobs:
           '
           echo "Target reference matches the configured webgista-dev project."
 
+      - name: Verify approved migration snapshot
+        run: node scripts/phase2d-migration-guard.mjs snapshot
+
       - name: Inspect remote migration history
-        run: supabase migration list --remote="$SUPABASE_DB_URL"
+        shell: bash
+        run: |
+          set -euo pipefail
+          supabase migration list --remote="$SUPABASE_DB_URL" > "$RUNNER_TEMP/phase2d-migrations.txt"
+          node scripts/phase2d-migration-guard.mjs history "$RUNNER_TEMP/phase2d-migrations.txt"
+
+      - name: Check targeted hosted schema preconditions (read-only)
+        run: supabase db query "$(cat supabase/verification/phase_2d45_deployment_preflight.sql)" --read-only --remote="$SUPABASE_DB_URL"
 
       - name: Preview remote migrations
-        run: supabase db push --dry-run --remote="$SUPABASE_DB_URL"
+        shell: bash
+        run: |
+          set -euo pipefail
+          supabase db push --dry-run --remote="$SUPABASE_DB_URL" 2>&1 | tee "$RUNNER_TEMP/phase2d-dry-run.txt"
+          node scripts/phase2d-migration-guard.mjs dry-run \
+            "$RUNNER_TEMP/phase2d-migrations.txt" "$RUNNER_TEMP/phase2d-dry-run.txt"
 
       - name: Require explicit apply selection
         if: ${{ inputs.apply_migrations != 'apply' }}
@@ -109,7 +127,17 @@ jobs:
 
       - name: Apply migrations to webgista-dev
         if: ${{ inputs.apply_migrations == 'apply' }}
-        run: supabase db push --remote="$SUPABASE_DB_URL" --yes
+        shell: bash
+        run: |
+          set -euo pipefail
+          node scripts/phase2d-migration-guard.mjs snapshot
+          supabase migration list --remote="$SUPABASE_DB_URL" > "$RUNNER_TEMP/phase2d-migrations-before-apply.txt"
+          node scripts/phase2d-migration-guard.mjs history "$RUNNER_TEMP/phase2d-migrations-before-apply.txt"
+          supabase db query "$(cat supabase/verification/phase_2d45_deployment_preflight.sql)" --read-only --remote="$SUPABASE_DB_URL"
+          supabase db push --dry-run --remote="$SUPABASE_DB_URL" 2>&1 | tee "$RUNNER_TEMP/phase2d-dry-run-before-apply.txt"
+          node scripts/phase2d-migration-guard.mjs dry-run \
+            "$RUNNER_TEMP/phase2d-migrations-before-apply.txt" "$RUNNER_TEMP/phase2d-dry-run-before-apply.txt"
+          supabase db push --yes --remote="$SUPABASE_DB_URL"
 
       - name: Create the explicitly approved Phase 2D test fixture
         if: ${{ inputs.apply_migrations == 'create-test-fixture' }}
@@ -125,9 +153,22 @@ jobs:
 
       - name: Verify remote migration history after apply
         if: ${{ inputs.apply_migrations == 'apply' || inputs.apply_migrations == 'verify' || inputs.apply_migrations == 'create-test-fixture' }}
-        run: supabase migration list --remote="$SUPABASE_DB_URL"
+        shell: bash
+        run: |
+          set -euo pipefail
+          supabase migration list --remote="$SUPABASE_DB_URL" > "$RUNNER_TEMP/phase2d-migrations-after.txt"
+          cat "$RUNNER_TEMP/phase2d-migrations-after.txt"
+          if [[ "${{ inputs.apply_migrations }}" == "apply" ]]; then
+            node scripts/phase2d-migration-guard.mjs applied "$RUNNER_TEMP/phase2d-migrations-after.txt"
+          else
+            node scripts/phase2d-migration-guard.mjs history "$RUNNER_TEMP/phase2d-migrations-after.txt"
+          fi
 
       - name: Verify installed security and aggregate readiness (read-only)
         if: ${{ inputs.apply_migrations == 'apply' || inputs.apply_migrations == 'verify' || inputs.apply_migrations == 'create-test-fixture' }}
         shell: bash
         run: supabase db query "$(cat supabase/verification/phase_2d_hosted_readiness.sql)" --read-only --remote="$SUPABASE_DB_URL"
+
+      - name: Verify targeted schema after migration (read-only)
+        if: ${{ inputs.apply_migrations == 'apply' || inputs.apply_migrations == 'verify' }}
+        run: supabase db query "$(cat supabase/verification/phase_2d45_deployment_preflight.sql)" --read-only --remote="$SUPABASE_DB_URL"
