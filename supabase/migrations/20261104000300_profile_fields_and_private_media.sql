@@ -59,8 +59,8 @@ using (
     select 1
     from public.cctv_locations as cameras
     join public.agencies on agencies.id = cameras.agency_id
-    where cameras.id::text = (storage.foldername(name))[1]
-      and cameras.snapshot_path = name
+    where cameras.id::text = (storage.foldername(storage.objects.name))[1]
+      and cameras.snapshot_path = storage.objects.name
       and cameras.is_active and cameras.is_public and agencies.is_public
   )
 );
@@ -71,8 +71,8 @@ using (
   bucket_id = 'cctv-images'
   and exists (
     select 1 from public.cctv_locations as cameras
-    where cameras.id::text = (storage.foldername(name))[1]
-      and cameras.snapshot_path = name
+    where cameras.id::text = (storage.foldername(storage.objects.name))[1]
+      and cameras.snapshot_path = storage.objects.name
       and (select private.can_manage_agency(cameras.agency_id))
   )
 );
@@ -83,7 +83,7 @@ with check (
   bucket_id = 'cctv-images'
   and exists (
     select 1 from public.cctv_locations as cameras
-    where cameras.id::text = (storage.foldername(name))[1]
+    where cameras.id::text = (storage.foldername(storage.objects.name))[1]
       and (select private.can_manage_agency(cameras.agency_id))
   )
 );
@@ -94,7 +94,7 @@ using (
   bucket_id = 'cctv-images'
   and exists (
     select 1 from public.cctv_locations as cameras
-    where cameras.id::text = (storage.foldername(name))[1]
+    where cameras.id::text = (storage.foldername(storage.objects.name))[1]
       and (select private.can_manage_agency(cameras.agency_id))
   )
 );
