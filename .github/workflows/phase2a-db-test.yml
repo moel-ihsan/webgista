@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - feat/webgista-v2
+      - ci/phase2d4-profile-media-verify-20261104
     paths:
       - "supabase/**"
       - ".github/workflows/phase2a-db-test.yml"
@@ -41,6 +42,9 @@ jobs:
 
       - name: Run Phase 2A security tests
         run: supabase test db supabase/tests/phase_2a_security.test.sql
+
+      - name: Run Phase 2D profile and media security tests
+        run: supabase test db supabase/tests/phase_2d_profile_media.test.sql
 
       - name: Validate the approved Phase 2D fixture script in the disposable database
         shell: bash
