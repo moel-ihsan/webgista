@@ -10,6 +10,29 @@ revoke insert, update on table public.cctv_locations from public, anon, authenti
 revoke insert (is_public), update (is_public)
   on table public.cctv_locations from public, anon, authenticated;
 
+grant insert (name), update (name)
+  on table public.agencies to authenticated;
+grant insert (
+  agency_id,
+  name,
+  address,
+  category,
+  longitude,
+  latitude,
+  snapshot_path,
+  is_active
+) on table public.cctv_locations to authenticated;
+grant update (
+  agency_id,
+  name,
+  address,
+  category,
+  longitude,
+  latitude,
+  snapshot_path,
+  is_active
+) on table public.cctv_locations to authenticated;
+
 drop policy if exists cctv_locations_authenticated_select on public.cctv_locations;
 
 create policy cctv_locations_authenticated_select
