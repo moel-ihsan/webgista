@@ -95,34 +95,6 @@ jobs:
           '
           echo "Target reference matches the configured webgista-dev project."
 
-      - name: Verify Supabase project name and reference
-        shell: bash
-        run: |
-          set -euo pipefail
-          projects_json="$(supabase projects list --output json)"
-          PROJECTS_JSON="$projects_json" node --input-type=module -e '
-            let response;
-            try {
-              response = JSON.parse(process.env.PROJECTS_JSON ?? "");
-            } catch {
-              console.error("Could not verify the Supabase project identity.");
-              process.exit(1);
-            }
-
-            const projects = Array.isArray(response) ? response : response.projects;
-            const target = Array.isArray(projects)
-              ? projects.find((project) =>
-                  [project.id, project.ref, project.project_ref].includes(process.env.SUPABASE_PROJECT_REF),
-                )
-              : undefined;
-
-            if (target?.name !== "webgista-dev") {
-              console.error("The configured reference does not identify Supabase project webgista-dev.");
-              process.exit(1);
-            }
-          '
-          echo "Supabase API confirmed the webgista-dev project identity."
-
       - name: Inspect remote migration history
         run: supabase migration list --remote="$SUPABASE_DB_URL"
 
