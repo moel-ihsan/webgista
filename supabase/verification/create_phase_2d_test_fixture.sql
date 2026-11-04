@@ -121,4 +121,5 @@ select
   (select id from target_agency limit 1) as agency_id,
   exists (select 1 from inserted_agency) as agency_created,
   (select id from target_camera limit 1) as cctv_id,
-  exists (select 1 from inserted_camera) as cctv_created;
+  exists (select 1 from inserted_camera) as cctv_created
+from preflight;
