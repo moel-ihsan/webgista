@@ -65,12 +65,12 @@ select ok(
   'CCTV images have public-approved read and agency-manager access policies'
 );
 select ok(
-  (select bool_and(qual::text like '%snapshot_path%' and qual::text like '%is_public%' and qual::text like '%is_active%' and qual::text like '%agencies.is_public%')
+  (select bool_and(polqual::text like '%snapshot_path%' and polqual::text like '%is_public%' and polqual::text like '%is_active%' and polqual::text like '%agencies.is_public%')
    from pg_catalog.pg_policy where polrelid = 'storage.objects'::regclass and polname = 'cctv_images_read_public'),
   'anonymous CCTV image access is tied to the row path and publication flags'
 );
 select ok(
-  (select bool_and(coalesce(qual::text, with_check::text) like '%can_manage_agency%')
+  (select bool_and(coalesce(polqual::text, polwithcheck::text) like '%can_manage_agency%')
    from pg_catalog.pg_policy where polrelid = 'storage.objects'::regclass
      and polname in ('cctv_images_read_managed', 'cctv_images_insert_managed', 'cctv_images_delete_managed')),
   'manager access to CCTV images is agency scoped'
