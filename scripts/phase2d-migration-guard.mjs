@@ -44,7 +44,9 @@ export function parseMigrationList(output) {
   const lines = clean.split(/\r?\n/);
   const header = lines.findIndex((line) => line.split('│').map((cell) => cell.trim()).join('|') === 'LOCAL|REMOTE|TIME (UTC)');
   if (header < 0) throw new Error('Could not parse the Supabase migration-list table; refusing deployment.');
-  if (lines.slice(0, header).some((line) => line.trim())) throw new Error('Unexpected text before the migration-list table; refusing deployment.');
+  if (lines.slice(0, header).some((line) => line.trim() && !/^Target: custom Postgres \(.+:\d+\)$/.test(line.trim()))) {
+    throw new Error('Unexpected text before the migration-list table; refusing deployment.');
+  }
 
   const local = [];
   const remote = [];

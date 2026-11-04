@@ -107,7 +107,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          supabase migration list --remote="$SUPABASE_DB_URL" > "$RUNNER_TEMP/phase2d-migrations.txt"
+          supabase migration list --remote="$SUPABASE_DB_URL" > "$RUNNER_TEMP/phase2d-migrations.txt" 2>&1
           node scripts/phase2d-migration-guard.mjs history "$RUNNER_TEMP/phase2d-migrations.txt"
 
       - name: Check targeted hosted schema preconditions (read-only)
@@ -135,7 +135,7 @@ jobs:
         run: |
           set -euo pipefail
           node scripts/phase2d-migration-guard.mjs snapshot
-          supabase migration list --remote="$SUPABASE_DB_URL" > "$RUNNER_TEMP/phase2d-migrations-before-apply.txt"
+          supabase migration list --remote="$SUPABASE_DB_URL" > "$RUNNER_TEMP/phase2d-migrations-before-apply.txt" 2>&1
           node scripts/phase2d-migration-guard.mjs history "$RUNNER_TEMP/phase2d-migrations-before-apply.txt"
           docker run --rm -i --network host postgres:17-alpine \
             psql "$SUPABASE_DB_URL" --set=ON_ERROR_STOP=1 --single-transaction \
@@ -163,8 +163,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          supabase migration list --remote="$SUPABASE_DB_URL" > "$RUNNER_TEMP/phase2d-migrations-after.txt"
-          cat "$RUNNER_TEMP/phase2d-migrations-after.txt"
+          supabase migration list --remote="$SUPABASE_DB_URL" > "$RUNNER_TEMP/phase2d-migrations-after.txt" 2>&1
           if [[ "${{ inputs.apply_migrations }}" == "apply" ]]; then
             node scripts/phase2d-migration-guard.mjs applied "$RUNNER_TEMP/phase2d-migrations-after.txt"
           else
