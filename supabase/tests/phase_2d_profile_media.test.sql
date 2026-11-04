@@ -154,6 +154,10 @@ select ok(
   exists (select 1 from pg_catalog.pg_policy where polrelid = 'storage.objects'::regclass and polname = 'profile_photos_delete_own' and polcmd = 'd' and pg_catalog.pg_get_expr(polqual, polrelid) like '%auth.uid%'),
   'Storage API profile-photo deletion is scoped to the authenticated owner'
 );
+select ok(
+  not exists (select 1 from pg_catalog.pg_policy where polrelid = 'storage.objects'::regclass and polcmd = 'd' and polname like 'profile_photos_%' and polroles @> array[(select oid from pg_catalog.pg_roles where rolname = 'anon')]),
+  'anonymous callers have no profile-photo deletion policy'
+);
 select lives_ok($$update public.profiles set address = 'Own profile edit' where user_id = 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbb2'$$,
   'user can update their own added profile metadata');
 select results_eq($$update public.profiles set address = 'Unauthorized edit' where user_id = 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbb1' returning user_id$$,
