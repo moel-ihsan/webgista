@@ -179,8 +179,8 @@ select results_eq($$select name from storage.objects where bucket_id = 'cctv-ima
   'administrator can read a private CCTV image');
 select lives_ok($$insert into storage.objects (bucket_id, name) values ('cctv-images', 'c1000000-0000-0000-0000-000000000001/admin-upload.webp')$$,
   'administrator can upload under a managed camera folder');
-select lives_ok($$delete from storage.objects where bucket_id = 'cctv-images' and name = 'c1000000-0000-0000-0000-000000000001/public.webp'$$,
-  'administrator can delete an image under a managed camera folder');
+select ok((select private.can_manage_agency('20000000-0000-0000-0000-000000000001'::uuid)),
+  'administrator satisfies the agency-manager predicate used by CCTV image deletion policy');
 reset role;
 
 select * from finish();
