@@ -2,7 +2,7 @@ import type { CctvLocation } from '../domain/cctv'
 import type { TrafficObservation } from '../domain/traffic'
 
 export interface CctvDataSource {
-  listLocations(): Promise<readonly CctvLocation[]>
+  listLocations(signal?: AbortSignal): Promise<readonly CctvLocation[]>
 }
 
 export interface TrafficObservationDataSource {

@@ -13,6 +13,14 @@ on:
           - apply
           - verify
           - create-test-fixture
+      development_data_loss_waiver:
+        description: Explicit one-time acceptance of unrecoverable development data loss for migrations 003 and 004 only
+        type: choice
+        required: true
+        default: none
+        options:
+          - none
+          - accept-dev-data-loss-for-003-004
 
 permissions:
   contents: read
@@ -33,6 +41,8 @@ jobs:
       SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
       SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
       EXPECTED_DEV_PROJECT_REF: ${{ vars.SUPABASE_DEV_PROJECT_REF }}
+      APPLY_MIGRATIONS: ${{ inputs.apply_migrations }}
+      DEVELOPMENT_DATA_LOSS_WAIVER: ${{ inputs.development_data_loss_waiver }}
 
     steps:
       - name: Verify selected branch
@@ -60,6 +70,10 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          if [[ "$DEVELOPMENT_DATA_LOSS_WAIVER" != "none" && "$APPLY_MIGRATIONS" != "apply" ]]; then
+            echo "The development data-loss waiver is only valid for an explicit apply run."
+            exit 1
+          fi
           if [[ -z "$SUPABASE_ACCESS_TOKEN" || -z "$SUPABASE_DB_URL" || -z "$SUPABASE_PROJECT_REF" ]]; then
             echo "Required environment secrets are missing. Configure them in the webgista-dev environment."
             exit 1
@@ -104,7 +118,7 @@ jobs:
         run: node scripts/phase2d-migration-guard.mjs snapshot
 
       - name: Verify a completed development database recovery point (read-only)
-        if: ${{ inputs.apply_migrations == 'apply' || inputs.apply_migrations == 'create-test-fixture' }}
+        if: ${{ (inputs.apply_migrations == 'apply' && inputs.development_data_loss_waiver != 'accept-dev-data-loss-for-003-004') || inputs.apply_migrations == 'create-test-fixture' }}
         shell: bash
         run: |
           set -euo pipefail
@@ -188,6 +202,23 @@ jobs:
       - name: Require explicit apply selection
         if: ${{ inputs.apply_migrations != 'apply' }}
         run: echo "Preview complete. No migrations were applied. Re-run manually and select apply after reviewing the dry-run."
+
+      - name: Validate and record the explicit development-only backup waiver
+        if: ${{ inputs.apply_migrations == 'apply' && inputs.development_data_loss_waiver == 'accept-dev-data-loss-for-003-004' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          waiver_result="$(node scripts/phase2d-migration-guard.mjs waiver "$RUNNER_TEMP/phase2d-migrations.txt")"
+          printf '%s\n' "$waiver_result"
+          {
+            echo '## One-time development backup waiver'
+            echo
+            echo '- Explicit workflow input accepted for this apply run.'
+            echo '- Target is restricted to the verified `webgista-dev` project and `feat/webgista-v2` branch.'
+            echo '- The operator accepts loss of development data if this migration fails; no recovery backup is available.'
+            echo '- Scope is restricted by the migration hash and pending-set guards to migrations 003 and 004 only.'
+            echo "- Guard result: $waiver_result"
+          } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Apply migrations to webgista-dev
         if: ${{ inputs.apply_migrations == 'apply' }}

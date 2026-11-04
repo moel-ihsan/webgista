@@ -18,6 +18,7 @@
     "verify": "\"$NODE\" node_modules/vue-tsc/bin/vue-tsc.js --noEmit && \"$NODE\" node_modules/eslint/bin/eslint.js . --cache --cache-location node_modules/.cache/eslint && \"$NODE\" node_modules/vitest/vitest.mjs run && \"$NODE\" node_modules/vite/bin/vite.js build"
   },
   "dependencies": {
+    "@supabase/supabase-js": "2.118.0",
     "maplibre-gl": "6.16.0",
     "vue": "3.5.44",
     "vue-router": "5.4.0"
@@ -27,6 +28,7 @@
     "@vue/eslint-config-typescript": "14.9.0",
     "eslint": "10.14.0",
     "eslint-plugin-vue": "10.12.0",
+    "happy-dom": "^21.0.4",
     "typescript": "5.9.3",
     "vite": "8.3.5",
     "vitest": "4.1.12",

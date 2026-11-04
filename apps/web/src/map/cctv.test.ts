@@ -1,0 +1,248 @@
+import { describe, expect, it, vi } from 'vitest'
+
+import type { CctvLocation } from '../domain/cctv'
+import type { BoundaryFeatureCollection } from './boundary'
+import { attachBoundaryLayers } from './boundaryLayers'
+import {
+  cctvPopupDetails,
+  focusCctvLocation,
+  searchCctvLocations,
+  toCctvFeatureCollection,
+} from './cctv'
+import {
+  attachCctvLayers,
+  CCTV_CLUSTER_COUNT_LAYER_ID,
+  CCTV_CLUSTER_LAYER_ID,
+  CCTV_POINT_LAYER_ID,
+  CCTV_SOURCE_ID,
+  setCctvVisibility,
+  updateCctvSource,
+} from './cctvLayers'
+
+const camera: CctvLocation = {
+  id: 'camera-1',
+  legacyId: null,
+  agency: { id: 'agency-1', name: 'Dishub' },
+  name: 'Kuta Alam Camera',
+  address: 'Banda Aceh',
+  category: 'analytic',
+  longitude: 95.3238,
+  latitude: 5.5483,
+  snapshotUrl: null,
+  publicStreamUrl: null,
+  isActive: true,
+}
+
+function fakeMap() {
+  const sources = new Map<string, Record<string, unknown>>()
+  const layers = new Map<string, Record<string, unknown>>()
+  const listeners = new Map<string, (...args: never[]) => unknown>()
+  let styleAvailable = true
+  const map = {
+    getStyle: () => styleAvailable ? { layers: [{ id: 'labels', type: 'symbol' }] } : undefined,
+    getSource: (id: string) => sources.get(id),
+    getLayer: (id: string) => layers.get(id),
+    addSource: vi.fn((id: string, source: Record<string, unknown>) => {
+      sources.set(id, {
+        ...source,
+        setData: vi.fn(),
+        getClusterExpansionZoom: vi.fn().mockResolvedValue(15),
+      })
+    }),
+    addLayer: vi.fn((layer: Record<string, unknown>) => layers.set(String(layer.id), layer)),
+    setLayoutProperty: vi.fn(),
+    on: vi.fn((type: string, layerOrHandler: string | ((...args: never[]) => unknown), handler?: (...args: never[]) => unknown) => {
+      const layer = typeof layerOrHandler === 'string' ? layerOrHandler : ''
+      listeners.set(`${type}:${layer}`, (handler ?? layerOrHandler) as (...args: never[]) => unknown)
+    }),
+    off: vi.fn((type: string, layerOrHandler: string | ((...args: never[]) => unknown)) => {
+      const layer = typeof layerOrHandler === 'string' ? layerOrHandler : ''
+      listeners.delete(`${type}:${layer}`)
+    }),
+    getCanvas: () => ({ style: { cursor: '' } }),
+    easeTo: vi.fn(),
+    remove: vi.fn(),
+    sources,
+    layers,
+    listeners,
+    setStyleAvailable: (value: boolean) => { styleAvailable = value },
+  }
+  return map
+}
+
+describe('CCTV map data and interactions', () => {
+  it('converts actual cameras to stable GeoJSON point features with the original No Data color key', () => {
+    expect(toCctvFeatureCollection([camera])).toEqual({
+      type: 'FeatureCollection',
+      features: [{
+        type: 'Feature',
+        id: 'camera-1',
+        properties: { cctvId: 'camera-1', name: 'Kuta Alam Camera', category: 'Analytic', condition: 'No Data' },
+        geometry: { type: 'Point', coordinates: [95.3238, 5.5483] },
+      }],
+    })
+  })
+
+  it('searches names, addresses, and agencies case-insensitively with partial matches', () => {
+    expect(searchCctvLocations([camera], 'KUTA')).toEqual([camera])
+    expect(searchCctvLocations([camera], 'banda')).toEqual([camera])
+    expect(searchCctvLocations([camera], 'dish')).toEqual([camera])
+    expect(searchCctvLocations([camera], 'no match')).toEqual([])
+    expect(searchCctvLocations([camera], '  ')).toEqual([camera])
+  })
+
+  it('keeps popup values plain and reports unavailable video and traffic honestly', () => {
+    expect(cctvPopupDetails(camera)).toEqual(expect.arrayContaining([
+      { label: 'Traffic condition', value: 'No Data' },
+      { label: 'Video', value: 'Unavailable in Phase 2C' },
+    ]))
+  })
+
+  it('focuses a selected camera using its coordinates and leaves room beside the open drawer', () => {
+    const map = { flyTo: vi.fn() }
+    const showPopup = vi.fn()
+    focusCctvLocation(map, camera, true, showPopup)
+    expect(map.flyTo).toHaveBeenCalledWith({
+      center: [95.3238, 5.5483], zoom: 16, offset: [-150, 0], essential: true,
+    })
+    expect(showPopup).toHaveBeenCalledWith(camera)
+  })
+})
+
+describe('CCTV MapLibre layers', () => {
+  it('registers the original clustered source and marker layer identifiers', () => {
+    const map = fakeMap()
+    const data = toCctvFeatureCollection([camera])
+    const detach = attachCctvLayers(map as never, () => data, () => true, false, vi.fn(), { ready: vi.fn(), error: vi.fn() })
+
+    expect(map.addSource).toHaveBeenCalledWith(CCTV_SOURCE_ID, expect.objectContaining({
+      cluster: true, clusterRadius: 50, clusterMaxZoom: 14,
+    }))
+    expect(map.addLayer.mock.calls.map(([layer]) => layer.id)).toEqual([
+      CCTV_CLUSTER_LAYER_ID,
+      CCTV_CLUSTER_COUNT_LAYER_ID,
+      CCTV_POINT_LAYER_ID,
+    ])
+    expect(map.addLayer.mock.calls[2]?.[0]).toMatchObject({
+      paint: { 'circle-color': ['match', ['get', 'condition'], 'No Data', '#0000ff', '#0000ff'] },
+    })
+    detach()
+  })
+
+  it('retains the v1 dashboard category marker colors without assigning traffic conditions', () => {
+    const map = fakeMap()
+    const detach = attachCctvLayers(
+      map as never,
+      () => toCctvFeatureCollection([camera]),
+      () => true,
+      true,
+      vi.fn(),
+      { ready: vi.fn(), error: vi.fn() },
+    )
+    expect(map.addLayer.mock.calls[2]?.[0]).toMatchObject({
+      paint: { 'circle-color': ['match', ['get', 'category'], 'Regular', 'green', 'Analytic', 'yellow', '#0000ff'] },
+    })
+    expect(toCctvFeatureCollection([camera]).features[0]?.properties.condition).toBe('No Data')
+    detach()
+  })
+
+  it('toggles CCTV layers independently of other map layers', () => {
+    const map = fakeMap()
+    for (const id of [CCTV_CLUSTER_LAYER_ID, CCTV_CLUSTER_COUNT_LAYER_ID, CCTV_POINT_LAYER_ID, 'banda-aceh-fill']) {
+      map.layers.set(id, { id })
+    }
+
+    setCctvVisibility(map as never, false)
+    expect(map.setLayoutProperty).toHaveBeenCalledTimes(3)
+    expect(map.setLayoutProperty).not.toHaveBeenCalledWith('banda-aceh-fill', 'visibility', 'none')
+    setCctvVisibility(map as never, true)
+    expect(map.setLayoutProperty).toHaveBeenLastCalledWith(CCTV_POINT_LAYER_ID, 'visibility', 'visible')
+  })
+
+  it('updates a loaded source when data arrives after style readiness', () => {
+    const map = fakeMap()
+    const detach = attachCctvLayers(map as never, () => toCctvFeatureCollection([]), () => true, false, vi.fn(), { ready: vi.fn(), error: vi.fn() })
+    const source = map.sources.get(CCTV_SOURCE_ID)
+    const nextData = toCctvFeatureCollection([camera])
+
+    updateCctvSource(map as never, nextData)
+    expect(source?.setData).toHaveBeenCalledWith(nextData)
+    detach()
+  })
+
+  it('registers data that arrives before the initial style is ready', () => {
+    const map = fakeMap()
+    map.setStyleAvailable(false)
+    let data = toCctvFeatureCollection([])
+    const detach = attachCctvLayers(map as never, () => data, () => true, false, vi.fn(), {
+      ready: vi.fn(), error: vi.fn(),
+    })
+    expect(map.addSource).not.toHaveBeenCalled()
+
+    data = toCctvFeatureCollection([camera])
+    map.setStyleAvailable(true)
+    map.listeners.get('style.load:')?.()
+    expect(map.addSource).toHaveBeenCalledWith(CCTV_SOURCE_ID, expect.objectContaining({ data }))
+    detach()
+  })
+
+  it('expands clusters and selects points, restores after style changes without duplicate handlers, then cleans up', async () => {
+    const map = fakeMap()
+    const select = vi.fn()
+    let visible = false
+    const detach = attachCctvLayers(map as never, () => toCctvFeatureCollection([camera]), () => visible, false, select, { ready: vi.fn(), error: vi.fn() })
+
+    const cluster = map.listeners.get(`click:${CCTV_CLUSTER_LAYER_ID}`)
+    await cluster?.({ features: [{ properties: { cluster_id: 4 }, geometry: { type: 'Point', coordinates: [95.3, 5.5] } }] } as never)
+    await Promise.resolve()
+    expect(map.easeTo).toHaveBeenCalledWith({ center: [95.3, 5.5], zoom: 15 })
+
+    map.listeners.get(`click:${CCTV_POINT_LAYER_ID}`)?.({ features: [{ properties: { cctvId: 'camera-1' } }] } as never)
+    expect(select).toHaveBeenCalledWith('camera-1')
+
+    visible = true
+    for (let styleChange = 0; styleChange < 3; styleChange += 1) {
+      map.sources.clear()
+      map.layers.clear()
+      map.listeners.get('style.load:')?.()
+    }
+    expect(map.addSource).toHaveBeenCalledTimes(4)
+    expect(map.addLayer).toHaveBeenCalledTimes(12)
+    expect([...map.listeners.keys()].filter((key) => key.startsWith('click:'))).toHaveLength(2)
+
+    detach()
+    expect(map.listeners.size).toBe(0)
+    expect(map.sources.has(CCTV_SOURCE_ID)).toBe(true)
+  })
+
+  it('coexists with administrative boundary source and layers and detaches both handlers', () => {
+    const map = fakeMap()
+    const boundary: BoundaryFeatureCollection = {
+      type: 'FeatureCollection',
+      features: [{
+        type: 'Feature',
+        properties: { KECAMATAN: 'Kuta Alam' },
+        geometry: { type: 'Polygon', coordinates: [[[95.3, 5.5], [95.4, 5.5], [95.4, 5.6], [95.3, 5.5]]] },
+      }],
+    }
+    const detachCctv = attachCctvLayers(map as never, () => toCctvFeatureCollection([camera]), () => true, false, vi.fn(), {
+      ready: vi.fn(), error: vi.fn(),
+    })
+    const detachBoundary = attachBoundaryLayers(
+      map as never,
+      boundary,
+      () => true,
+      { move: vi.fn(), leave: vi.fn(), click: vi.fn() },
+      vi.fn(),
+      vi.fn(),
+    )
+
+    expect(map.sources.has(CCTV_SOURCE_ID)).toBe(true)
+    expect(map.sources.has('banda-aceh-boundary')).toBe(true)
+    expect(map.layers.has(CCTV_POINT_LAYER_ID)).toBe(true)
+    expect(map.layers.has('banda-aceh-fill')).toBe(true)
+    detachCctv()
+    detachBoundary()
+    expect(map.listeners.size).toBe(0)
+  })
+})

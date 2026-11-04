@@ -9,6 +9,7 @@ export const approvedHashes = new Map([
 ]);
 
 const approvedVersions = [...approvedHashes.keys()];
+export const developmentWaiver = 'accept-dev-data-loss-for-003-004';
 
 export function verifyContext({ githubRef, projectRef, expectedProjectRef }) {
   if (githubRef !== 'refs/heads/feat/webgista-v2') throw new Error('Deployment is restricted to feat/webgista-v2.');
@@ -91,6 +92,20 @@ export function assessMigrationHistory({ localVersions, remoteVersions }) {
   return pending;
 }
 
+export function validateDevelopmentBackupWaiver({ applyMigrations, waiver, githubRef, projectRef, expectedProjectRef, pendingVersions }) {
+  verifyContext({ githubRef, projectRef, expectedProjectRef });
+  if (applyMigrations !== 'apply' || waiver !== developmentWaiver) {
+    throw new Error('The one-time data-loss waiver is valid only for an explicit apply run.');
+  }
+  if (!Array.isArray(pendingVersions) || !pendingVersions.length || pendingVersions.some((version) => !approvedVersions.includes(version))) {
+    throw new Error('The one-time waiver only covers pending migrations 003 and 004.');
+  }
+  if (pendingVersions.length > 2 || (pendingVersions.length === 2 && [...pendingVersions].sort().join(',') !== [...approvedVersions].sort().join(','))) {
+    throw new Error('The one-time waiver only covers migrations 003 and 004.');
+  }
+  return [...pendingVersions].sort();
+}
+
 export function assertDryRunMatches(output, pendingVersions) {
   const migrationList = output.match(/Would push these migrations:\s*\r?\n([\s\S]*?)(?:\r?\nFinished supabase db push\.|$)/i);
   const proposed = [];
@@ -157,8 +172,19 @@ if (process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.ar
     } else if (command === 'backup' && first) {
       const count = assertRecoveryAvailable(JSON.parse(await readFile(first, 'utf8')));
       console.log(`Confirmed ${count} completed recovery backup(s); backup identifiers withheld.`);
+    } else if (command === 'waiver' && first) {
+      const pendingVersions = await inspectHistory(first);
+      const waivedVersions = validateDevelopmentBackupWaiver({
+        applyMigrations: process.env.APPLY_MIGRATIONS,
+        waiver: process.env.DEVELOPMENT_DATA_LOSS_WAIVER,
+        githubRef: process.env.GITHUB_REF,
+        projectRef: process.env.SUPABASE_PROJECT_REF,
+        expectedProjectRef: process.env.EXPECTED_DEV_PROJECT_REF,
+        pendingVersions,
+      });
+      console.log(`Explicit development data-loss waiver accepted for approved pending migrations: ${waivedVersions.join(', ')}.`);
     } else {
-      throw new Error('Usage: snapshot | history <migration-list-output> | applied <migration-list-output> | dry-run <migration-list-output> <dry-run-output> | backup <backup-api-json>');
+      throw new Error('Usage: snapshot | history <migration-list-output> | applied <migration-list-output> | dry-run <migration-list-output> <dry-run-output> | backup <backup-api-json> | waiver <migration-list-output>');
     }
   } catch (error) {
     console.error(error.message);

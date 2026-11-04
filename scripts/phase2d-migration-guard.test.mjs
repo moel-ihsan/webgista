@@ -8,7 +8,9 @@ import {
   assessMigrationHistory,
   assertDryRunMatches,
   assertRecoveryAvailable,
+  developmentWaiver,
   parseMigrationList,
+  validateDevelopmentBackupWaiver,
   verifyContext,
   verifyMigrationHashes,
 } from './phase2d-migration-guard.mjs';
@@ -87,4 +89,20 @@ test('requires at least one completed backup with a valid, nonfuture timestamp',
   assert.throws(() => assertRecoveryAvailable({ backups: [{ status: 'COMPLETED', inserted_at: 'not-a-date' }] }, now), /No completed/);
   assert.throws(() => assertRecoveryAvailable({ backups: [{ status: 'COMPLETED', inserted_at: '2026-11-06T00:00:00Z' }] }, now), /No completed/);
   assert.throws(() => assertRecoveryAvailable({}, now), /invalid response/);
+});
+
+test('accepts the one-time data-loss waiver only for an apply to the configured dev project and pending 003/004', () => {
+  const context = {
+    applyMigrations: 'apply', waiver: developmentWaiver,
+    githubRef: 'refs/heads/feat/webgista-v2',
+    projectRef: 'abcdefghijklmnopqrst', expectedProjectRef: 'abcdefghijklmnopqrst',
+  };
+  assert.deepEqual(validateDevelopmentBackupWaiver({ ...context, pendingVersions: ['20261104000300', '20261104000400'] }), ['20261104000300', '20261104000400']);
+  assert.deepEqual(validateDevelopmentBackupWaiver({ ...context, pendingVersions: ['20261104000400'] }), ['20261104000400']);
+  assert.throws(() => validateDevelopmentBackupWaiver({ ...context, applyMigrations: 'preview', pendingVersions: ['20261104000300'] }), /explicit apply/);
+  assert.throws(() => validateDevelopmentBackupWaiver({ ...context, waiver: 'none', pendingVersions: ['20261104000300'] }), /explicit apply/);
+  assert.throws(() => validateDevelopmentBackupWaiver({ ...context, projectRef: 'ponmlkjihgfedcbaqrst', pendingVersions: ['20261104000300'] }), /target/);
+  assert.throws(() => validateDevelopmentBackupWaiver({ ...context, githubRef: 'refs/heads/main', pendingVersions: ['20261104000300'] }), /restricted/);
+  assert.throws(() => validateDevelopmentBackupWaiver({ ...context, pendingVersions: ['20261105000100'] }), /only covers/);
+  assert.throws(() => validateDevelopmentBackupWaiver({ ...context, pendingVersions: [] }), /only covers/);
 });

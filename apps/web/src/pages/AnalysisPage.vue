@@ -1,29 +1,47 @@
-<script setup lang="ts">
-import PageHeader from '../components/ui/PageHeader.vue'
-import PhaseNotice from '../components/ui/PhaseNotice.vue'
-</script>
-
 <template>
-  <div class="page-stack">
-    <PageHeader
-      eyebrow="Traffic observations"
-      title="Analysis begins with reproducible measurements"
-      description="Future views will separate per-frame detections, tracked line crossings, and manually verified ground truth."
-    />
-
-    <PhaseNotice
-      title="No charts or vehicle totals are shown"
-      message="The v1 dashboard values were not connected to a reliable observation history. Phase 1 does not replace them with fabricated demonstration statistics."
-    />
-
-    <section class="content-card analysis-principles">
-      <h3>Required provenance for every result</h3>
-      <dl>
-        <div><dt>Time window</dt><dd>Start, end, and timezone</dd></div>
-        <div><dt>Counting method</dt><dd>Frame, tracked crossing, or manual</dd></div>
-        <div><dt>Model context</dt><dd>Model, threshold, class map, and quality flags</dd></div>
-        <div><dt>Formula context</dt><dd>Named version with documented units</dd></div>
-      </dl>
+  <div class="legacy-analysis">
+    <section class="legacy-video-column" aria-label="CCTV video workspace">
+      <div class="legacy-video-stage" role="img" aria-label="No CCTV video connected">
+        <div class="legacy-video-stage__message">
+          <span class="legacy-video-stage__icon" aria-hidden="true">▶</span>
+          <strong>No CCTV video selected</strong>
+          <span>Live streams and stored clips are not connected.</span>
+        </div>
+      </div>
+      <div class="legacy-video-actions">
+        <button class="legacy-button legacy-button--primary" type="button" disabled title="Video processing is not implemented">
+          Manage Video
+        </button>
+        <button class="legacy-button legacy-button--outline" type="button" disabled title="No video source is connected">
+          Show Video
+        </button>
+      </div>
+      <div class="legacy-observation-note">
+        Counts will appear only for persisted observations with a documented counting method.
+      </div>
     </section>
+
+    <aside class="legacy-analysis-summary" aria-label="Traffic observation summary">
+      <div class="legacy-analysis-summary__heading">
+        <h2>Camera not selected</h2>
+        <span class="legacy-state-tag">No Data</span>
+      </div>
+
+      <article class="legacy-vehicle-card">
+        <div><h3>Light Vehicle (LV)</h3><strong>—</strong><p>No persisted observations</p></div>
+        <img src="/assets/Car.png" alt="" />
+      </article>
+      <article class="legacy-vehicle-card">
+        <div><h3>Heavy Vehicle (HV)</h3><strong>—</strong><p>No persisted observations</p></div>
+        <span class="legacy-vehicle-card__mark" aria-hidden="true">HV</span>
+      </article>
+      <article class="legacy-vehicle-card">
+        <div><h3>Motorcycle (MC)</h3><strong>—</strong><p>No persisted observations</p></div>
+        <img src="/assets/Motor.png" alt="" />
+      </article>
+      <article class="legacy-vehicle-card legacy-vehicle-card--condition">
+        <div><h3>Traffic Condition</h3><strong>No Data</strong><p>No validated traffic result is available.</p></div>
+      </article>
+    </aside>
   </div>
 </template>

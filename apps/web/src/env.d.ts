@@ -1,14 +1,13 @@
 /// <reference types="vite/client" />
 
 interface ImportMetaEnv {
-  readonly VITE_MAP_STYLE_URL?: string
+  readonly VITE_SUPABASE_URL?: string
+  readonly VITE_SUPABASE_PUBLISHABLE_KEY?: string
+  readonly VITE_SUPABASE_PRIVATE_MEDIA_ENABLED?: string
+  readonly VITE_SUPABASE_PROFILE_FIELDS_ENABLED?: string
+  readonly VITE_AGENCY_REMOVAL_ENABLED?: string
 }
 
 interface ImportMeta {
   readonly env: ImportMetaEnv
-}
-
-declare module '*?worker&url' {
-  const workerUrl: string
-  export default workerUrl
 }
