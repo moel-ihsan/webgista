@@ -104,6 +104,7 @@ jobs:
         run: node scripts/phase2d-migration-guard.mjs snapshot
 
       - name: Verify a completed development database recovery point (read-only)
+        if: ${{ inputs.apply_migrations == 'apply' || inputs.apply_migrations == 'create-test-fixture' }}
         shell: bash
         run: |
           set -euo pipefail
