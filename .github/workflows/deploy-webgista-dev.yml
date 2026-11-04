@@ -12,6 +12,7 @@ on:
           - preview
           - apply
           - verify
+          - create-test-fixture
 
 permissions:
   contents: read
@@ -110,11 +111,23 @@ jobs:
         if: ${{ inputs.apply_migrations == 'apply' }}
         run: supabase db push --remote="$SUPABASE_DB_URL" --yes
 
+      - name: Create the explicitly approved Phase 2D test fixture
+        if: ${{ inputs.apply_migrations == 'create-test-fixture' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          result="$(supabase db query "$(cat supabase/verification/create_phase_2d_test_fixture.sql)" --yes --remote="$SUPABASE_DB_URL")"
+          printf '%s\n' "$result"
+          if ! grep -q 'phase2d_fixture_ready' <<<"$result"; then
+            echo "Fixture preconditions failed; no test rows were created. Review the exact-name preflight and migration history."
+            exit 1
+          fi
+
       - name: Verify remote migration history after apply
-        if: ${{ inputs.apply_migrations == 'apply' || inputs.apply_migrations == 'verify' }}
+        if: ${{ inputs.apply_migrations == 'apply' || inputs.apply_migrations == 'verify' || inputs.apply_migrations == 'create-test-fixture' }}
         run: supabase migration list --remote="$SUPABASE_DB_URL"
 
       - name: Verify installed security and aggregate readiness (read-only)
-        if: ${{ inputs.apply_migrations == 'apply' || inputs.apply_migrations == 'verify' }}
+        if: ${{ inputs.apply_migrations == 'apply' || inputs.apply_migrations == 'verify' || inputs.apply_migrations == 'create-test-fixture' }}
         shell: bash
         run: supabase db query "$(cat supabase/verification/phase_2d_hosted_readiness.sql)" --read-only --remote="$SUPABASE_DB_URL"

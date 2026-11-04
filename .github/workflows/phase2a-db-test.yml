@@ -42,6 +42,19 @@ jobs:
       - name: Run Phase 2A security tests
         run: supabase test db supabase/tests/phase_2a_security.test.sql
 
+      - name: Validate the approved Phase 2D fixture script in the disposable database
+        shell: bash
+        run: |
+          set -euo pipefail
+          for attempt in 1 2; do
+            result="$(supabase db query "$(cat supabase/verification/create_phase_2d_test_fixture.sql)" --yes --local)"
+            printf '%s\n' "$result"
+            grep -Fq 'phase2d_fixture_ready' <<<"$result"
+          done
+          result="$(supabase db query "select case when (select count(*) from public.agencies where name = 'WebGISTA DEV — Testing' and not is_public) = 1 and (select count(*) from public.cctv_locations camera join public.agencies agency on agency.id = camera.agency_id where camera.name = 'TEST — CCTV Simpang Jambo Tape' and camera.address = 'Simpang Jambo Tape, Banda Aceh, Aceh' and camera.category = 'regular'::public.camera_category and camera.longitude = 95.330911 and camera.latitude = 5.559729 and camera.is_active and not camera.is_public and agency.name = 'WebGISTA DEV — Testing' and not agency.is_public) = 1 and not exists (select 1 from public.cctv_private_config) and not exists (select 1 from public.traffic_observations) then 'phase2d_fixture_ci_valid' else 'phase2d_fixture_ci_invalid' end" --read-only --local)"
+          printf '%s\n' "$result"
+          grep -Fq 'phase2d_fixture_ci_valid' <<<"$result"
+
       - name: Stop temporary database
         if: always()
         run: supabase stop --no-backup
