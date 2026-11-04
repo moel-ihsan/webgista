@@ -4,13 +4,14 @@ on:
   workflow_dispatch:
     inputs:
       apply_migrations:
-        description: Apply the migrations after reviewing the dry-run output
+        description: Select preview, apply reviewed pending migrations, or run read-only verification
         type: choice
         required: true
         default: preview
         options:
           - preview
           - apply
+          - verify
 
 permissions:
   contents: read
@@ -110,5 +111,10 @@ jobs:
         run: supabase db push --remote="$SUPABASE_DB_URL" --yes
 
       - name: Verify remote migration history after apply
-        if: ${{ inputs.apply_migrations == 'apply' }}
+        if: ${{ inputs.apply_migrations == 'apply' || inputs.apply_migrations == 'verify' }}
         run: supabase migration list --remote="$SUPABASE_DB_URL"
+
+      - name: Verify installed security and aggregate readiness (read-only)
+        if: ${{ inputs.apply_migrations == 'apply' || inputs.apply_migrations == 'verify' }}
+        shell: bash
+        run: supabase db query "$(cat supabase/verification/phase_2d_hosted_readiness.sql)" --read-only --remote="$SUPABASE_DB_URL"
