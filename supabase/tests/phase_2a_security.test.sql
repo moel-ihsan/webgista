@@ -3,7 +3,7 @@ begin;
 create extension if not exists pgtap with schema extensions;
 set search_path = public, extensions;
 
-select plan(54);
+select plan(119);
 
 select has_table('public', 'profiles', 'profiles table exists');
 select has_table('public', 'user_roles', 'user roles table exists');
@@ -71,6 +71,83 @@ select ok(
       and classes.relname = 'public_cctv_locations'
   ),
   'public CCTV view executes with caller privileges'
+);
+select is(
+  (
+    select count(*)::bigint
+    from pg_catalog.pg_policies
+    where schemaname = 'public'
+      and tablename = 'cctv_locations'
+      and cmd = 'SELECT'
+      and permissive = 'PERMISSIVE'
+      and ('anon'::name = any(roles) or 'public'::name = any(roles))
+  ),
+  1::bigint,
+  'anonymous camera reads have one permissive SELECT policy'
+);
+select is(
+  (
+    select count(*)::bigint
+    from pg_catalog.pg_policies
+    where schemaname = 'public'
+      and tablename = 'cctv_locations'
+      and cmd = 'SELECT'
+      and permissive = 'PERMISSIVE'
+      and 'authenticated'::name = any(roles)
+  ),
+  1::bigint,
+  'authenticated camera reads have one permissive SELECT policy'
+);
+select ok(
+  not has_column_privilege('authenticated', 'public.cctv_locations', 'is_public', 'INSERT')
+    and not has_column_privilege('authenticated', 'public.cctv_locations', 'is_public', 'UPDATE')
+    and not has_table_privilege('authenticated', 'public.cctv_locations', 'INSERT')
+    and not has_table_privilege('authenticated', 'public.cctv_locations', 'UPDATE'),
+  'authenticated clients cannot write camera publication state directly'
+);
+select ok(
+  not has_column_privilege('authenticated', 'public.agencies', 'is_public', 'INSERT')
+    and not has_column_privilege('authenticated', 'public.agencies', 'is_public', 'UPDATE')
+    and not has_table_privilege('authenticated', 'public.agencies', 'INSERT')
+    and not has_table_privilege('authenticated', 'public.agencies', 'UPDATE'),
+  'authenticated clients cannot write agency publication state directly'
+);
+select ok(
+  has_column_privilege('authenticated', 'public.cctv_locations', 'name', 'INSERT')
+    and has_column_privilege('authenticated', 'public.cctv_locations', 'name', 'UPDATE')
+    and has_column_privilege('authenticated', 'public.cctv_locations', 'is_active', 'UPDATE')
+    and has_column_privilege('authenticated', 'public.agencies', 'name', 'UPDATE'),
+  'ordinary camera and agency management column grants remain available'
+);
+select is(
+  (
+    select column_default
+    from information_schema.columns
+    where table_schema = 'public'
+      and table_name = 'agencies'
+      and column_name = 'is_public'
+  ),
+  'false',
+  'new agencies default to private'
+);
+select ok(
+  (
+    select count(*) = 2
+      and bool_and(procedures.prosecdef)
+      and bool_and(coalesce(array_to_string(procedures.proconfig, ','), '') like '%search_path=%')
+    from pg_catalog.pg_proc as procedures
+    join pg_catalog.pg_namespace as namespaces on namespaces.oid = procedures.pronamespace
+    where namespaces.nspname = 'public'
+      and procedures.proname in ('set_cctv_publication', 'set_agency_publication')
+  ),
+  'publication RPCs are SECURITY DEFINER with pinned search paths'
+);
+select ok(
+  not has_function_privilege('anon', 'public.set_cctv_publication(uuid,boolean)', 'EXECUTE')
+    and not has_function_privilege('anon', 'public.set_agency_publication(uuid,boolean)', 'EXECUTE')
+    and has_function_privilege('authenticated', 'public.set_cctv_publication(uuid,boolean)', 'EXECUTE')
+    and has_function_privilege('authenticated', 'public.set_agency_publication(uuid,boolean)', 'EXECUTE'),
+  'publication RPC execution is limited to authenticated callers'
 );
 
 insert into auth.users (
@@ -149,7 +226,8 @@ values
 insert into public.agencies (id, name, is_public)
 values
   ('10000000-0000-0000-0000-000000000001', 'Agency One', true),
-  ('10000000-0000-0000-0000-000000000002', 'Agency Two', true);
+  ('10000000-0000-0000-0000-000000000002', 'Agency Two', true),
+  ('10000000-0000-0000-0000-000000000003', 'Private Agency', false);
 
 insert into public.agency_memberships (agency_id, user_id)
 values
@@ -200,6 +278,26 @@ values
     'Banda Aceh private test location',
     95.340000,
     5.570000,
+    false,
+    true
+  ),
+  (
+    'c0000000-0000-0000-0000-000000000004',
+    '10000000-0000-0000-0000-000000000003',
+    'Public Flag Private Agency Camera',
+    'Banda Aceh private-agency test location',
+    95.350000,
+    5.580000,
+    true,
+    true
+  ),
+  (
+    'c0000000-0000-0000-0000-000000000005',
+    '10000000-0000-0000-0000-000000000003',
+    'Private Flag Camera',
+    'Banda Aceh private camera publication test location',
+    95.360000,
+    5.590000,
     false,
     true
   );
@@ -375,6 +473,51 @@ select results_eq(
   array[1::bigint],
   'anonymous base-table reads are also limited to active approved cameras'
 );
+select results_eq(
+  $$select count(*)::bigint from public.cctv_locations where id = 'c0000000-0000-0000-0000-000000000001'$$,
+  array[1::bigint],
+  'anon can read an active public camera owned by a public agency directly'
+);
+select results_eq(
+  $$select count(*)::bigint from public.public_cctv_locations where id = 'c0000000-0000-0000-0000-000000000001'$$,
+  array[1::bigint],
+  'anon can read an active public camera owned by a public agency through the view'
+);
+select results_eq(
+  $$select count(*)::bigint from public.cctv_locations where id = 'c0000000-0000-0000-0000-000000000003'$$,
+  array[0::bigint],
+  'anon cannot directly read a private camera in a public agency'
+);
+select results_eq(
+  $$select count(*)::bigint from public.public_cctv_locations where id = 'c0000000-0000-0000-0000-000000000003'$$,
+  array[0::bigint],
+  'anon cannot read a private camera through the view'
+);
+select results_eq(
+  $$select count(*)::bigint from public.cctv_locations where id = 'c0000000-0000-0000-0000-000000000002'$$,
+  array[0::bigint],
+  'anon cannot directly read an inactive public camera'
+);
+select results_eq(
+  $$select count(*)::bigint from public.public_cctv_locations where id = 'c0000000-0000-0000-0000-000000000002'$$,
+  array[0::bigint],
+  'anon cannot read an inactive camera through the view'
+);
+select results_eq(
+  $$select count(*)::bigint from public.cctv_locations where id = 'c0000000-0000-0000-0000-000000000004'$$,
+  array[0::bigint],
+  'anon cannot directly read an active public camera owned by a private agency'
+);
+select results_eq(
+  $$select count(*)::bigint from public.public_cctv_locations where id = 'c0000000-0000-0000-0000-000000000004'$$,
+  array[0::bigint],
+  'anon cannot read an active public camera in a private agency through the view'
+);
+select results_eq(
+  $$select count(*)::bigint from public.agencies where id = '10000000-0000-0000-0000-000000000003'$$,
+  array[0::bigint],
+  'anon cannot otherwise read the camera owner agency'
+);
 select is(
   (select location_geojson ->> 'type' from public.public_cctv_locations),
   'Point',
@@ -412,6 +555,16 @@ select throws_matching(
   'permission denied',
   'anonymous users cannot delete CCTV metadata'
 );
+select throws_matching(
+  $$select public.set_cctv_publication('c0000000-0000-0000-0000-000000000001', true)$$,
+  'permission denied',
+  'anonymous users cannot invoke camera publication'
+);
+select throws_matching(
+  $$select public.set_agency_publication('10000000-0000-0000-0000-000000000001', true)$$,
+  'permission denied',
+  'anonymous users cannot invoke agency publication'
+);
 
 reset role;
 select set_config(
@@ -420,6 +573,27 @@ select set_config(
   true
 );
 set local role authenticated;
+
+select results_eq(
+  $$select count(*)::bigint from public.cctv_locations where id = 'c0000000-0000-0000-0000-000000000004'$$,
+  array[0::bigint],
+  'authenticated users without a management role cannot read a public camera in a private agency directly'
+);
+select results_eq(
+  $$select count(*)::bigint from public.public_cctv_locations where id = 'c0000000-0000-0000-0000-000000000004'$$,
+  array[0::bigint],
+  'authenticated users without a management role cannot read a private-agency camera through the view'
+);
+select results_eq(
+  $$select count(*)::bigint from public.cctv_locations where id = 'c0000000-0000-0000-0000-000000000001'$$,
+  array[1::bigint],
+  'authenticated users can read an active public camera in a public agency directly'
+);
+select results_eq(
+  $$select count(*)::bigint from public.public_cctv_locations where id = 'c0000000-0000-0000-0000-000000000001'$$,
+  array[1::bigint],
+  'authenticated users can read an active public camera in a public agency through the view'
+);
 
 update public.agencies
 set name = 'Viewer Changed Agency'
@@ -458,6 +632,38 @@ select set_config(
 set local role authenticated;
 
 select throws_matching(
+  $$insert into public.cctv_locations (agency_id, name, address, longitude, latitude, is_public)
+    values ('10000000-0000-0000-0000-000000000001', 'Editor Public Camera', 'Must be denied', 95.31, 5.51, true)$$,
+  'permission denied',
+  'agency editors cannot explicitly insert a public camera'
+);
+select throws_matching(
+  $$update public.cctv_locations set is_public = false where id = 'c0000000-0000-0000-0000-000000000001'$$,
+  'permission denied',
+  'agency editors cannot unpublish an existing camera directly'
+);
+select throws_matching(
+  $$update public.agencies set is_public = false where id = '10000000-0000-0000-0000-000000000001'$$,
+  'permission denied',
+  'agency editors cannot change an assigned agency publication state'
+);
+select throws_matching(
+  $$update public.agencies set is_public = true where id = '10000000-0000-0000-0000-000000000003'$$,
+  'permission denied',
+  'agency editors cannot publish an agency directly'
+);
+select throws_matching(
+  $$select public.set_cctv_publication('c0000000-0000-0000-0000-000000000001', true)$$,
+  'administrator authorization required',
+  'agency editors cannot bypass camera publication field grants via RPC'
+);
+select throws_matching(
+  $$select public.set_agency_publication('10000000-0000-0000-0000-000000000001', true)$$,
+  'administrator authorization required',
+  'agency editors cannot bypass agency publication field grants via RPC'
+);
+
+select throws_matching(
   $$
     insert into public.user_roles (user_id, role)
     values ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa3', 'administrator')
@@ -465,9 +671,26 @@ select throws_matching(
   'row-level security',
   'agency editors cannot assign roles to other users'
 );
+select throws_matching(
+  $$update public.cctv_locations set agency_id = '10000000-0000-0000-0000-000000000002' where id = 'c0000000-0000-0000-0000-000000000001'$$,
+  'row-level security',
+  'agency editors cannot reassign a camera to an unassigned agency'
+);
 
 update public.cctv_locations
 set name = 'Assigned Camera Edited'
+where id = 'c0000000-0000-0000-0000-000000000001';
+
+update public.cctv_locations
+set is_active = false
+where id = 'c0000000-0000-0000-0000-000000000001';
+select is(
+  (select is_active from public.cctv_locations where id = 'c0000000-0000-0000-0000-000000000001'),
+  false,
+  'agency editors can deactivate an assigned camera'
+);
+update public.cctv_locations
+set is_active = true
 where id = 'c0000000-0000-0000-0000-000000000001';
 
 update public.cctv_locations
@@ -483,6 +706,11 @@ select is(
   ),
   'Assigned Camera Edited',
   'agency editors can update CCTV metadata for their assigned agency'
+);
+select is(
+  (select is_active from public.cctv_locations where id = 'c0000000-0000-0000-0000-000000000001'),
+  true,
+  'agency editors retain authorized camera activation controls'
 );
 select is(
   (
@@ -555,11 +783,166 @@ update public.traffic_observations
 set light_vehicle_count = 2
 where id = 'd0000000-0000-0000-0000-000000000001';
 
+select throws_matching(
+  $$update public.cctv_locations set is_public = false where id = 'c0000000-0000-0000-0000-000000000002'$$,
+  'permission denied',
+  'administrators use the audited operation instead of direct camera publication writes'
+);
+select throws_matching(
+  $$insert into public.cctv_locations (agency_id, name, address, longitude, latitude, is_public)
+    values ('10000000-0000-0000-0000-000000000001', 'Admin Public Camera', 'Must be denied', 95.32, 5.52, true)$$,
+  'permission denied',
+  'administrators cannot bypass the publication operation during camera creation'
+);
+select throws_matching(
+  $$insert into public.agencies (name, is_public) values ('Admin Public Agency', true)$$,
+  'permission denied',
+  'administrators cannot bypass the publication operation during agency creation'
+);
+select throws_matching(
+  $$update public.agencies set is_public = true where id = '10000000-0000-0000-0000-000000000003'$$,
+  'permission denied',
+  'administrators use the audited operation instead of direct agency publication writes'
+);
+
+update public.cctv_locations
+set name = 'Administrator Metadata Edit'
+where id = 'c0000000-0000-0000-0000-000000000002';
+
+insert into public.agencies (name)
+values ('Admin Default Private Agency');
+
+select throws_matching(
+  $$select public.set_cctv_publication('c0000000-0000-0000-0000-000000000005', true)$$,
+  'camera agency must be public before publishing',
+  'administrators cannot publish a camera while its agency is private'
+);
+
+select is(
+  public.set_agency_publication('10000000-0000-0000-0000-000000000003', true),
+  true,
+  'administrators can publish an agency through the audited operation'
+);
+select is(
+  (select is_public from public.cctv_locations where id = 'c0000000-0000-0000-0000-000000000005'),
+  false,
+  'publishing an agency does not publish its cameras'
+);
+select is(
+  public.set_agency_publication('10000000-0000-0000-0000-000000000003', true),
+  false,
+  'repeated agency publication is an idempotent no-op'
+);
+select results_eq(
+  $$select count(*)::bigint from public.admin_audit_events
+    where action = 'UPDATE' and entity_type = 'agencies' and entity_id = '10000000-0000-0000-0000-000000000003'$$,
+  array[1::bigint],
+  'repeated agency publication creates no duplicate audit event'
+);
+select is(
+  (
+    select actor_user_id
+    from public.admin_audit_events
+    where action = 'UPDATE' and entity_type = 'agencies' and entity_id = '10000000-0000-0000-0000-000000000003'
+    order by occurred_at desc, id desc
+    limit 1
+  ),
+  'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa1'::uuid,
+  'agency publication audit event records the authenticated administrator'
+);
+select is(
+  (
+    select details -> 'publication'
+    from public.admin_audit_events
+    where action = 'UPDATE' and entity_type = 'agencies' and entity_id = '10000000-0000-0000-0000-000000000003'
+    order by occurred_at desc, id desc
+    limit 1
+  ),
+  '{"from": false, "to": true}'::jsonb,
+  'agency publication audit records the state transition'
+);
+
+select is(
+  public.set_cctv_publication('c0000000-0000-0000-0000-000000000005', true),
+  true,
+  'administrators can publish a camera through the audited operation'
+);
+select is(
+  public.set_cctv_publication('c0000000-0000-0000-0000-000000000005', true),
+  false,
+  'repeated camera publication is an idempotent no-op'
+);
+select results_eq(
+  $$select count(*)::bigint from public.admin_audit_events
+    where action = 'UPDATE' and entity_type = 'cctv_locations' and entity_id = 'c0000000-0000-0000-0000-000000000005'$$,
+  array[1::bigint],
+  'repeated camera publication creates no duplicate audit event'
+);
+select is(
+  (
+    select actor_user_id
+    from public.admin_audit_events
+    where action = 'UPDATE' and entity_type = 'cctv_locations' and entity_id = 'c0000000-0000-0000-0000-000000000005'
+    order by occurred_at desc, id desc
+    limit 1
+  ),
+  'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa1'::uuid,
+  'camera publication audit event records the authenticated administrator'
+);
+select is(
+  (
+    select details -> 'publication'
+    from public.admin_audit_events
+    where action = 'UPDATE' and entity_type = 'cctv_locations' and entity_id = 'c0000000-0000-0000-0000-000000000005'
+    order by occurred_at desc, id desc
+    limit 1
+  ),
+  '{"from": false, "to": true}'::jsonb,
+  'camera publication audit records the state transition'
+);
+select is(
+  public.set_agency_publication('10000000-0000-0000-0000-000000000003', false),
+  true,
+  'administrators can unpublish an agency through the audited operation'
+);
+select is(
+  (select is_public from public.cctv_locations where id = 'c0000000-0000-0000-0000-000000000005'),
+  true,
+  'unpublishing an agency does not rewrite camera publication state'
+);
+select results_eq(
+  $$select count(*)::bigint from public.admin_audit_events
+    where action = 'UPDATE' and entity_type = 'agencies' and entity_id = '10000000-0000-0000-0000-000000000003'$$,
+  array[2::bigint],
+  'agency publication and unpublication each generate one audit event'
+);
+select is(
+  (
+    select details -> 'publication'
+    from public.admin_audit_events
+    where action = 'UPDATE' and entity_type = 'agencies' and entity_id = '10000000-0000-0000-0000-000000000003'
+    order by occurred_at desc, id desc
+    limit 1
+  ),
+  '{"from": true, "to": false}'::jsonb,
+  'agency unpublication audit records the state transition'
+);
+
 reset role;
 select is(
   (select name from public.agencies where id = '10000000-0000-0000-0000-000000000002'),
   'Agency Two Admin Edited',
   'administrators can update managed records'
+);
+select is(
+  (select name from public.cctv_locations where id = 'c0000000-0000-0000-0000-000000000002'),
+  'Administrator Metadata Edit',
+  'administrators retain ordinary camera metadata management'
+);
+select is(
+  (select is_public from public.agencies where name = 'Admin Default Private Agency'),
+  false,
+  'administrator-created agencies default to private'
 );
 select is(
   (
@@ -571,12 +954,37 @@ select is(
   'administrators retain the audited correction path for completed observations'
 );
 
+select set_config('request.jwt.claims', '{"role":"anon"}', true);
+set local role anon;
+select results_eq(
+  $$select count(*)::bigint from public.cctv_locations where id = 'c0000000-0000-0000-0000-000000000005'$$,
+  array[0::bigint],
+  'public camera remains hidden from direct anonymous reads while its agency is private'
+);
+select results_eq(
+  $$select count(*)::bigint from public.public_cctv_locations where id = 'c0000000-0000-0000-0000-000000000005'$$,
+  array[0::bigint],
+  'public camera remains hidden through the view while its agency is private'
+);
+reset role;
+
 select set_config(
   'request.jwt.claims',
   '{"sub":"aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa3","role":"authenticated"}',
   true
 );
 set local role authenticated;
+
+select throws_matching(
+  $$select public.set_cctv_publication('c0000000-0000-0000-0000-000000000001', true)$$,
+  'administrator authorization required',
+  'authenticated users without an administrator role cannot publish cameras'
+);
+select throws_matching(
+  $$select public.set_agency_publication('10000000-0000-0000-0000-000000000001', true)$$,
+  'administrator authorization required',
+  'authenticated users without an administrator role cannot publish agencies'
+);
 
 select throws_matching(
   $$
@@ -696,6 +1104,15 @@ values (
   5.58
 );
 
+select throws_matching(
+  $$update public.cctv_locations set is_public = true where name = 'Editor Camera'$$,
+  'permission denied',
+  'agency editors cannot publish a newly created private camera'
+);
+update public.cctv_locations
+set is_active = false
+where name = 'Editor Camera';
+
 reset role;
 select results_eq(
   $$
@@ -715,6 +1132,22 @@ select is(
   ),
   'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa2'::uuid,
   'database trigger records the authenticated actor on client inserts'
+);
+select ok(
+  (
+    select is_active and not is_public
+    from public.cctv_locations
+    where name = 'Editor Camera'
+  ),
+  'new camera rows default to active and private'
+);
+select ok(
+  (
+    select not is_active and not is_public
+    from public.cctv_locations
+    where name = 'Editor Camera'
+  ),
+  'changing activation state does not publish a camera'
 );
 
 select set_config(
@@ -779,6 +1212,18 @@ select throws_matching(
   'row-level security',
   'agency editors cannot insert a camera for another agency'
 );
+select is(
+  (
+    with deleted as (
+      delete from public.cctv_locations
+      where name = 'Editor Camera'
+      returning id
+    )
+    select count(*)::bigint from deleted
+  ),
+  0::bigint,
+  'agency editors cannot delete camera metadata'
+);
 
 reset role;
 select set_config(
@@ -804,6 +1249,21 @@ set local role authenticated;
 
 insert into public.user_roles (user_id, role)
 values ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa3', 'agency_editor');
+
+select lives_ok(
+  $$delete from public.cctv_locations where name = 'Editor Camera'$$,
+  'administrators can delete an unreferenced CCTV location'
+);
+select results_eq(
+  $$select count(*)::bigint from public.cctv_locations where name = 'Editor Camera'$$,
+  array[0::bigint],
+  'administrator CCTV delete removes only its target location'
+);
+select throws_matching(
+  $$delete from public.cctv_locations where id = 'c0000000-0000-0000-0000-000000000001'$$,
+  'foreign key constraint',
+  'traffic observation history prevents camera deletion'
+);
 
 reset role;
 select is(
