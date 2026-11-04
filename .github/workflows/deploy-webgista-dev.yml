@@ -112,15 +112,52 @@ jobs:
             -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
             "https://api.supabase.com/v1/projects/$SUPABASE_PROJECT_REF/database/backups")"
           if [[ "$http_status" != "200" ]]; then
-            BACKUP_HTTP_STATUS="$http_status" node --input-type=module - "$RUNNER_TEMP/phase2d-backups.json" <<'NODE'
+            project_status="$(curl --silent --show-error --output "$RUNNER_TEMP/phase2d-project.json" --write-out '%{http_code}' \
+              -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
+              "https://api.supabase.com/v1/projects/$SUPABASE_PROJECT_REF")"
+            org_status="not_checked"
+            if [[ "$project_status" == "200" ]]; then
+              org_slug="$(node --input-type=module - "$RUNNER_TEMP/phase2d-project.json" <<'NODE'
           import { readFileSync } from 'node:fs';
-          let body = {};
-          try { body = JSON.parse(readFileSync(process.argv[2], 'utf8')); } catch {}
-          const code = typeof body.code === 'string' && /^[a-z0-9_-]+$/i.test(body.code) ? body.code : null;
-          const missing = Array.isArray(body.missing_permissions)
-            ? body.missing_permissions.filter((item) => typeof item === 'string' && /^[a-z0-9_-]+$/i.test(item))
-            : [];
-          console.error(JSON.stringify({ http_status: Number(process.env.BACKUP_HTTP_STATUS), code, missing_permissions: missing }));
+          try {
+            const body = JSON.parse(readFileSync(process.argv[2], 'utf8'));
+            if (typeof body.organization_slug === 'string' && /^[a-z0-9-]+$/i.test(body.organization_slug)) process.stdout.write(body.organization_slug);
+          } catch {}
+          NODE
+              )"
+              if [[ -n "$org_slug" ]]; then
+                org_status="$(curl --silent --show-error --output "$RUNNER_TEMP/phase2d-organization.json" --write-out '%{http_code}' \
+                  -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
+                  "https://api.supabase.com/v1/organizations/$org_slug")"
+              fi
+            fi
+            BACKUP_HTTP_STATUS="$http_status" PROJECT_HTTP_STATUS="$project_status" ORG_HTTP_STATUS="$org_status" \
+              node --input-type=module - "$RUNNER_TEMP/phase2d-backups.json" "$RUNNER_TEMP/phase2d-project.json" "$RUNNER_TEMP/phase2d-organization.json" <<'NODE'
+          import { readFileSync } from 'node:fs';
+          const read = (path) => { try { return JSON.parse(readFileSync(path, 'utf8')); } catch { return {}; } };
+          const safe = (body) => ({
+            code: typeof body.code === 'string' && /^[a-z0-9_-]+$/i.test(body.code) ? body.code : null,
+            missing_permissions: Array.isArray(body.missing_permissions)
+              ? body.missing_permissions.filter((item) => typeof item === 'string' && /^[a-z0-9_-]+$/i.test(item))
+              : [],
+          });
+          const backup = safe(read(process.argv[2]));
+          const project = safe(read(process.argv[3]));
+          const organization = read(process.argv[4]);
+          const plan = ['free', 'pro', 'team', 'enterprise'].includes(organization.plan) ? organization.plan : null;
+          const projectStatus = process.env.PROJECT_HTTP_STATUS;
+          let cause = 'unclassified_management_api_denial';
+          if (backup.missing_permissions.includes('backups_read')) cause = 'token_missing_backups_read';
+          else if (projectStatus === '401') cause = 'management_token_unauthorized';
+          else if (projectStatus === '403') cause = project.missing_permissions.length ? 'project_read_permission_denied' : 'project_scope_or_access_denied';
+          else if (projectStatus === '200' && plan === 'free') cause = 'free_plan_has_no_automatic_backups; backup_api_denial_still_unclassified';
+          else if (projectStatus === '200' && plan) cause = 'backup_endpoint_denied_despite_project_access';
+          console.error(JSON.stringify({
+            cause,
+            backup: { http_status: Number(process.env.BACKUP_HTTP_STATUS), ...backup },
+            project: { http_status: Number(projectStatus), ...project, ref_matches_configured_target: read(process.argv[3]).ref === process.env.SUPABASE_PROJECT_REF },
+            organization: { http_status: process.env.ORG_HTTP_STATUS, plan },
+          }));
           NODE
             exit 1
           fi
