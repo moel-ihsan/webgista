@@ -1,21 +1,21 @@
-# CCTV Private Video Association INSERT Hotfix
+# CCTV Private Video Association INSERT Review
 
 ## Finding
 
-Chrome reported PostgreSQL `42501` while the administrator saved a demo-video association. The current client performs a direct `.insert()` for a new configuration (and a separate authorized `.select()` before that). It does not use UPSERT. Existing migrations granted INSERT only on selected columns, while PostgREST rejected the relation-level INSERT operation and suggested a table INSERT grant.
+`cctv_private_config` has nine columns: `cctv_id`, `source_kind`, `source_uri`, `credential_reference`, `notes`, `created_by`, `updated_by`, `created_at`, and `updated_at`. The latter four are server-managed identity/timestamp columns; `source_uri` and `credential_reference` can contain private camera configuration.
 
-The existing `cctv_private_config_manager_insert` RLS policy remains the row-level boundary: the camera must belong to an agency the authenticated actor can manage, and `created_by` must resolve to `auth.uid()`. The `private.set_actor_columns()` trigger supplies the actor identity. Authenticated reads remain RLS-filtered to managed cameras; anonymous users retain neither table SELECT nor INSERT. The fix adds only the missing relation INSERT grant and does not add SELECT privileges.
+Migration `20261103000200_phase_2a_security.sql` already grants authenticated users column-scoped INSERT on `(cctv_id, source_kind, source_uri, credential_reference, notes)` and column-scoped UPDATE on the editable configuration fields. It grants SELECT at table level, but RLS limits rows to cameras the actor may manage. The `cctv_private_config_manager_insert` policy also checks agency authorization and `created_by = auth.uid()`. The actor trigger fills `created_by` and `updated_by`, and preserves the original creator on UPDATE.
 
-## Changes
+The client uses INSERT for a new association, not UPSERT. Its `return=representation` behavior is only needed on the UPDATE branch; INSERT does not request a returned row. The earlier `42501` message was compatible with a request attempting to write a non-granted column such as `created_by`; PostgreSQL's hint to grant table INSERT was broader than necessary.
 
-- Migration `20261105000300_grant_cctv_private_config_insert.sql` grants INSERT to `authenticated`.
-- The existing Phase 2A pgTAP suite now verifies the relation grant, anonymous denial, administrator insert/update, authorized editor insert/update, cross-agency insert denial, and actor identity enforcement.
-- The deployment guard pins the migration SHA-256 and accepts it only as the sole pending migration.
-- The protected development workflow runs a read-only policy/privilege preflight before apply and after verification.
-- The CCTV form keeps metadata, coordinates, and selected video after association failure. Code `42501` is reported as a database permission failure, distinct from a CCTV metadata failure.
+## Least-privilege resolution
 
-## Verification status
+Do not deploy `20261105000300_grant_cctv_private_config_insert.sql`. Table-level INSERT would grant access to all nine columns, including actor/timestamp fields, and is unnecessary. The verified frontend sends only the allowed fields. The trigger and RLS enforce actor identity and agency scope.
 
-The isolated CI run [41987487812](https://github.com/moel-ihsan/webgista/actions/runs/41987487812) passed on commit `694c90b15ffd2fd17362f9dc23c8d93c7d4df3c7`: nine migrations applied to the disposable stack, database lint and ACL/RLS preflight passed, pgTAP passed 130 + 36 + 20 + 27 = 213 assertions, fixture validation passed, and cleanup succeeded. The first CI attempt exposed the fixture's stale migration allowlist; the allowlist now includes 007 while still rejecting unknown versions.
+The frontend retains a specific `42501` error message. The database suite now asserts that table-level INSERT is absent and that server-managed columns remain non-writable. A disposable local PostgREST test exercises admin and agency-editor INSERT/UPDATE, forged actor/timestamp denial, cross-agency denial, and anonymous denial/read protection.
 
-The migration has not been applied to hosted Supabase. Hosted preflight/deployment requires the protected development workflow and its existing recovery and GitHub Environment gates. No remote database data was changed for this hotfix.
+## Verification
+
+The prior CI run `41987487812` tested the broader table-level grant and is not evidence for this least-privilege conclusion. The current verification branch removes migration 007, adds the real Data API test, and updates the database assertion. Its new CI result must pass before any promotion.
+
+No hosted Supabase request or data change is part of this review. Since migration 007 is unnecessary, there is no migration 007 to apply and no backup waiver should be used. The protected deployment preview should continue to show no changes for migrations 001–006; any unrelated pending migration must be investigated separately.

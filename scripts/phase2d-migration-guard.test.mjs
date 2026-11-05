@@ -8,7 +8,6 @@ import {
   assessMigrationHistory,
   assertPhase2eAclFixOnlyPending,
   assertPhase2eOnlyPending,
-  assertPhase3cPrivateConfigOnlyPending,
   assertDryRunMatches,
   assertRecoveryAvailable,
   developmentWaiver003004,
@@ -91,22 +90,15 @@ test('parses complete migration-list output and fails closed for inspection erro
 });
 
 test('accepts only a chronological suffix of the reviewed migrations', () => {
-  assert.deepEqual(assessMigrationHistory({ localVersions: versions, remoteVersions: versions.slice(0, 4) }), ['20261104000300', '20261104000400', '20261105000100', '20261105000200', '20261105000300']);
-  assert.deepEqual(assessMigrationHistory({ localVersions: versions, remoteVersions: versions.slice(0, 5) }), ['20261104000400', '20261105000100', '20261105000200', '20261105000300']);
-  assert.deepEqual(assessMigrationHistory({ localVersions: versions, remoteVersions: versions.slice(0, 6) }), ['20261105000100', '20261105000200', '20261105000300']);
-  assert.deepEqual(assessMigrationHistory({ localVersions: versions, remoteVersions: versions.slice(0, 7) }), ['20261105000200', '20261105000300']);
+  assert.deepEqual(assessMigrationHistory({ localVersions: versions, remoteVersions: versions.slice(0, 4) }), ['20261104000300', '20261104000400', '20261105000100', '20261105000200']);
+  assert.deepEqual(assessMigrationHistory({ localVersions: versions, remoteVersions: versions.slice(0, 5) }), ['20261104000400', '20261105000100', '20261105000200']);
+  assert.deepEqual(assessMigrationHistory({ localVersions: versions, remoteVersions: versions.slice(0, 6) }), ['20261105000100', '20261105000200']);
+  assert.deepEqual(assessMigrationHistory({ localVersions: versions, remoteVersions: versions.slice(0, 7) }), ['20261105000200']);
   assert.deepEqual(assessMigrationHistory({ localVersions: versions, remoteVersions: versions }), []);
   assert.throws(() => assessMigrationHistory({ localVersions: [...versions, '20261106000100'], remoteVersions: versions.slice(0, 4) }), /Unapproved pending/);
   assert.throws(() => assessMigrationHistory({ localVersions: versions, remoteVersions: [...versions, '20261106000100'] }), /absent locally/);
   assert.throws(() => assessMigrationHistory({ localVersions: versions, remoteVersions: [...versions.slice(0, 4), versions[5]] }), /inconsistent/);
   assert.throws(() => assessMigrationHistory({ localVersions: versions, remoteVersions: [...versions.slice(0, 5), versions[6]] }), /inconsistent/);
-});
-
-test('allows only migration 007 as the Phase 3C private-config deployment', () => {
-  assert.doesNotThrow(() => assertPhase3cPrivateConfigOnlyPending(['20261105000300']));
-  assert.throws(() => assertPhase3cPrivateConfigOnlyPending([]), /only for migration 20261105000300/);
-  assert.throws(() => assertPhase3cPrivateConfigOnlyPending(['20261105000200', '20261105000300']), /only for migration 20261105000300/);
-  assert.throws(() => assertPhase3cPrivateConfigOnlyPending(['20261106000100']), /only for migration 20261105000300/);
 });
 
 test('requires the dry-run migration set to exactly match the reviewed pending set', () => {
