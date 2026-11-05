@@ -1,7 +1,7 @@
 begin;
 create extension if not exists pgtap with schema extensions;
 set search_path = public, extensions;
-select plan(26);
+select plan(27);
 
 select has_table('public', 'cctv_analysis_config', 'per-camera ROI configuration table exists');
 select ok((select relrowsecurity from pg_class where oid = 'public.cctv_analysis_config'::regclass), 'ROI settings use row-level security');
@@ -79,9 +79,10 @@ select is((select configuration_version from public.cctv_analysis_config where c
 reset role;
 select set_config('request.jwt.claims', '{"sub":"be000000-0000-0000-0000-000000000003","role":"authenticated"}', true);
 set local role authenticated;
-select throws_matching($$update public.cctv_analysis_config set configuration = configuration where cctv_id = 'be200000-0000-0000-0000-000000000003'$$, 'row-level security', 'editor from another agency cannot modify ROI configuration');
+select lives_ok($$update public.cctv_analysis_config set configuration = jsonb_set(configuration, '{busy_threshold_vehicles}', '99'::jsonb) where cctv_id = 'be200000-0000-0000-0000-000000000003'$$, 'cross-agency update is filtered by row-level security');
 
 reset role;
+select is((select configuration_version from public.cctv_analysis_config where cctv_id = 'be200000-0000-0000-0000-000000000003'), 2, 'cross-agency update leaves the authorized configuration unchanged');
 select set_config('request.jwt.claims', '{"role":"anon"}', true);
 set local role anon;
 select throws_matching($$select * from public.cctv_analysis_config$$, 'permission denied', 'anonymous users cannot read private ROI configurations');
