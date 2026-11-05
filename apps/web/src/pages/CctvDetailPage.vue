@@ -5,8 +5,10 @@ import { RouterLink, useRoute, useRouter } from 'vue-router'
 import { authSession } from '../auth/session'
 import { appConfig } from '../config/app'
 import { getCctvDetail, type CctvDetail } from '../data/cctvDetail'
+import { getCctvDemoAssociation } from '../data/cctvDemoVideo'
 import { listTrafficObservations } from '../data/trafficObservations'
 import { privateImageUrl } from '../data/privateMedia'
+import { demoDetectionTotal, demoFrameAt, type TrafficDemoVideo } from '../data/trafficDemo'
 import type { TrafficObservation } from '../domain/traffic'
 import { supabaseClient } from '../lib/supabase'
 
@@ -18,11 +20,18 @@ const pageStatus = ref<'loading' | 'ready' | 'not-found' | 'error'>('loading')
 const observationStatus = ref<'loading' | 'ready' | 'unavailable' | 'error'>('loading')
 const imageUrl = ref<string | null>(null)
 const imageFailed = ref(false)
+const demoVideo = ref<TrafficDemoVideo | null>(null)
+const videoAssociationReady = ref(false)
+const videoLoading = ref(false)
+const videoFailed = ref(false)
+const videoTime = ref(0)
 let loadRevision = 0
 let imageRefreshTimer: ReturnType<typeof setInterval> | null = null
 
 const latest = computed(() => observations.value[0] ?? null)
 const categoryLabel = computed(() => camera.value?.category === 'analytic' ? 'Analytic' : 'Regular')
+const demoFrame = computed(() => demoVideo.value ? demoFrameAt(demoVideo.value.analysis, videoTime.value) : null)
+const demoDetections = computed(() => demoVideo.value ? demoDetectionTotal(demoVideo.value.analysis) : 0)
 
 function dateLabel(value: string): string {
   const date = new Date(value)
@@ -39,6 +48,16 @@ function sourceLabel(observation: TrafficObservation): string {
   return 'Computer Vision'
 }
 
+function updateDemoTime(event: Event): void {
+  videoTime.value = (event.currentTarget as HTMLVideoElement).currentTime
+}
+
+function onDemoVideoError(): void {
+  videoFailed.value = true
+  videoLoading.value = false
+  demoVideo.value = null
+}
+
 watch([() => String(route.params.id ?? ''), () => authSession.state.status], ([id, authStatus]) => {
   const revision = ++loadRevision
   if (imageRefreshTimer) clearInterval(imageRefreshTimer)
@@ -47,6 +66,11 @@ watch([() => String(route.params.id ?? ''), () => authSession.state.status], ([i
   observations.value = []
   imageUrl.value = null
   imageFailed.value = false
+  demoVideo.value = null
+  videoAssociationReady.value = authStatus !== 'authenticated'
+  videoLoading.value = false
+  videoFailed.value = false
+  videoTime.value = 0
   observationStatus.value = authStatus === 'authenticated' ? 'loading' : 'unavailable'
   if (authStatus === 'loading') {
     pageStatus.value = 'loading'
@@ -69,6 +93,19 @@ watch([() => String(route.params.id ?? ''), () => authSession.state.status], ([i
       }
       camera.value = result
       pageStatus.value = 'ready'
+
+      if (authStatus === 'authenticated') {
+        void getCctvDemoAssociation(client, id).then(({ video }) => {
+          if (revision === loadRevision) {
+            demoVideo.value = video
+            videoAssociationReady.value = true
+            videoLoading.value = video !== null
+          }
+        }).catch(() => {
+          // Restricted or unavailable sources use the authorized CCTV image fallback.
+          if (revision === loadRevision) videoAssociationReady.value = true
+        })
+      }
 
       if (result.snapshotPath && appConfig.privateMediaEnabled) {
         const refreshImage = async () => {
@@ -130,17 +167,37 @@ onBeforeUnmount(() => {
 
       <div class="cctv-detail-layout">
         <section class="cctv-detail-media" :aria-label="`${camera.name} camera media`">
-          <img v-if="imageUrl && !imageFailed" :src="imageUrl" :alt="`${camera.name} CCTV`" @error="imageFailed = true">
+          <template v-if="demoVideo && !videoFailed">
+            <video
+              :key="demoVideo.id"
+              class="cctv-detail-video"
+              :src="demoVideo.videoUrl"
+              :poster="imageUrl || undefined"
+              controls
+              playsinline
+              preload="metadata"
+              :aria-label="`Demo video, not live CCTV: ${demoVideo.title}`"
+              @loadeddata="videoLoading = false"
+              @timeupdate="updateDemoTime"
+              @error="onDemoVideoError"
+            >Your browser does not support H.264 playback.</video>
+            <p class="cctv-detail-demo-label">DEMO VIDEO — NOT LIVE CCTV</p>
+            <p v-if="videoLoading" class="cctv-detail-media-note" role="status">Loading demo video…</p>
+          </template>
+          <template v-else-if="videoAssociationReady && imageUrl && !imageFailed">
+            <img :src="imageUrl" :alt="`${camera.name} CCTV`" @error="imageFailed = true">
+            <p v-if="videoFailed" class="cctv-detail-media-note" role="status">Demo video unavailable. Showing the uploaded CCTV image.</p>
+          </template>
           <div v-else class="cctv-detail-fallback" role="status">
+            <template v-if="!videoAssociationReady">Checking authorized video source…</template>
+            <template v-else>
             <strong>{{ camera.category === 'analytic' ? 'Video unavailable' : 'Camera image unavailable' }}</strong>
-            <span v-if="camera.category === 'analytic' && imageFailed">Secure video playback is not configured, and the camera image could not be loaded.</span>
-            <span v-else-if="camera.category === 'analytic'">Secure video playback is not configured, and no camera image is available.</span>
+            <span v-if="camera.category === 'analytic' && imageFailed">No authorized playable video or accessible camera image is available.</span>
+            <span v-else-if="camera.category === 'analytic'">No authorized playable video or uploaded camera image is available.</span>
             <span v-else-if="imageFailed">The authorized camera image could not be loaded.</span>
             <span v-else>No camera image has been uploaded or private media preview is unavailable.</span>
+            </template>
           </div>
-          <p v-if="camera.category === 'analytic' && imageUrl && !imageFailed" class="cctv-detail-media-note">
-            Secure video playback is not configured. Showing the uploaded CCTV image.
-          </p>
         </section>
 
         <aside class="cctv-detail-info" aria-label="CCTV information">
@@ -153,6 +210,16 @@ onBeforeUnmount(() => {
           <p class="cctv-detail-address">{{ camera.address || 'Address not recorded' }}</p>
           <p class="cctv-detail-coordinate">{{ camera.longitude.toFixed(6) }} E · {{ camera.latitude.toFixed(6) }} N</p>
           <p class="cctv-detail-agency">{{ camera.agencyName || 'Agency unavailable' }}</p>
+
+          <section v-if="demoVideo && !videoFailed" class="cctv-detail-cv" aria-label="Offline demo video analysis">
+            <strong>DEMO VIDEO — NOT LIVE CCTV</strong>
+            <span>Source: <a :href="demoVideo.sourceUrl" target="_blank" rel="noreferrer">{{ demoVideo.title }} — {{ demoVideo.creator }}</a> · <a href="https://www.pexels.com/license/" target="_blank" rel="noreferrer">Pexels Free License</a>.</span>
+            <span>{{ demoDetections }} detection instances across {{ demoVideo.analysis.frames.length }} sampled frames; not unique vehicles.</span>
+            <span v-if="demoVideo.analysis.line_crossing_total != null">Experimental heuristic line crossings: {{ demoVideo.analysis.line_crossing_total }}; not validated unique vehicles.</span>
+            <span v-else>Tracking {{ demoVideo.analysis.tracking.enabled ? 'IDs only; no validated line count.' : 'unavailable.' }} Traffic condition not calculated.</span>
+            <span v-if="demoFrame">Frame at {{ demoFrame.offset_seconds.toFixed(1) }}s: {{ demoFrame.detections.length }} vehicle detections.</span>
+            <span>Experimental demo footage; it does not depict current traffic at this camera location.</span>
+          </section>
 
           <section class="cctv-detail-observations" aria-labelledby="cctv-observation-heading">
             <h2 id="cctv-observation-heading">Traffic Condition</h2>
@@ -190,9 +257,13 @@ onBeforeUnmount(() => {
 .cctv-detail-layout { display: grid; grid-template-columns: minmax(0, 5fr) minmax(280px, 3fr); gap: 30px; align-items: start; }
 .cctv-detail-media { position: relative; min-height: 550px; overflow: hidden; border-radius: 10px; background: var(--color-secondary); box-shadow: var(--shadow); }
 .cctv-detail-media > img { display: block; width: 100%; height: 550px; object-fit: cover; }
+.cctv-detail-video { display: block; width: 100%; height: 550px; object-fit: contain; background: #101311; }
+.cctv-detail-demo-label { position: absolute; top: 12px; left: 12px; z-index: 1; margin: 0; padding: 7px 10px; border-radius: 6px; color: #fff; background: #a13b20; font-size: .78rem; font-weight: 700; }
 .cctv-detail-fallback { display: grid; min-height: 550px; place-content: center; gap: 10px; padding: 28px; color: var(--text-color); text-align: center; }
 .cctv-detail-fallback span, .cctv-detail-observation-meta, .cctv-detail-history span { color: var(--ink-500); font-size: .82rem; }
 .cctv-detail-media-note { position: absolute; right: 12px; bottom: 12px; left: 12px; margin: 0; padding: 9px 12px; border-radius: 8px; color: var(--text-color); background: var(--color-secondary); font-size: .78rem; }
+.cctv-detail-cv { display: grid; gap: 6px; margin-top: 12px; padding: 10px; border-radius: 8px; background: var(--color-primary); font-size: .75rem; }
+.cctv-detail-cv a { color: var(--green-theme); }
 .cctv-detail-info { min-width: 0; padding: 15px; border-radius: 10px; color: var(--text-color); background: var(--color-secondary); box-shadow: var(--shadow); }
 .cctv-detail-thumbnail { position: relative; height: 150px; overflow: hidden; border-radius: 10px; background: var(--color-primary); }
 .cctv-detail-thumbnail img { width: 100%; height: 100%; object-fit: cover; }
@@ -207,5 +278,5 @@ onBeforeUnmount(() => {
 .cctv-detail-history ol { display: grid; gap: 9px; max-height: 220px; margin: 0; padding: 0; overflow: auto; list-style: none; }
 .cctv-detail-history li { display: grid; gap: 3px; font-size: .82rem; }
 .cctv-detail-actions { display: flex; gap: 10px; margin-top: 22px; }
-@media (max-width: 760px) { .cctv-detail-layout { grid-template-columns: minmax(0, 1fr); gap: 16px; } .cctv-detail-media, .cctv-detail-fallback { min-height: 320px; } .cctv-detail-media > img { height: 320px; } }
+@media (max-width: 760px) { .cctv-detail-layout { grid-template-columns: minmax(0, 1fr); gap: 16px; } .cctv-detail-media, .cctv-detail-fallback { min-height: 320px; } .cctv-detail-media > img, .cctv-detail-video { height: 320px; } }
 </style>

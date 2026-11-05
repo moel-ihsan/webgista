@@ -67,7 +67,8 @@ function resetTime(): void {
       <p><strong>Model:</strong> {{ analysis.model.name }} · {{ analysis.model.version }}</p>
       <p><strong>Processed:</strong> {{ new Date(analysis.created_at).toLocaleString() }}</p>
       <p><strong>Detection instances:</strong> {{ totalDetections }} across {{ analysis.frames.length }} sampled frames. These are not unique vehicles.</p>
-      <p><strong>Tracking:</strong> Not available. <strong>Traffic condition:</strong> Not calculated.</p>
+      <p v-if="analysis.line_crossing_total != null"><strong>Experimental heuristic line crossings:</strong> {{ analysis.line_crossing_total }} across the configured line. This is not a validated unique-vehicle count.</p>
+      <p v-else><strong>Tracking:</strong> {{ analysis.tracking.enabled ? 'Heuristic IDs only; no line-crossing total is available.' : 'Not available.' }} <strong>Traffic condition:</strong> Not calculated.</p>
       <h3>Peak detections in one sampled frame</h3>
       <ul class="traffic-demo__counts">
         <li v-for="[key, label] in vehicleLabels" :key="key">{{ label }} <strong>{{ analysis.peak_vehicles_in_sampled_frame[key] }}</strong></li>
@@ -79,13 +80,14 @@ function resetTime(): void {
         </ul>
         <ol class="traffic-demo__detections">
           <li v-for="(detection, index) in currentFrame.detections" :key="`${currentFrame.offset_seconds}-${index}`">
-            {{ detection.class }} · {{ Math.round(detection.confidence * 100) }}% confidence
+            {{ detection.class }}<template v-if="detection.track_id != null"> · heuristic track {{ detection.track_id }}</template> · {{ Math.round(detection.confidence * 100) }}% confidence
             · box [{{ detection.bbox_xyxy.join(', ') }}]
           </li>
         </ol>
+        <p v-if="currentFrame.line_crossings_this_frame?.length">Line crossings in this sampled frame: {{ currentFrame.line_crossings_this_frame.length }} experimental event(s).</p>
         <p v-if="!currentFrame.detections.length">No supported vehicle detections in this sampled frame.</p>
       </template>
-      <p><strong>Vehicle count semantics:</strong> per-frame detections only. No object tracking or unique-vehicle counting.</p>
+      <p><strong>Vehicle count semantics:</strong> {{ analysis.vehicle_count_semantics }}</p>
     </div>
   </section>
 </template>

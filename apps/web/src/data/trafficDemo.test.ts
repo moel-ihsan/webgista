@@ -4,12 +4,13 @@ import { demoDetectionTotal, demoFrameAt, trafficDemoVideos } from './trafficDem
 
 describe('offline traffic CV demos', () => {
   it('uses the two processed sample outputs and keeps demo limits explicit', () => {
-    expect(trafficDemoVideos.map(({ analysis }) => demoDetectionTotal(analysis))).toEqual([110, 186])
+    expect(trafficDemoVideos.map(({ analysis }) => demoDetectionTotal(analysis))).toEqual([574, 1032])
+    expect(trafficDemoVideos.map(({ analysis }) => analysis.line_crossing_total)).toEqual([1, 11])
     for (const sample of trafficDemoVideos) {
       expect(sample.analysis).toMatchObject({
         record_kind: 'demo_video_analysis',
         is_live_cctv: false,
-        tracking: { enabled: false },
+        tracking: { enabled: true, quality: 'experimental heuristic; not validated for unique-vehicle accuracy' },
         condition: null,
       })
     }

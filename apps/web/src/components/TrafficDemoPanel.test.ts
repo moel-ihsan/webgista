@@ -23,14 +23,16 @@ describe('TrafficDemoPanel', () => {
 
     const select = host.querySelector<HTMLSelectElement>('#traffic-demo-select')!
     expect(host.querySelector('video')?.getAttribute('src')).toBe('/traffic-demo/traffic_sample_01_annotated.mp4')
-    expect(host.textContent).toContain('110 across 23 sampled frames')
+    expect(host.textContent).toContain('574 across 111 sampled frames')
+    expect(host.textContent).toContain('Experimental heuristic line crossings: 1')
     expect(host.textContent).toContain('DEMO · NOT LIVE CCTV')
 
     select.value = 'traffic-sample-02'
     select.dispatchEvent(new Event('change'))
     await nextTick()
     expect(host.querySelector('video')?.getAttribute('src')).toBe('/traffic-demo/traffic_sample_02_annotated.mp4')
-    expect(host.textContent).toContain('186 across 26 sampled frames')
+    expect(host.textContent).toContain('1032 across 132 sampled frames')
+    expect(host.textContent).toContain('Experimental heuristic line crossings: 11')
 
     const video = host.querySelector<HTMLVideoElement>('video')!
     Object.defineProperty(video, 'currentTime', { configurable: true, value: 4 })

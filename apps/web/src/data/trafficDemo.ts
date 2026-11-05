@@ -7,12 +7,14 @@ export interface DemoDetection {
   class: string
   confidence: number
   bbox_xyxy: number[]
+  track_id?: number
 }
 
 export interface DemoFrame {
   offset_seconds: number
   vehicle_counts_this_frame: Record<DemoVehicleClass, number>
   detections: DemoDetection[]
+  line_crossings_this_frame?: Array<{ track_id: number; class: string }>
 }
 
 export interface DemoAnalysis {
@@ -22,9 +24,20 @@ export interface DemoAnalysis {
   input_duration_seconds: number
   sampled_fps: number
   model: { name: string; version: string; license: string }
-  tracking: { enabled: boolean; reason: string }
+  tracking: {
+    enabled: boolean
+    reason?: string
+    algorithm?: string
+    quality?: string
+    max_distance_pixels?: number
+    max_missed_frames?: number
+    roi_normalized?: number[] | null
+    counting_line_normalized?: number[] | null
+  }
   vehicle_count_semantics: string
   peak_vehicles_in_sampled_frame: Record<DemoVehicleClass, number>
+  line_crossing_counts_by_class?: Record<DemoVehicleClass, number> | null
+  line_crossing_total?: number | null
   condition: null
   condition_note: string
   frames: DemoFrame[]
