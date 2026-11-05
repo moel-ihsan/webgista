@@ -6,6 +6,7 @@ on:
       - feat/webgista-v2
       - ci/phase2d5-settings-verification-20261104
       - ci/phase2d45-final-verification-20261105
+      - ci/phase3e-roi-density-20261106
     paths:
       - "supabase/**"
       - "scripts/**"
@@ -76,6 +77,23 @@ jobs:
 
       - name: Run Phase 3D.1 permanent CCTV deletion security tests
         run: supabase test db supabase/tests/phase_3d1_cctv_permanent_delete.test.sql
+
+      - name: Run Phase 3E ROI density configuration security tests
+        run: supabase test db supabase/tests/phase_3e_roi_density_config.test.sql
+
+      - name: Verify ROI density configuration preflight on the disposable database
+        run: |
+          docker exec -i supabase_db_webgista-v2 psql -U postgres -d postgres \
+            --set=ON_ERROR_STOP=1 --single-transaction \
+            --command='SET TRANSACTION READ ONLY' --file=/dev/stdin \
+            < supabase/verification/phase_3e_roi_density_preflight.sql
+
+      - name: Verify ROI density configuration readiness on the disposable database
+        run: |
+          docker exec -i supabase_db_webgista-v2 psql -U postgres -d postgres \
+            --set=ON_ERROR_STOP=1 --single-transaction \
+            --command='SET TRANSACTION READ ONLY' --file=/dev/stdin \
+            < supabase/verification/phase_3e_roi_density_readiness.sql
 
       - name: Validate the approved Phase 2D fixture in the disposable database
         shell: bash

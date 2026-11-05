@@ -2,6 +2,8 @@
 import { computed, ref } from 'vue'
 
 import { demoDetectionTotal, demoFrameAt, trafficDemoVideos, type DemoAnalysis } from '../data/trafficDemo'
+import { roiDensityFrameAt } from '../domain/roiDensityResult'
+import { rectangleToPolygon } from '../domain/roiDensity'
 
 const selectedId = ref(trafficDemoVideos[0]?.id ?? '')
 const currentTime = ref(0)
@@ -9,6 +11,12 @@ const selectedDemo = computed(() => trafficDemoVideos.find((sample) => sample.id
 const analysis = computed(() => selectedDemo.value.analysis)
 const currentFrame = computed(() => demoFrameAt(analysis.value, currentTime.value))
 const totalDetections = computed(() => demoDetectionTotal(analysis.value))
+const density = computed(() => selectedDemo.value.roiDensity)
+const densityFrame = computed(() => roiDensityFrameAt(density.value, currentTime.value))
+const densityWindow = computed(() => density.value.windows.find((window) => currentTime.value >= window.window_started_at_seconds && currentTime.value < window.window_ended_at_seconds) ?? null)
+const roiPoints = computed(() => density.value.roi_type === 'rectangle'
+  ? rectangleToPolygon(density.value.roi_geometry as number[])
+  : density.value.roi_geometry as [number, number][])
 const vehicleLabels = [
   ['car', 'Car'], ['motorcycle', 'Motorcycle'], ['bus', 'Bus'], ['truck', 'Truck'], ['bicycle', 'Bicycle'],
 ] as const
@@ -43,19 +51,24 @@ function crossingDescription(event: NonNullable<DemoAnalysis['crossing_events']>
       </option>
     </select>
 
-    <video
-      :key="selectedDemo.id"
-      class="traffic-demo__video"
-      :src="selectedDemo.videoUrl"
-      controls
-      playsinline
-      preload="metadata"
-      :aria-label="`YOLOX annotated demo: ${selectedDemo.title}`"
-      @timeupdate="updateTime"
-      @loadedmetadata="resetTime"
-    >
-      Your browser does not support H.264 video playback.
-    </video>
+    <div class="traffic-demo__video-stage" :style="{ aspectRatio: `${density.video_dimensions.width} / ${density.video_dimensions.height}` }">
+      <video
+        :key="selectedDemo.id"
+        class="traffic-demo__video"
+        :src="selectedDemo.videoUrl"
+        controls
+        playsinline
+        preload="metadata"
+        :aria-label="`YOLOX annotated demo with ROI overlay: ${selectedDemo.title}`"
+        @timeupdate="updateTime"
+        @loadedmetadata="resetTime"
+      >
+        Your browser does not support H.264 video playback.
+      </video>
+      <svg class="traffic-demo__roi-overlay" viewBox="0 0 1000 1000" preserveAspectRatio="none" aria-hidden="true">
+        <polygon :points="roiPoints.map(([x, y]) => `${x * 1000},${y * 1000}`).join(' ')" />
+      </svg>
+    </div>
 
     <p class="traffic-demo__notice">
       Licensed stock-footage demo processed locally at {{ analysis.sampled_fps }} sampled frames per second for {{ analysis.input_duration_seconds }} seconds.
@@ -66,6 +79,25 @@ function crossingDescription(event: NonNullable<DemoAnalysis['crossing_events']>
       <a :href="selectedDemo.sourceUrl" target="_blank" rel="noreferrer">Source: {{ selectedDemo.title }} — {{ selectedDemo.creator }}</a>
       <a href="https://www.pexels.com/license/" target="_blank" rel="noreferrer">Pexels Free License</a>
     </div>
+
+    <section class="traffic-demo__density" aria-label="Experimental ten-second ROI density results">
+      <h3>10-second ROI Density · EXPERIMENTAL — DEMO VIDEO</h3>
+      <p>Time-weighted concurrent vehicle detections inside the outlined image area. This is visual presence, not unique vehicles, traffic flow, V/C, or live CCTV. YOLOX detections were reused from the offline sampled analysis; no inference runs in the browser.</p>
+      <p v-if="densityFrame">At {{ densityFrame.timestamp_seconds.toFixed(1) }} s: {{ densityFrame.vehicle_presence_total }} supported vehicle detections in ROI · image coverage {{ ((densityFrame.roi_image_coverage ?? 0) * 100).toFixed(1) }}%.</p>
+      <p v-if="densityWindow">Current interval {{ densityWindow.window_started_at_seconds.toFixed(0) }}–{{ densityWindow.window_ended_at_seconds.toFixed(1) }} s · {{ densityWindow.status }} · classification {{ densityWindow.classification_status.replaceAll('_', ' ') }}{{ densityWindow.condition ? `: ${densityWindow.condition}` : '' }}.</p>
+      <div class="traffic-demo__density-windows">
+        <article v-for="(window, index) in density.windows" :key="window.window_started_at_seconds" class="traffic-demo__density-window">
+          <strong>Window {{ index + 1 }} · {{ window.window_started_at_seconds.toFixed(0) }}–{{ window.window_ended_at_seconds.toFixed(1) }} s · {{ window.status }}</strong>
+          <span>Average presence: {{ window.average_vehicles_present?.toFixed(2) ?? 'unavailable' }} · peak: {{ window.peak_vehicles_present ?? 'unavailable' }}</span>
+          <span>Mean image coverage: {{ window.roi_image_coverage_average !== null ? `${(window.roi_image_coverage_average * 100).toFixed(1)}%` : 'unavailable' }} · busy: {{ window.busy_duration_seconds.toFixed(1) }}s ({{ window.busy_duration_percentage?.toFixed(1) ?? '—' }}%)</span>
+          <span>Valid samples: {{ window.data_quality.valid_samples }}/{{ window.data_quality.expected_samples }} · observed {{ window.data_quality.effective_observation_seconds.toFixed(1) }}s</span>
+          <span>Average presence — LV {{ window.traffic_category_statistics.LV.average?.toFixed(2) ?? '—' }}, HV {{ window.traffic_category_statistics.HV.average?.toFixed(2) ?? '—' }}, MC {{ window.traffic_category_statistics.MC.average?.toFixed(2) ?? '—' }}, bicycle {{ window.traffic_category_statistics.bicycle.average?.toFixed(2) ?? '—' }}.</span>
+          <span>Category peaks — LV {{ window.traffic_category_statistics.LV.peak }}, HV {{ window.traffic_category_statistics.HV.peak }}, MC {{ window.traffic_category_statistics.MC.peak }}, bicycle {{ window.traffic_category_statistics.bicycle.peak }}.</span>
+          <span>Condition: {{ window.condition ? window.condition : window.classification_status.replaceAll('_', ' ') }}</span>
+        </article>
+      </div>
+      <p>Configured at {{ density.sampled_fps }} FPS · target {{ density.observation_window_seconds }}s windows / {{ density.refresh_seconds }}s refresh · model {{ density.provenance.model?.name ?? 'unknown' }}. Threshold calibration: {{ density.calibration_status }}. Partial footage is not treated as a complete interval.</p>
+    </section>
 
     <div class="traffic-demo__summary" aria-live="polite">
       <p><strong>Model:</strong> {{ analysis.model.name }} · {{ analysis.model.version }}</p>

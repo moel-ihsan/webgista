@@ -52,3 +52,31 @@ At a requested 5 FPS, every fifth source frame is processed (about 0.209 seconds
 For Video 02, singleton detections have lower median confidence (0.504) than detections in longer tracks (0.588); all its detections are inside the configured ROI, so ROI exclusion does not explain its singleton tracks. At this sampling cadence, a 35 px gate, crowded/night footage, detector misses, occlusion, fast apparent motion, and greedy local matching can each fragment identities. Those are plausible contributors, not a proven per-track cause; a human frame review is needed to distinguish missed detections from association failure. Video 01 also has 187 detections outside its smaller ROI, which are intentionally not tracked. Tracker settings have not been tuned against the clips because no human ground truth is available.
 
 There are no human-reviewed labels checked in, so the figures above are model/tracker outputs, not validated counts, and no P/R/F1 or count-error metric is available. Neither clip reaches the V/C module's 30-second minimum, nor has calibrated camera-specific capacity; the condition remains unavailable. Do not loop the videos, extrapolate crossings, infer congestion from detections, or record stock footage as Banda Aceh traffic.
+
+## ROI Density — Phase 3E
+
+`roi_density.py` is a separate, offline analysis method. It aggregates already sampled YOLOX detections in **consecutive, non-overlapping 10-second windows** using the configured 5 FPS default. It does not need tracking IDs or a virtual counting line. A detection is present when its bottom-center point falls inside the normalized rectangle or polygon and its class/confidence passes the configuration.
+
+The time-weighted window output distinguishes average concurrent detections, peak detections, class statistics, approximate image-pixel coverage, busy duration, and sample coverage. A missing sample contributes missing observation time, not a zero count. A partial final window is reported as `partial` and is never classified. A complete window with enough coverage and no detections is a valid zero-presence observation. Image coverage is a low-resolution union of accepted bounding boxes clipped to the ROI; it is not physical road occupancy.
+
+Reproduce the checked-in Pexels demo outputs (inputs are the existing local analysis JSONs):
+
+```sh
+python tools/traffic-analytics/analyze_roi_density.py \
+  --analysis-json apps/web/src/data/traffic-demo/traffic_sample_01.analysis.json \
+  --config tools/traffic-analytics/demo_configs/traffic_sample_01_roi.json \
+  --output apps/web/src/data/traffic-demo/traffic_sample_01.roi-density.json
+```
+
+Repeat with sample 02 paths. The sample configurations use normalized video coordinates and retain 10 seconds / 10 seconds / 5 FPS defaults. The current demo outputs contain two complete windows plus one actual partial interval each:
+
+| Demo | Duration | Window 0–10s avg / peak | Window 10–20s avg / peak | Tail | Status |
+|---|---:|---:|---:|---:|---|
+| 01 | 23.023s | 2.6875 / 5 | 3.6257 / 6 | 20–23.023s partial | Uncalibrated |
+| 02 | 26s | 6.86 / 12 | 7.32 / 14 | 20–26s partial | Uncalibrated |
+
+These are per-frame YOLOX vehicle detections in the selected image areas, not distinct vehicles, real Banda Aceh measurements, traffic flow, smp/hour, V/C, or MKJI level of service. The UI therefore labels them `EXPERIMENTAL — DEMO VIDEO`, and conditions remain unavailable until camera-specific density cutoffs are configured. Experimental cutoffs are not official or universal standards.
+
+The V/C calculation remains separate in `apps/web/src/domain/trafficCalculation.ts`. It requires valid flow and a road-capacity configuration; ROI presence must never be converted to vehicles/hour or compared directly to smp/hour capacity.
+
+CCTV ROI settings are stored in `public.cctv_analysis_config` by migration `20261106000100`. The editor exports JSON for reproducible offline processing; changing an ROI increments its database configuration version and marks prior output stale. `VITE_SUPABASE_ROI_DENSITY_ENABLED` stays false until this migration receives separate hosted deployment approval. The editor currently accepts the application's two approved browser-playable demo sources; private stream credentials/URLs are not exposed or fetched by this pipeline.

@@ -1,0 +1,1818 @@
+{
+  "schema_version": "webgista.roi-density-result.v1",
+  "analysis_method": "roi_density_v1",
+  "provenance": {
+    "source_video_identifier": "traffic_sample_02",
+    "source_video_sha256": "88f571acbd0f502f82c3e0f02a8f977ecf4a23f56debe68533f6026050a490ca",
+    "is_live_cctv": false,
+    "record_kind": "demo_video_analysis",
+    "model": {
+      "name": "OpenCV Zoo YOLOX-S COCO",
+      "version": "object_detection_yolox_2022nov_int8",
+      "license": "Apache-2.0",
+      "sha256": "01a3b0f400b30bc1e45230e991b2e499ab42622485a330021947333fbaf03935"
+    },
+    "detections_reused_from": "webgista.traffic-analysis.v2",
+    "sampled_fps": 5.0
+  },
+  "input_duration_seconds": 26.0,
+  "configuration_version": 1,
+  "roi_geometry": [
+    0.02,
+    0.4,
+    0.96,
+    0.58
+  ],
+  "configuration_snapshot": {
+    "schema_version": "webgista.roi-density-config.v1",
+    "roi_type": "rectangle",
+    "roi_geometry": [
+      0.02,
+      0.4,
+      0.96,
+      0.58
+    ],
+    "video_dimensions": {
+      "width": 1280,
+      "height": 720
+    },
+    "observation_window_seconds": 10,
+    "refresh_seconds": 10,
+    "sampled_fps": 5,
+    "minimum_detection_confidence": 0.35,
+    "included_classes": [
+      "car",
+      "bus",
+      "truck",
+      "motorcycle",
+      "bicycle"
+    ],
+    "busy_threshold_vehicles": 0,
+    "minimum_valid_coverage": 0.8,
+    "density_thresholds": null,
+    "calibration_status": "uncalibrated",
+    "calibration_note": ""
+  },
+  "roi_type": "rectangle",
+  "video_dimensions": {
+    "width": 1280,
+    "height": 720
+  },
+  "observation_window_seconds": 10,
+  "refresh_seconds": 10,
+  "sampled_fps": 5,
+  "minimum_detection_confidence": 0.35,
+  "calibration_status": "uncalibrated",
+  "density_thresholds": null,
+  "threshold_metric": "time-weighted average concurrent detections in ROI (vehicles present)",
+  "sampled_frame_metrics": [
+    {
+      "timestamp_seconds": 0.0,
+      "vehicle_presence_by_class": {
+        "car": 3,
+        "bus": 1,
+        "truck": 0,
+        "motorcycle": 3,
+        "bicycle": 0
+      },
+      "vehicle_presence_total": 7,
+      "roi_image_coverage": 0.43931
+    },
+    {
+      "timestamp_seconds": 0.2,
+      "vehicle_presence_by_class": {
+        "car": 5,
+        "bus": 1,
+        "truck": 0,
+        "motorcycle": 1,
+        "bicycle": 0
+      },
+      "vehicle_presence_total": 7,
+      "roi_image_coverage": 0.36501
+    },
+    {
+      "timestamp_seconds": 0.4,
+      "vehicle_presence_by_class": {
+        "car": 6,
+        "bus": 1,
+        "truck": 1,
+        "motorcycle": 1,
+        "bicycle": 0
+      },
+      "vehicle_presence_total": 9,
+      "roi_image_coverage": 0.50968
+    },
+    {
+      "timestamp_seconds": 0.6,
+      "vehicle_presence_by_class": {
+        "car": 3,
+        "bus": 1,
+        "truck": 1,
+        "motorcycle": 2,
+        "bicycle": 0
+      },
+      "vehicle_presence_total": 7,
+      "roi_image_coverage": 0.49972
+    },
+    {
+      "timestamp_seconds": 0.8,
+      "vehicle_presence_by_class": {
+        "car": 2,
+        "bus": 1,
+        "truck": 1,
+        "motorcycle": 2,
+        "bicycle": 0
+      },
+      "vehicle_presence_total": 6,
+      "roi_image_coverage": 0.34687
+    },
+    {
+      "timestamp_seconds": 1.0,
+      "vehicle_presence_by_class": {
+        "car": 7,
+        "bus": 1,
+        "truck": 0,
+        "motorcycle": 4,
+        "bicycle": 0
+      },
+      "vehicle_presence_total": 12,
+      "roi_image_coverage": 0.52494
+    },
+    {
+      "timestamp_seconds": 1.2,
+      "vehicle_presence_by_class": {
+        "car": 5,
+        "bus": 0,
+        "truck": 0,
+        "motorcycle": 4,
+        "bicycle": 0
+      },
+      "vehicle_presence_total": 9,
+      "roi_image_coverage": 0.39061
+    },
+    {
+      "timestamp_seconds": 1.4,
+      "vehicle_presence_by_class": {
+        "car": 8,
+        "bus": 0,
+        "truck": 0,
+        "motorcycle": 4,
+        "bicycle": 0
+      },
+      "vehicle_presence_total": 12,
+      "roi_image_coverage": 0.39189
+    },
+    {
+      "timestamp_seconds": 1.6,
+      "vehicle_presence_by_class": {
+        "car": 3,
+        "bus": 0,
+        "truck": 0,
+        "motorcycle": 3,
+        "bicycle": 0
+      },
+      "vehicle_presence_total": 6,
+      "roi_image_coverage": 0.27201
+    },
+    {
+      "timestamp_seconds": 1.8,
+      "vehicle_presence_by_class": {
+        "car": 6,
+        "bus": 0,
+        "truck": 0,
+        "motorcycle": 3,
+        "bicycle": 0
+      },
+      "vehicle_presence_total": 9,
+      "roi_image_coverage": 0.2161
+    },
+    {
+      "timestamp_seconds": 2.0,
+      "vehicle_presence_by_class": {
+        "car": 5,
+        "bus": 0,
+        "truck": 0,
+        "motorcycle": 4,
+        "bicycle": 0
+      },
+      "vehicle_presence_total": 9,
+      "roi_image_coverage": 0.2048
+    },
+    {
+      "timestamp_seconds": 2.2,
+      "vehicle_presence_by_class": {
+        "car": 5,
+        "bus": 0,
+        "truck": 0,
+        "motorcycle": 2,
+        "bicycle": 0
+      },
+      "vehicle_presence_total": 7,
+      "roi_image_coverage": 0.16256
+    },
+    {
+      "timestamp_seconds": 2.4,
+      "vehicle_presence_by_class": {
+        "car": 4,
+        "bus": 0,
+        "truck": 0,
+        "motorcycle": 3,
+        "bicycle": 0
+      },
+      "vehicle_presence_total": 7,
+      "roi_image_coverage": 0.15653
+    },
+    {
+      "timestamp_seconds": 2.6,
+      "vehicle_presence_by_class": {
+        "car": 4,
+        "bus": 0,
+        "truck": 0,
+        "motorcycle": 2,
+        "bicycle": 0
+      },
+      "vehicle_presence_total": 6,
+      "roi_image_coverage": 0.12906
+    },
+    {
+      "timestamp_seconds": 2.8,
+      "vehicle_presence_by_class": {
+        "car": 4,
+        "bus": 0,
+        "truck": 0,
+        "motorcycle": 1,
+        "bicycle": 0
+      },
+      "vehicle_presence_total": 5,
+      "roi_image_coverage": 0.11036
+    },
+    {
+      "timestamp_seconds": 3.0,
+      "vehicle_presence_by_class": {
+        "car": 3,
+        "bus": 0,
+        "truck": 0,
+        "motorcycle": 2,
+        "bicycle": 0
+      },
+      "vehicle_presence_total": 5,
+      "roi_image_coverage": 0.06896
+    },
+    {
+      "timestamp_seconds": 3.2,
+      "vehicle_presence_by_class": {
+        "car": 5,
+        "bus": 0,
+        "truck": 0,
+        "motorcycle": 1,
+        "bicycle": 0
+      },
+      "vehicle_presence_total": 6,
+      "roi_image_coverage": 0.0925
+    },
+    {
+      "timestamp_seconds": 3.4,
+      "vehicle_presence_by_class": {
+        "car": 5,
+        "bus": 0,
+        "truck": 0,
+        "motorcycle": 1,
+        "bicycle": 0
+      },
+      "vehicle_presence_total": 6,
+      "roi_image_coverage": 0.09178
+    },
+    {
+      "timestamp_seconds": 3.6,
+      "vehicle_presence_by_class": {
+        "car": 3,
+        "bus": 0,
+        "truck": 1,
+        "motorcycle": 2,
+        "bicycle": 0
+      },
+      "vehicle_presence_total": 6,
+      "roi_image_coverage": 0.09522
+    },
+    {
+      "timestamp_seconds": 3.8,
+      "vehicle_presence_by_class": {
+        "car": 6,
+        "bus": 0,
+        "truck": 0,
+        "motorcycle": 4,
+        "bicycle": 0
+      },
+      "vehicle_presence_total": 10,
+      "roi_image_coverage": 0.28628
+    },
+    {
+      "timestamp_seconds": 4.0,
+      "vehicle_presence_by_class": {
+        "car": 2,
+        "bus": 0,
+        "truck": 0,
+        "motorcycle": 7,
+        "bicycle": 0
+      },
+      "vehicle_presence_total": 9,
+      "roi_image_coverage": 0.19043
+    },
+    {
+      "timestamp_seconds": 4.2,
+      "vehicle_presence_by_class": {
+        "car": 4,
+        "bus": 0,
+        "truck": 0,
+        "motorcycle": 6,
+        "bicycle": 0
+      },
+      "vehicle_presence_total": 10,
+      "roi_image_coverage": 0.22668
+    },
+    {
+      "timestamp_seconds": 4.4,
+      "vehicle_presence_by_class": {
+        "car": 2,
+        "bus": 0,
+        "truck": 0,
+        "motorcycle": 6,
+        "bicycle": 0
+      },
+      "vehicle_presence_total": 8,
+      "roi_image_coverage": 0.1482
+    },
+    {
+      "timestamp_seconds": 4.6,
+      "vehicle_presence_by_class": {
+        "car": 5,
+        "bus": 0,
+        "truck": 0,
+        "motorcycle": 3,
+        "bicycle": 0
+      },
+      "vehicle_presence_total": 8,
+      "roi_image_coverage": 0.28899
+    },
+    {
+      "timestamp_seconds": 4.8,
+      "vehicle_presence_by_class": {
+        "car": 2,
+        "bus": 0,
+        "truck": 0,
+        "motorcycle": 6,
+        "bicycle": 0
+      },
+      "vehicle_presence_total": 8,
+      "roi_image_coverage": 0.21753
+    },
+    {
+      "timestamp_seconds": 5.0,
+      "vehicle_presence_by_class": {
+        "car": 3,
+        "bus": 0,
+        "truck": 0,
+        "motorcycle": 4,
+        "bicycle": 0
+      },
+      "vehicle_presence_total": 7,
+      "roi_image_coverage": 0.19278
+    },
+    {
+      "timestamp_seconds": 5.2,
+      "vehicle_presence_by_class": {
+        "car": 3,
+        "bus": 0,
+        "truck": 0,
+        "motorcycle": 6,
+        "bicycle": 0
+      },
+      "vehicle_presence_total": 9,
+      "roi_image_coverage": 0.24266
+    },
+    {
+      "timestamp_seconds": 5.4,
+      "vehicle_presence_by_class": {
+        "car": 2,
+        "bus": 0,
+        "truck": 0,
+        "motorcycle": 7,
+        "bicycle": 0
+      },
+      "vehicle_presence_total": 9,
+      "roi_image_coverage": 0.27138
+    },
+    {
+      "timestamp_seconds": 5.6,
+      "vehicle_presence_by_class": {
+        "car": 2,
+        "bus": 0,
+        "truck": 0,
+        "motorcycle": 5,
+        "bicycle": 0
+      },
+      "vehicle_presence_total": 7,
+      "roi_image_coverage": 0.18388
+    },
+    {
+      "timestamp_seconds": 5.8,
+      "vehicle_presence_by_class": {
+        "car": 2,
+        "bus": 0,
+        "truck": 0,
+        "motorcycle": 5,
+        "bicycle": 0
+      },
+      "vehicle_presence_total": 7,
+      "roi_image_coverage": 0.2097
+    },
+    {
+      "timestamp_seconds": 6.0,
+      "vehicle_presence_by_class": {
+        "car": 3,
+        "bus": 0,
+        "truck": 0,
+        "motorcycle": 5,
+        "bicycle": 0
+      },
+      "vehicle_presence_total": 8,
+      "roi_image_coverage": 0.19443
+    },
+    {
+      "timestamp_seconds": 6.2,
+      "vehicle_presence_by_class": {
+        "car": 2,
+        "bus": 0,
+        "truck": 0,
+        "motorcycle": 9,
+        "bicycle": 0
+      },
+      "vehicle_presence_total": 11,
+      "roi_image_coverage": 0.23021
+    },
+    {
+      "timestamp_seconds": 6.4,
+      "vehicle_presence_by_class": {
+        "car": 1,
+        "bus": 0,
+        "truck": 0,
+        "motorcycle": 9,
+        "bicycle": 0
+      },
+      "vehicle_presence_total": 10,
+      "roi_image_coverage": 0.14267
+    },
+    {
+      "timestamp_seconds": 6.6,
+      "vehicle_presence_by_class": {
+        "car": 1,
+        "bus": 0,
+        "truck": 0,
+        "motorcycle": 5,
+        "bicycle": 0
+      },
+      "vehicle_presence_total": 6,
+      "roi_image_coverage": 0.09375
+    },
+    {
+      "timestamp_seconds": 6.8,
+      "vehicle_presence_by_class": {
+        "car": 2,
+        "bus": 0,
+        "truck": 0,
+        "motorcycle": 4,
+        "bicycle": 0
+      },
+      "vehicle_presence_total": 6,
+      "roi_image_coverage": 0.09781
+    },
+    {
+      "timestamp_seconds": 7.0,
+      "vehicle_presence_by_class": {
+        "car": 3,
+        "bus": 0,
+        "truck": 0,
+        "motorcycle": 3,
+        "bicycle": 0
+      },
+      "vehicle_presence_total": 6,
+      "roi_image_coverage": 0.30029
+    },
+    {
+      "timestamp_seconds": 7.2,
+      "vehicle_presence_by_class": {
+        "car": 0,
+        "bus": 0,
+        "truck": 0,
+        "motorcycle": 2,
+        "bicycle": 0
+      },
+      "vehicle_presence_total": 2,
+      "roi_image_coverage": 0.03191
+    },
+    {
+      "timestamp_seconds": 7.4,
+      "vehicle_presence_by_class": {
+        "car": 3,
+        "bus": 0,
+        "truck": 0,
+        "motorcycle": 1,
+        "bicycle": 0
+      },
+      "vehicle_presence_total": 4,
+      "roi_image_coverage": 0.66415
+    },
+    {
+      "timestamp_seconds": 7.6,
+      "vehicle_presence_by_class": {
+        "car": 0,
+        "bus": 0,
+        "truck": 0,
+        "motorcycle": 0,
+        "bicycle": 0
+      },
+      "vehicle_presence_total": 0,
+      "roi_image_coverage": 0.0
+    },
+    {
+      "timestamp_seconds": 7.8,
+      "vehicle_presence_by_class": {
+        "car": 2,
+        "bus": 0,
+        "truck": 0,
+        "motorcycle": 1,
+        "bicycle": 0
+      },
+      "vehicle_presence_total": 3,
+      "roi_image_coverage": 0.08891
+    },
+    {
+      "timestamp_seconds": 8.0,
+      "vehicle_presence_by_class": {
+        "car": 4,
+        "bus": 0,
+        "truck": 0,
+        "motorcycle": 2,
+        "bicycle": 0
+      },
+      "vehicle_presence_total": 6,
+      "roi_image_coverage": 0.72749
+    },
+    {
+      "timestamp_seconds": 8.2,
+      "vehicle_presence_by_class": {
+        "car": 3,
+        "bus": 0,
+        "truck": 0,
+        "motorcycle": 2,
+        "bicycle": 0
+      },
+      "vehicle_presence_total": 5,
+      "roi_image_coverage": 0.62837
+    },
+    {
+      "timestamp_seconds": 8.4,
+      "vehicle_presence_by_class": {
+        "car": 3,
+        "bus": 0,
+        "truck": 0,
+        "motorcycle": 2,
+        "bicycle": 0
+      },
+      "vehicle_presence_total": 5,
+      "roi_image_coverage": 0.60081
+    },
+    {
+      "timestamp_seconds": 8.6,
+      "vehicle_presence_by_class": {
+        "car": 2,
+        "bus": 0,
+        "truck": 0,
+        "motorcycle": 3,
+        "bicycle": 0
+      },
+      "vehicle_presence_total": 5,
+      "roi_image_coverage": 0.47384
+    },
+    {
+      "timestamp_seconds": 8.8,
+      "vehicle_presence_by_class": {
+        "car": 1,
+        "bus": 0,
+        "truck": 0,
+        "motorcycle": 2,
+        "bicycle": 0
+      },
+      "vehicle_presence_total": 3,
+      "roi_image_coverage": 0.3075
+    },
+    {
+      "timestamp_seconds": 9.0,
+      "vehicle_presence_by_class": {
+        "car": 2,
+        "bus": 0,
+        "truck": 0,
+        "motorcycle": 2,
+        "bicycle": 0
+      },
+      "vehicle_presence_total": 4,
+      "roi_image_coverage": 0.3159
+    },
+    {
+      "timestamp_seconds": 9.2,
+      "vehicle_presence_by_class": {
+        "car": 5,
+        "bus": 0,
+        "truck": 0,
+        "motorcycle": 2,
+        "bicycle": 0
+      },
+      "vehicle_presence_total": 7,
+      "roi_image_coverage": 0.469
+    },
+    {
+      "timestamp_seconds": 9.4,
+      "vehicle_presence_by_class": {
+        "car": 5,
+        "bus": 0,
+        "truck": 0,
+        "motorcycle": 2,
+        "bicycle": 0
+      },
+      "vehicle_presence_total": 7,
+      "roi_image_coverage": 0.11585
+    },
+    {
+      "timestamp_seconds": 9.6,
+      "vehicle_presence_by_class": {
+        "car": 1,
+        "bus": 0,
+        "truck": 0,
+        "motorcycle": 5,
+        "bicycle": 0
+      },
+      "vehicle_presence_total": 6,
+      "roi_image_coverage": 0.19668
+    },
+    {
+      "timestamp_seconds": 9.8,
+      "vehicle_presence_by_class": {
+        "car": 1,
+        "bus": 0,
+        "truck": 0,
+        "motorcycle": 5,
+        "bicycle": 0
+      },
+      "vehicle_presence_total": 6,
+      "roi_image_coverage": 0.63468
+    },
+    {
+      "timestamp_seconds": 10.0,
+      "vehicle_presence_by_class": {
+        "car": 1,
+        "bus": 0,
+        "truck": 0,
+        "motorcycle": 2,
+        "bicycle": 0
+      },
+      "vehicle_presence_total": 3,
+      "roi_image_coverage": 0.54542
+    },
+    {
+      "timestamp_seconds": 10.2,
+      "vehicle_presence_by_class": {
+        "car": 2,
+        "bus": 0,
+        "truck": 0,
+        "motorcycle": 2,
+        "bicycle": 0
+      },
+      "vehicle_presence_total": 4,
+      "roi_image_coverage": 0.53475
+    },
+    {
+      "timestamp_seconds": 10.4,
+      "vehicle_presence_by_class": {
+        "car": 3,
+        "bus": 0,
+        "truck": 0,
+        "motorcycle": 3,
+        "bicycle": 0
+      },
+      "vehicle_presence_total": 6,
+      "roi_image_coverage": 0.42364
+    },
+    {
+      "timestamp_seconds": 10.6,
+      "vehicle_presence_by_class": {
+        "car": 3,
+        "bus": 0,
+        "truck": 0,
+        "motorcycle": 3,
+        "bicycle": 0
+      },
+      "vehicle_presence_total": 6,
+      "roi_image_coverage": 0.43291
+    },
+    {
+      "timestamp_seconds": 10.8,
+      "vehicle_presence_by_class": {
+        "car": 2,
+        "bus": 0,
+        "truck": 0,
+        "motorcycle": 2,
+        "bicycle": 0
+      },
+      "vehicle_presence_total": 4,
+      "roi_image_coverage": 0.28737
+    },
+    {
+      "timestamp_seconds": 11.0,
+      "vehicle_presence_by_class": {
+        "car": 3,
+        "bus": 0,
+        "truck": 0,
+        "motorcycle": 3,
+        "bicycle": 0
+      },
+      "vehicle_presence_total": 6,
+      "roi_image_coverage": 0.33251
+    },
+    {
+      "timestamp_seconds": 11.2,
+      "vehicle_presence_by_class": {
+        "car": 4,
+        "bus": 0,
+        "truck": 0,
+        "motorcycle": 3,
+        "bicycle": 0
+      },
+      "vehicle_presence_total": 7,
+      "roi_image_coverage": 0.27869
+    },
+    {
+      "timestamp_seconds": 11.4,
+      "vehicle_presence_by_class": {
+        "car": 2,
+        "bus": 0,
+        "truck": 0,
+        "motorcycle": 4,
+        "bicycle": 0
+      },
+      "vehicle_presence_total": 6,
+      "roi_image_coverage": 0.33276
+    },
+    {
+      "timestamp_seconds": 11.6,
+      "vehicle_presence_by_class": {
+        "car": 2,
+        "bus": 0,
+        "truck": 0,
+        "motorcycle": 4,
+        "bicycle": 0
+      },
+      "vehicle_presence_total": 6,
+      "roi_image_coverage": 0.23099
+    },
+    {
+      "timestamp_seconds": 11.8,
+      "vehicle_presence_by_class": {
+        "car": 3,
+        "bus": 0,
+        "truck": 0,
+        "motorcycle": 3,
+        "bicycle": 0
+      },
+      "vehicle_presence_total": 6,
+      "roi_image_coverage": 0.2476
+    },
+    {
+      "timestamp_seconds": 12.0,
+      "vehicle_presence_by_class": {
+        "car": 2,
+        "bus": 0,
+        "truck": 0,
+        "motorcycle": 5,
+        "bicycle": 0
+      },
+      "vehicle_presence_total": 7,
+      "roi_image_coverage": 0.2136
+    },
+    {
+      "timestamp_seconds": 12.2,
+      "vehicle_presence_by_class": {
+        "car": 2,
+        "bus": 0,
+        "truck": 0,
+        "motorcycle": 6,
+        "bicycle": 0
+      },
+      "vehicle_presence_total": 8,
+      "roi_image_coverage": 0.27376
+    },
+    {
+      "timestamp_seconds": 12.4,
+      "vehicle_presence_by_class": {
+        "car": 2,
+        "bus": 0,
+        "truck": 0,
+        "motorcycle": 5,
+        "bicycle": 0
+      },
+      "vehicle_presence_total": 7,
+      "roi_image_coverage": 0.4026
+    },
+    {
+      "timestamp_seconds": 12.6,
+      "vehicle_presence_by_class": {
+        "car": 2,
+        "bus": 0,
+        "truck": 0,
+        "motorcycle": 5,
+        "bicycle": 0
+      },
+      "vehicle_presence_total": 7,
+      "roi_image_coverage": 0.35243
+    },
+    {
+      "timestamp_seconds": 12.8,
+      "vehicle_presence_by_class": {
+        "car": 4,
+        "bus": 0,
+        "truck": 0,
+        "motorcycle": 4,
+        "bicycle": 0
+      },
+      "vehicle_presence_total": 8,
+      "roi_image_coverage": 0.27229
+    },
+    {
+      "timestamp_seconds": 13.0,
+      "vehicle_presence_by_class": {
+        "car": 3,
+        "bus": 0,
+        "truck": 0,
+        "motorcycle": 4,
+        "bicycle": 0
+      },
+      "vehicle_presence_total": 7,
+      "roi_image_coverage": 0.16306
+    },
+    {
+      "timestamp_seconds": 13.2,
+      "vehicle_presence_by_class": {
+        "car": 6,
+        "bus": 0,
+        "truck": 0,
+        "motorcycle": 2,
+        "bicycle": 0
+      },
+      "vehicle_presence_total": 8,
+      "roi_image_coverage": 0.27788
+    },
+    {
+      "timestamp_seconds": 13.4,
+      "vehicle_presence_by_class": {
+        "car": 4,
+        "bus": 0,
+        "truck": 0,
+        "motorcycle": 3,
+        "bicycle": 0
+      },
+      "vehicle_presence_total": 7,
+      "roi_image_coverage": 0.35858
+    },
+    {
+      "timestamp_seconds": 13.6,
+      "vehicle_presence_by_class": {
+        "car": 3,
+        "bus": 0,
+        "truck": 0,
+        "motorcycle": 4,
+        "bicycle": 0
+      },
+      "vehicle_presence_total": 7,
+      "roi_image_coverage": 0.44228
+    },
+    {
+      "timestamp_seconds": 13.8,
+      "vehicle_presence_by_class": {
+        "car": 4,
+        "bus": 0,
+        "truck": 0,
+        "motorcycle": 4,
+        "bicycle": 0
+      },
+      "vehicle_presence_total": 8,
+      "roi_image_coverage": 0.4046
+    },
+    {
+      "timestamp_seconds": 14.0,
+      "vehicle_presence_by_class": {
+        "car": 3,
+        "bus": 0,
+        "truck": 0,
+        "motorcycle": 3,
+        "bicycle": 0
+      },
+      "vehicle_presence_total": 6,
+      "roi_image_coverage": 0.27975
+    },
+    {
+      "timestamp_seconds": 14.2,
+      "vehicle_presence_by_class": {
+        "car": 3,
+        "bus": 0,
+        "truck": 0,
+        "motorcycle": 6,
+        "bicycle": 0
+      },
+      "vehicle_presence_total": 9,
+      "roi_image_coverage": 0.29246
+    },
+    {
+      "timestamp_seconds": 14.4,
+      "vehicle_presence_by_class": {
+        "car": 2,
+        "bus": 0,
+        "truck": 0,
+        "motorcycle": 9,
+        "bicycle": 0
+      },
+      "vehicle_presence_total": 11,
+      "roi_image_coverage": 0.26311
+    },
+    {
+      "timestamp_seconds": 14.6,
+      "vehicle_presence_by_class": {
+        "car": 3,
+        "bus": 0,
+        "truck": 0,
+        "motorcycle": 4,
+        "bicycle": 0
+      },
+      "vehicle_presence_total": 7,
+      "roi_image_coverage": 0.16774
+    },
+    {
+      "timestamp_seconds": 14.8,
+      "vehicle_presence_by_class": {
+        "car": 3,
+        "bus": 0,
+        "truck": 0,
+        "motorcycle": 5,
+        "bicycle": 0
+      },
+      "vehicle_presence_total": 8,
+      "roi_image_coverage": 0.22974
+    },
+    {
+      "timestamp_seconds": 15.0,
+      "vehicle_presence_by_class": {
+        "car": 2,
+        "bus": 0,
+        "truck": 0,
+        "motorcycle": 7,
+        "bicycle": 0
+      },
+      "vehicle_presence_total": 9,
+      "roi_image_coverage": 0.20476
+    },
+    {
+      "timestamp_seconds": 15.2,
+      "vehicle_presence_by_class": {
+        "car": 4,
+        "bus": 0,
+        "truck": 0,
+        "motorcycle": 6,
+        "bicycle": 0
+      },
+      "vehicle_presence_total": 10,
+      "roi_image_coverage": 0.25649
+    },
+    {
+      "timestamp_seconds": 15.4,
+      "vehicle_presence_by_class": {
+        "car": 4,
+        "bus": 0,
+        "truck": 0,
+        "motorcycle": 5,
+        "bicycle": 0
+      },
+      "vehicle_presence_total": 9,
+      "roi_image_coverage": 0.24806
+    },
+    {
+      "timestamp_seconds": 15.6,
+      "vehicle_presence_by_class": {
+        "car": 2,
+        "bus": 0,
+        "truck": 0,
+        "motorcycle": 5,
+        "bicycle": 0
+      },
+      "vehicle_presence_total": 7,
+      "roi_image_coverage": 0.28724
+    },
+    {
+      "timestamp_seconds": 15.8,
+      "vehicle_presence_by_class": {
+        "car": 4,
+        "bus": 0,
+        "truck": 0,
+        "motorcycle": 10,
+        "bicycle": 0
+      },
+      "vehicle_presence_total": 14,
+      "roi_image_coverage": 0.23118
+    },
+    {
+      "timestamp_seconds": 16.0,
+      "vehicle_presence_by_class": {
+        "car": 3,
+        "bus": 0,
+        "truck": 0,
+        "motorcycle": 9,
+        "bicycle": 0
+      },
+      "vehicle_presence_total": 12,
+      "roi_image_coverage": 0.22899
+    },
+    {
+      "timestamp_seconds": 16.2,
+      "vehicle_presence_by_class": {
+        "car": 2,
+        "bus": 0,
+        "truck": 0,
+        "motorcycle": 7,
+        "bicycle": 0
+      },
+      "vehicle_presence_total": 9,
+      "roi_image_coverage": 0.20745
+    },
+    {
+      "timestamp_seconds": 16.4,
+      "vehicle_presence_by_class": {
+        "car": 4,
+        "bus": 0,
+        "truck": 0,
+        "motorcycle": 6,
+        "bicycle": 0
+      },
+      "vehicle_presence_total": 10,
+      "roi_image_coverage": 0.2284
+    },
+    {
+      "timestamp_seconds": 16.6,
+      "vehicle_presence_by_class": {
+        "car": 4,
+        "bus": 0,
+        "truck": 0,
+        "motorcycle": 8,
+        "bicycle": 0
+      },
+      "vehicle_presence_total": 12,
+      "roi_image_coverage": 0.30086
+    },
+    {
+      "timestamp_seconds": 16.8,
+      "vehicle_presence_by_class": {
+        "car": 1,
+        "bus": 0,
+        "truck": 0,
+        "motorcycle": 8,
+        "bicycle": 0
+      },
+      "vehicle_presence_total": 9,
+      "roi_image_coverage": 0.21219
+    },
+    {
+      "timestamp_seconds": 17.0,
+      "vehicle_presence_by_class": {
+        "car": 2,
+        "bus": 0,
+        "truck": 0,
+        "motorcycle": 9,
+        "bicycle": 0
+      },
+      "vehicle_presence_total": 11,
+      "roi_image_coverage": 0.2894
+    },
+    {
+      "timestamp_seconds": 17.2,
+      "vehicle_presence_by_class": {
+        "car": 2,
+        "bus": 0,
+        "truck": 0,
+        "motorcycle": 6,
+        "bicycle": 0
+      },
+      "vehicle_presence_total": 8,
+      "roi_image_coverage": 0.23664
+    },
+    {
+      "timestamp_seconds": 17.4,
+      "vehicle_presence_by_class": {
+        "car": 2,
+        "bus": 0,
+        "truck": 0,
+        "motorcycle": 6,
+        "bicycle": 0
+      },
+      "vehicle_presence_total": 8,
+      "roi_image_coverage": 0.21469
+    },
+    {
+      "timestamp_seconds": 17.6,
+      "vehicle_presence_by_class": {
+        "car": 2,
+        "bus": 0,
+        "truck": 0,
+        "motorcycle": 3,
+        "bicycle": 0
+      },
+      "vehicle_presence_total": 5,
+      "roi_image_coverage": 0.2052
+    },
+    {
+      "timestamp_seconds": 17.8,
+      "vehicle_presence_by_class": {
+        "car": 4,
+        "bus": 0,
+        "truck": 0,
+        "motorcycle": 5,
+        "bicycle": 0
+      },
+      "vehicle_presence_total": 9,
+      "roi_image_coverage": 0.16983
+    },
+    {
+      "timestamp_seconds": 18.0,
+      "vehicle_presence_by_class": {
+        "car": 5,
+        "bus": 0,
+        "truck": 0,
+        "motorcycle": 5,
+        "bicycle": 0
+      },
+      "vehicle_presence_total": 10,
+      "roi_image_coverage": 0.11532
+    },
+    {
+      "timestamp_seconds": 18.2,
+      "vehicle_presence_by_class": {
+        "car": 6,
+        "bus": 0,
+        "truck": 0,
+        "motorcycle": 3,
+        "bicycle": 0
+      },
+      "vehicle_presence_total": 9,
+      "roi_image_coverage": 0.10842
+    },
+    {
+      "timestamp_seconds": 18.4,
+      "vehicle_presence_by_class": {
+        "car": 4,
+        "bus": 0,
+        "truck": 0,
+        "motorcycle": 3,
+        "bicycle": 0
+      },
+      "vehicle_presence_total": 7,
+      "roi_image_coverage": 0.09466
+    },
+    {
+      "timestamp_seconds": 18.6,
+      "vehicle_presence_by_class": {
+        "car": 6,
+        "bus": 0,
+        "truck": 0,
+        "motorcycle": 2,
+        "bicycle": 0
+      },
+      "vehicle_presence_total": 8,
+      "roi_image_coverage": 0.05076
+    },
+    {
+      "timestamp_seconds": 18.8,
+      "vehicle_presence_by_class": {
+        "car": 4,
+        "bus": 1,
+        "truck": 1,
+        "motorcycle": 2,
+        "bicycle": 0
+      },
+      "vehicle_presence_total": 8,
+      "roi_image_coverage": 0.63774
+    },
+    {
+      "timestamp_seconds": 19.0,
+      "vehicle_presence_by_class": {
+        "car": 5,
+        "bus": 1,
+        "truck": 0,
+        "motorcycle": 1,
+        "bicycle": 0
+      },
+      "vehicle_presence_total": 7,
+      "roi_image_coverage": 0.7033
+    },
+    {
+      "timestamp_seconds": 19.2,
+      "vehicle_presence_by_class": {
+        "car": 2,
+        "bus": 0,
+        "truck": 0,
+        "motorcycle": 1,
+        "bicycle": 0
+      },
+      "vehicle_presence_total": 3,
+      "roi_image_coverage": 0.01464
+    },
+    {
+      "timestamp_seconds": 19.4,
+      "vehicle_presence_by_class": {
+        "car": 1,
+        "bus": 1,
+        "truck": 0,
+        "motorcycle": 0,
+        "bicycle": 0
+      },
+      "vehicle_presence_total": 2,
+      "roi_image_coverage": 0.87793
+    },
+    {
+      "timestamp_seconds": 19.6,
+      "vehicle_presence_by_class": {
+        "car": 0,
+        "bus": 0,
+        "truck": 0,
+        "motorcycle": 0,
+        "bicycle": 0
+      },
+      "vehicle_presence_total": 0,
+      "roi_image_coverage": 0.0
+    },
+    {
+      "timestamp_seconds": 19.8,
+      "vehicle_presence_by_class": {
+        "car": 0,
+        "bus": 1,
+        "truck": 0,
+        "motorcycle": 0,
+        "bicycle": 0
+      },
+      "vehicle_presence_total": 1,
+      "roi_image_coverage": 0.95529
+    },
+    {
+      "timestamp_seconds": 20.0,
+      "vehicle_presence_by_class": {
+        "car": 0,
+        "bus": 0,
+        "truck": 0,
+        "motorcycle": 0,
+        "bicycle": 0
+      },
+      "vehicle_presence_total": 0,
+      "roi_image_coverage": 0.0
+    },
+    {
+      "timestamp_seconds": 20.2,
+      "vehicle_presence_by_class": {
+        "car": 0,
+        "bus": 0,
+        "truck": 0,
+        "motorcycle": 1,
+        "bicycle": 0
+      },
+      "vehicle_presence_total": 1,
+      "roi_image_coverage": 0.01499
+    },
+    {
+      "timestamp_seconds": 20.4,
+      "vehicle_presence_by_class": {
+        "car": 0,
+        "bus": 1,
+        "truck": 0,
+        "motorcycle": 3,
+        "bicycle": 0
+      },
+      "vehicle_presence_total": 4,
+      "roi_image_coverage": 0.59534
+    },
+    {
+      "timestamp_seconds": 20.6,
+      "vehicle_presence_by_class": {
+        "car": 1,
+        "bus": 1,
+        "truck": 0,
+        "motorcycle": 5,
+        "bicycle": 0
+      },
+      "vehicle_presence_total": 7,
+      "roi_image_coverage": 0.53125
+    },
+    {
+      "timestamp_seconds": 20.8,
+      "vehicle_presence_by_class": {
+        "car": 1,
+        "bus": 1,
+        "truck": 0,
+        "motorcycle": 4,
+        "bicycle": 0
+      },
+      "vehicle_presence_total": 6,
+      "roi_image_coverage": 0.45967
+    },
+    {
+      "timestamp_seconds": 21.0,
+      "vehicle_presence_by_class": {
+        "car": 4,
+        "bus": 1,
+        "truck": 0,
+        "motorcycle": 4,
+        "bicycle": 0
+      },
+      "vehicle_presence_total": 9,
+      "roi_image_coverage": 0.39217
+    },
+    {
+      "timestamp_seconds": 21.2,
+      "vehicle_presence_by_class": {
+        "car": 3,
+        "bus": 1,
+        "truck": 1,
+        "motorcycle": 6,
+        "bicycle": 0
+      },
+      "vehicle_presence_total": 11,
+      "roi_image_coverage": 0.23177
+    },
+    {
+      "timestamp_seconds": 21.4,
+      "vehicle_presence_by_class": {
+        "car": 2,
+        "bus": 1,
+        "truck": 1,
+        "motorcycle": 4,
+        "bicycle": 0
+      },
+      "vehicle_presence_total": 8,
+      "roi_image_coverage": 0.37881
+    },
+    {
+      "timestamp_seconds": 21.6,
+      "vehicle_presence_by_class": {
+        "car": 6,
+        "bus": 1,
+        "truck": 0,
+        "motorcycle": 3,
+        "bicycle": 0
+      },
+      "vehicle_presence_total": 10,
+      "roi_image_coverage": 0.42848
+    },
+    {
+      "timestamp_seconds": 21.8,
+      "vehicle_presence_by_class": {
+        "car": 5,
+        "bus": 1,
+        "truck": 0,
+        "motorcycle": 0,
+        "bicycle": 0
+      },
+      "vehicle_presence_total": 6,
+      "roi_image_coverage": 0.46013
+    },
+    {
+      "timestamp_seconds": 22.0,
+      "vehicle_presence_by_class": {
+        "car": 5,
+        "bus": 1,
+        "truck": 1,
+        "motorcycle": 0,
+        "bicycle": 0
+      },
+      "vehicle_presence_total": 7,
+      "roi_image_coverage": 0.59035
+    },
+    {
+      "timestamp_seconds": 22.2,
+      "vehicle_presence_by_class": {
+        "car": 2,
+        "bus": 1,
+        "truck": 0,
+        "motorcycle": 1,
+        "bicycle": 0
+      },
+      "vehicle_presence_total": 4,
+      "roi_image_coverage": 0.56437
+    },
+    {
+      "timestamp_seconds": 22.4,
+      "vehicle_presence_by_class": {
+        "car": 2,
+        "bus": 1,
+        "truck": 0,
+        "motorcycle": 0,
+        "bicycle": 0
+      },
+      "vehicle_presence_total": 3,
+      "roi_image_coverage": 0.60327
+    },
+    {
+      "timestamp_seconds": 22.6,
+      "vehicle_presence_by_class": {
+        "car": 1,
+        "bus": 1,
+        "truck": 0,
+        "motorcycle": 0,
+        "bicycle": 0
+      },
+      "vehicle_presence_total": 2,
+      "roi_image_coverage": 0.71472
+    },
+    {
+      "timestamp_seconds": 22.8,
+      "vehicle_presence_by_class": {
+        "car": 0,
+        "bus": 1,
+        "truck": 0,
+        "motorcycle": 0,
+        "bicycle": 0
+      },
+      "vehicle_presence_total": 1,
+      "roi_image_coverage": 0.90494
+    },
+    {
+      "timestamp_seconds": 23.0,
+      "vehicle_presence_by_class": {
+        "car": 0,
+        "bus": 1,
+        "truck": 0,
+        "motorcycle": 0,
+        "bicycle": 0
+      },
+      "vehicle_presence_total": 1,
+      "roi_image_coverage": 0.82692
+    },
+    {
+      "timestamp_seconds": 23.2,
+      "vehicle_presence_by_class": {
+        "car": 0,
+        "bus": 1,
+        "truck": 0,
+        "motorcycle": 0,
+        "bicycle": 0
+      },
+      "vehicle_presence_total": 1,
+      "roi_image_coverage": 0.77994
+    },
+    {
+      "timestamp_seconds": 23.4,
+      "vehicle_presence_by_class": {
+        "car": 0,
+        "bus": 1,
+        "truck": 0,
+        "motorcycle": 0,
+        "bicycle": 0
+      },
+      "vehicle_presence_total": 1,
+      "roi_image_coverage": 0.63437
+    },
+    {
+      "timestamp_seconds": 23.6,
+      "vehicle_presence_by_class": {
+        "car": 2,
+        "bus": 1,
+        "truck": 0,
+        "motorcycle": 1,
+        "bicycle": 0
+      },
+      "vehicle_presence_total": 4,
+      "roi_image_coverage": 0.56512
+    },
+    {
+      "timestamp_seconds": 23.8,
+      "vehicle_presence_by_class": {
+        "car": 3,
+        "bus": 1,
+        "truck": 0,
+        "motorcycle": 0,
+        "bicycle": 0
+      },
+      "vehicle_presence_total": 4,
+      "roi_image_coverage": 0.4671
+    },
+    {
+      "timestamp_seconds": 24.0,
+      "vehicle_presence_by_class": {
+        "car": 5,
+        "bus": 1,
+        "truck": 1,
+        "motorcycle": 0,
+        "bicycle": 0
+      },
+      "vehicle_presence_total": 7,
+      "roi_image_coverage": 0.43912
+    },
+    {
+      "timestamp_seconds": 24.2,
+      "vehicle_presence_by_class": {
+        "car": 3,
+        "bus": 1,
+        "truck": 1,
+        "motorcycle": 1,
+        "bicycle": 0
+      },
+      "vehicle_presence_total": 6,
+      "roi_image_coverage": 0.35002
+    },
+    {
+      "timestamp_seconds": 24.4,
+      "vehicle_presence_by_class": {
+        "car": 6,
+        "bus": 1,
+        "truck": 0,
+        "motorcycle": 1,
+        "bicycle": 0
+      },
+      "vehicle_presence_total": 8,
+      "roi_image_coverage": 0.32464
+    },
+    {
+      "timestamp_seconds": 24.6,
+      "vehicle_presence_by_class": {
+        "car": 6,
+        "bus": 1,
+        "truck": 0,
+        "motorcycle": 1,
+        "bicycle": 0
+      },
+      "vehicle_presence_total": 8,
+      "roi_image_coverage": 0.25696
+    },
+    {
+      "timestamp_seconds": 24.8,
+      "vehicle_presence_by_class": {
+        "car": 5,
+        "bus": 1,
+        "truck": 0,
+        "motorcycle": 3,
+        "bicycle": 0
+      },
+      "vehicle_presence_total": 9,
+      "roi_image_coverage": 0.19721
+    },
+    {
+      "timestamp_seconds": 25.0,
+      "vehicle_presence_by_class": {
+        "car": 2,
+        "bus": 0,
+        "truck": 0,
+        "motorcycle": 2,
+        "bicycle": 0
+      },
+      "vehicle_presence_total": 4,
+      "roi_image_coverage": 0.08769
+    },
+    {
+      "timestamp_seconds": 25.2,
+      "vehicle_presence_by_class": {
+        "car": 4,
+        "bus": 0,
+        "truck": 0,
+        "motorcycle": 2,
+        "bicycle": 0
+      },
+      "vehicle_presence_total": 6,
+      "roi_image_coverage": 0.08954
+    },
+    {
+      "timestamp_seconds": 25.4,
+      "vehicle_presence_by_class": {
+        "car": 4,
+        "bus": 0,
+        "truck": 0,
+        "motorcycle": 2,
+        "bicycle": 0
+      },
+      "vehicle_presence_total": 6,
+      "roi_image_coverage": 0.07446
+    },
+    {
+      "timestamp_seconds": 25.6,
+      "vehicle_presence_by_class": {
+        "car": 4,
+        "bus": 0,
+        "truck": 0,
+        "motorcycle": 4,
+        "bicycle": 0
+      },
+      "vehicle_presence_total": 8,
+      "roi_image_coverage": 0.08485
+    },
+    {
+      "timestamp_seconds": 25.8,
+      "vehicle_presence_by_class": {
+        "car": 4,
+        "bus": 0,
+        "truck": 0,
+        "motorcycle": 7,
+        "bicycle": 0
+      },
+      "vehicle_presence_total": 11,
+      "roi_image_coverage": 0.10446
+    }
+  ],
+  "windows": [
+    {
+      "window_started_at_seconds": 0.0,
+      "window_ended_at_seconds": 10.0,
+      "window_duration_seconds": 10.0,
+      "status": "complete",
+      "condition": null,
+      "classification_status": "uncalibrated",
+      "average_vehicles_present": 6.86,
+      "peak_vehicles_present": 12,
+      "class_statistics": {
+        "car": {
+          "average": 3.26,
+          "peak": 8
+        },
+        "bus": {
+          "average": 0.12,
+          "peak": 1
+        },
+        "truck": {
+          "average": 0.08,
+          "peak": 1
+        },
+        "motorcycle": {
+          "average": 3.4,
+          "peak": 9
+        },
+        "bicycle": {
+          "average": 0.0,
+          "peak": 0
+        }
+      },
+      "traffic_category_statistics": {
+        "LV": {
+          "average": 3.26,
+          "peak": 8
+        },
+        "HV": {
+          "average": 0.2,
+          "peak": 2
+        },
+        "MC": {
+          "average": 3.4,
+          "peak": 9
+        },
+        "bicycle": {
+          "average": 0.0,
+          "peak": 0
+        }
+      },
+      "busy_duration_seconds": 9.8,
+      "busy_duration_percentage": 98.0,
+      "roi_image_coverage_average": 0.27681,
+      "data_quality": {
+        "expected_samples": 50,
+        "valid_samples": 50,
+        "missing_samples": 0,
+        "effective_observation_seconds": 10.0,
+        "valid_observation_coverage": 1.0,
+        "processing_fps": 5,
+        "sample_period_seconds": 0.2
+      }
+    },
+    {
+      "window_started_at_seconds": 10.0,
+      "window_ended_at_seconds": 20.0,
+      "window_duration_seconds": 10.0,
+      "status": "complete",
+      "condition": null,
+      "classification_status": "uncalibrated",
+      "average_vehicles_present": 7.32,
+      "peak_vehicles_present": 14,
+      "class_statistics": {
+        "car": {
+          "average": 2.92,
+          "peak": 6
+        },
+        "bus": {
+          "average": 0.08,
+          "peak": 1
+        },
+        "truck": {
+          "average": 0.02,
+          "peak": 1
+        },
+        "motorcycle": {
+          "average": 4.3,
+          "peak": 10
+        },
+        "bicycle": {
+          "average": 0.0,
+          "peak": 0
+        }
+      },
+      "traffic_category_statistics": {
+        "LV": {
+          "average": 2.92,
+          "peak": 6
+        },
+        "HV": {
+          "average": 0.1,
+          "peak": 2
+        },
+        "MC": {
+          "average": 4.3,
+          "peak": 10
+        },
+        "bicycle": {
+          "average": 0.0,
+          "peak": 0
+        }
+      },
+      "busy_duration_seconds": 9.8,
+      "busy_duration_percentage": 98.0,
+      "roi_image_coverage_average": 0.3024,
+      "data_quality": {
+        "expected_samples": 50,
+        "valid_samples": 50,
+        "missing_samples": 0,
+        "effective_observation_seconds": 10.0,
+        "valid_observation_coverage": 1.0,
+        "processing_fps": 5,
+        "sample_period_seconds": 0.2
+      }
+    },
+    {
+      "window_started_at_seconds": 20.0,
+      "window_ended_at_seconds": 26.0,
+      "window_duration_seconds": 6.0,
+      "status": "partial",
+      "condition": null,
+      "classification_status": "insufficient_duration",
+      "average_vehicles_present": 5.4333,
+      "peak_vehicles_present": 11,
+      "class_statistics": {
+        "car": {
+          "average": 2.6667,
+          "peak": 6
+        },
+        "bus": {
+          "average": 0.7667,
+          "peak": 1
+        },
+        "truck": {
+          "average": 0.1667,
+          "peak": 1
+        },
+        "motorcycle": {
+          "average": 1.8333,
+          "peak": 7
+        },
+        "bicycle": {
+          "average": 0.0,
+          "peak": 0
+        }
+      },
+      "traffic_category_statistics": {
+        "LV": {
+          "average": 2.6667,
+          "peak": 6
+        },
+        "HV": {
+          "average": 0.9333,
+          "peak": 2
+        },
+        "MC": {
+          "average": 1.8333,
+          "peak": 7
+        },
+        "bicycle": {
+          "average": 0.0,
+          "peak": 0
+        }
+      },
+      "busy_duration_seconds": 5.8,
+      "busy_duration_percentage": 96.67,
+      "roi_image_coverage_average": 0.40509,
+      "data_quality": {
+        "expected_samples": 30,
+        "valid_samples": 30,
+        "missing_samples": 0,
+        "effective_observation_seconds": 6.0,
+        "valid_observation_coverage": 1.0,
+        "processing_fps": 5,
+        "sample_period_seconds": 0.2
+      }
+    }
+  ]
+}

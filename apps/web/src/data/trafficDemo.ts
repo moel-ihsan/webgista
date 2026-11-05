@@ -1,5 +1,8 @@
 import sample01 from './traffic-demo/traffic_sample_01.analysis.json'
 import sample02 from './traffic-demo/traffic_sample_02.analysis.json'
+import sample01RoiDensity from './traffic-demo/traffic_sample_01.roi-density.json'
+import sample02RoiDensity from './traffic-demo/traffic_sample_02.roi-density.json'
+import type { RoiDensityResult } from '../domain/roiDensityResult'
 
 export type DemoVehicleClass = 'bicycle' | 'car' | 'motorcycle' | 'bus' | 'truck'
 
@@ -99,6 +102,7 @@ export interface TrafficDemoVideo {
   previewVideoUrl: string
   videoUrl: string
   analysis: DemoAnalysis
+  roiDensity: RoiDensityResult
 }
 
 export const trafficDemoVideos: readonly TrafficDemoVideo[] = [
@@ -110,6 +114,7 @@ export const trafficDemoVideos: readonly TrafficDemoVideo[] = [
     previewVideoUrl: '/traffic-demo/traffic_sample_01.mp4',
     videoUrl: '/traffic-demo/traffic_sample_01_annotated.mp4',
     analysis: sample01,
+    roiDensity: sample01RoiDensity as RoiDensityResult,
   },
   {
     id: 'traffic-sample-02',
@@ -119,6 +124,7 @@ export const trafficDemoVideos: readonly TrafficDemoVideo[] = [
     previewVideoUrl: '/traffic-demo/traffic_sample_02.mp4',
     videoUrl: '/traffic-demo/traffic_sample_02_annotated.mp4',
     analysis: sample02,
+    roiDensity: sample02RoiDensity as RoiDensityResult,
   },
 ]
 

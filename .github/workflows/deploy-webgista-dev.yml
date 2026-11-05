@@ -187,6 +187,7 @@ jobs:
           set -euo pipefail
           supabase migration list --remote="$SUPABASE_DB_URL" > "$RUNNER_TEMP/phase2d-migrations.txt" 2>&1
           node scripts/phase2d-migration-guard.mjs history "$RUNNER_TEMP/phase2d-migrations.txt"
+          node scripts/phase2d-migration-guard.mjs phase3e-roi-density "$RUNNER_TEMP/phase2d-migrations.txt"
 
       - name: Check targeted hosted schema preconditions (read-only)
         run: |
@@ -200,6 +201,13 @@ jobs:
           docker run --rm -i --network host postgres:17-alpine \
             psql "$SUPABASE_DB_URL" --set=ON_ERROR_STOP=1 \
             --file=/dev/stdin < supabase/verification/phase_3d1_cctv_delete_preflight.sql
+
+      - name: Check ROI density migration preconditions (read-only)
+        run: |
+          docker run --rm -i --network host postgres:17-alpine \
+            psql "$SUPABASE_DB_URL" --set=ON_ERROR_STOP=1 --single-transaction \
+            --command='SET TRANSACTION READ ONLY' --file=/dev/stdin \
+            < supabase/verification/phase_3e_roi_density_preflight.sql
 
       - name: Preview remote migrations
         shell: bash
@@ -218,8 +226,12 @@ jobs:
         run: node scripts/phase2d-migration-guard.mjs phase3d-cctv-cleanup "$RUNNER_TEMP/phase2d-migrations.txt"
 
       - name: Require CCTV permanent-delete migration as the sole pending migration
-        if: ${{ inputs.apply_migrations == 'apply' && inputs.development_data_loss_waiver != 'accept-dev-data-loss-for-008' }}
+        if: ${{ inputs.apply_migrations == 'apply' && inputs.development_data_loss_waiver == 'accept-dev-data-loss-for-009' }}
         run: node scripts/phase2d-migration-guard.mjs phase3d1-cctv-delete "$RUNNER_TEMP/phase2d-migrations.txt"
+
+      - name: Require ROI density migration as the sole pending migration when using the recovery-point path
+        if: ${{ inputs.apply_migrations == 'apply' && inputs.development_data_loss_waiver == 'none' }}
+        run: node scripts/phase2d-migration-guard.mjs phase3e-roi-density "$RUNNER_TEMP/phase2d-migrations.txt"
 
       - name: Validate and record the explicit development-only backup waiver
         if: ${{ inputs.apply_migrations == 'apply' && inputs.development_data_loss_waiver != 'none' }}
@@ -248,8 +260,12 @@ jobs:
           node scripts/phase2d-migration-guard.mjs history "$RUNNER_TEMP/phase2d-migrations-before-apply.txt"
           if [[ "$DEVELOPMENT_DATA_LOSS_WAIVER" == "accept-dev-data-loss-for-008" ]]; then
             node scripts/phase2d-migration-guard.mjs phase3d-cctv-cleanup "$RUNNER_TEMP/phase2d-migrations-before-apply.txt"
-          else
+          elif [[ "$DEVELOPMENT_DATA_LOSS_WAIVER" == "accept-dev-data-loss-for-009" ]]; then
             node scripts/phase2d-migration-guard.mjs phase3d1-cctv-delete "$RUNNER_TEMP/phase2d-migrations-before-apply.txt"
+          elif [[ "$DEVELOPMENT_DATA_LOSS_WAIVER" == "none" ]]; then
+            node scripts/phase2d-migration-guard.mjs phase3e-roi-density "$RUNNER_TEMP/phase2d-migrations-before-apply.txt"
+          else
+            node scripts/phase2d-migration-guard.mjs waiver "$RUNNER_TEMP/phase2d-migrations-before-apply.txt"
           fi
           docker run --rm -i --network host postgres:17-alpine \
             psql "$SUPABASE_DB_URL" --set=ON_ERROR_STOP=1 --single-transaction \
@@ -303,3 +319,11 @@ jobs:
           docker run --rm -i --network host postgres:17-alpine \
             psql "$SUPABASE_DB_URL" --set=ON_ERROR_STOP=1 \
             --file=/dev/stdin < supabase/verification/phase_3d1_cctv_delete_preflight.sql
+
+      - name: Verify ROI density configuration contract after apply (read-only)
+        if: ${{ inputs.apply_migrations == 'apply' }}
+        run: |
+          docker run --rm -i --network host postgres:17-alpine \
+            psql "$SUPABASE_DB_URL" --set=ON_ERROR_STOP=1 --single-transaction \
+            --command='SET TRANSACTION READ ONLY' --file=/dev/stdin \
+            < supabase/verification/phase_3e_roi_density_readiness.sql

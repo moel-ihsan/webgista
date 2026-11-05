@@ -9,6 +9,7 @@ import {
   assertPhase2eAclFixOnlyPending,
   assertPhase3dCctvCleanupOnlyPending,
   assertPhase3d1CctvDeleteOnlyPending,
+  assertPhase3eRoiDensityOnlyPending,
   assertPhase2eOnlyPending,
   assertDryRunMatches,
   assertRecoveryAvailable,
@@ -94,15 +95,16 @@ test('parses complete migration-list output and fails closed for inspection erro
 });
 
 test('accepts only a chronological suffix of the reviewed migrations', () => {
-  assert.deepEqual(assessMigrationHistory({ localVersions: versions, remoteVersions: versions.slice(0, 4) }), ['20261104000300', '20261104000400', '20261105000100', '20261105000200', '20261105000400', '20261105000500']);
-  assert.deepEqual(assessMigrationHistory({ localVersions: versions, remoteVersions: versions.slice(0, 5) }), ['20261104000400', '20261105000100', '20261105000200', '20261105000400', '20261105000500']);
-  assert.deepEqual(assessMigrationHistory({ localVersions: versions, remoteVersions: versions.slice(0, 6) }), ['20261105000100', '20261105000200', '20261105000400', '20261105000500']);
-  assert.deepEqual(assessMigrationHistory({ localVersions: versions, remoteVersions: versions.slice(0, 7) }), ['20261105000200', '20261105000400', '20261105000500']);
-  assert.deepEqual(assessMigrationHistory({ localVersions: versions, remoteVersions: versions.slice(0, 8) }), ['20261105000400', '20261105000500']);
-  assert.deepEqual(assessMigrationHistory({ localVersions: versions, remoteVersions: versions.slice(0, 9) }), ['20261105000500']);
+  assert.deepEqual(assessMigrationHistory({ localVersions: versions, remoteVersions: versions.slice(0, 4) }), ['20261104000300', '20261104000400', '20261105000100', '20261105000200', '20261105000400', '20261105000500', '20261106000100']);
+  assert.deepEqual(assessMigrationHistory({ localVersions: versions, remoteVersions: versions.slice(0, 5) }), ['20261104000400', '20261105000100', '20261105000200', '20261105000400', '20261105000500', '20261106000100']);
+  assert.deepEqual(assessMigrationHistory({ localVersions: versions, remoteVersions: versions.slice(0, 6) }), ['20261105000100', '20261105000200', '20261105000400', '20261105000500', '20261106000100']);
+  assert.deepEqual(assessMigrationHistory({ localVersions: versions, remoteVersions: versions.slice(0, 7) }), ['20261105000200', '20261105000400', '20261105000500', '20261106000100']);
+  assert.deepEqual(assessMigrationHistory({ localVersions: versions, remoteVersions: versions.slice(0, 8) }), ['20261105000400', '20261105000500', '20261106000100']);
+  assert.deepEqual(assessMigrationHistory({ localVersions: versions, remoteVersions: versions.slice(0, 9) }), ['20261105000500', '20261106000100']);
+  assert.deepEqual(assessMigrationHistory({ localVersions: versions, remoteVersions: versions.slice(0, 10) }), ['20261106000100']);
   assert.deepEqual(assessMigrationHistory({ localVersions: versions, remoteVersions: versions }), []);
-  assert.throws(() => assessMigrationHistory({ localVersions: [...versions, '20261106000100'], remoteVersions: versions.slice(0, 4) }), /Unapproved pending/);
-  assert.throws(() => assessMigrationHistory({ localVersions: versions, remoteVersions: [...versions, '20261106000100'] }), /absent locally/);
+  assert.throws(() => assessMigrationHistory({ localVersions: [...versions, '20261107000100'], remoteVersions: versions.slice(0, 4) }), /Unapproved pending/);
+  assert.throws(() => assessMigrationHistory({ localVersions: versions, remoteVersions: [...versions, '20261107000100'] }), /absent locally/);
   assert.throws(() => assessMigrationHistory({ localVersions: versions, remoteVersions: [...versions.slice(0, 4), versions[5]] }), /inconsistent/);
   assert.throws(() => assessMigrationHistory({ localVersions: versions, remoteVersions: [...versions.slice(0, 5), versions[6]] }), /inconsistent/);
 });
@@ -146,6 +148,12 @@ test('allows CCTV permanent deletion only when migration 009 is the sole pending
   assert.throws(() => assertPhase3d1CctvDeleteOnlyPending(['20261105000500', '20261106000100']), /only for CCTV permanent-delete migration/);
 });
 
+test('allows ROI density migration only as the sole pending migration', () => {
+  assert.doesNotThrow(() => assertPhase3eRoiDensityOnlyPending(['20261106000100']));
+  assert.throws(() => assertPhase3eRoiDensityOnlyPending([]), /only for ROI density configuration migration/);
+  assert.throws(() => assertPhase3eRoiDensityOnlyPending(['20261105000500', '20261106000100']), /only for ROI density configuration migration/);
+});
+
 test('requires at least one completed backup with a valid, nonfuture timestamp', () => {
   const now = Date.parse('2026-11-05T00:00:00Z');
   assert.equal(assertRecoveryAvailable({ backups: [{ status: 'COMPLETED', inserted_at: '2026-11-04T20:00:00Z' }] }, now), 1);
@@ -168,6 +176,7 @@ test('accepts each one-time waiver only for its exact development migration set'
   assert.deepEqual(validateDevelopmentBackupWaiver({ ...context, waiver: developmentWaiver006, pendingVersions: ['20261105000200'] }), ['20261105000200']);
   assert.deepEqual(validateDevelopmentBackupWaiver({ ...context, waiver: developmentWaiver008, pendingVersions: ['20261105000400'] }), ['20261105000400']);
   assert.deepEqual(validateDevelopmentBackupWaiver({ ...context, waiver: developmentWaiver009, pendingVersions: ['20261105000500'] }), ['20261105000500']);
+  assert.throws(() => validateDevelopmentBackupWaiver({ ...context, waiver: developmentWaiver009, pendingVersions: ['20261106000100'] }), /exact approved/);
   assert.throws(() => validateDevelopmentBackupWaiver({ ...context, applyMigrations: 'preview', pendingVersions: ['20261104000300'] }), /explicit apply/);
   assert.throws(() => validateDevelopmentBackupWaiver({ ...context, waiver: 'none', pendingVersions: ['20261104000300'] }), /explicit apply/);
   assert.throws(() => validateDevelopmentBackupWaiver({ ...context, projectRef: 'ponmlkjihgfedcbaqrst', pendingVersions: ['20261104000300'] }), /target/);

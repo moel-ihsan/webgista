@@ -3,19 +3,22 @@ import { createApp, nextTick } from 'vue'
 import { createMemoryHistory, createRouter, RouterView } from 'vue-router'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-const { getCctvDetail, getCctvDemoAssociation, listTrafficObservations, privateImageUrl, authState } = vi.hoisted(() => ({
+const { getCctvDetail, getCctvDemoAssociation, getCctvAnalysisConfig, listTrafficObservations, privateImageUrl, authState, appConfigState } = vi.hoisted(() => ({
   getCctvDetail: vi.fn(),
   getCctvDemoAssociation: vi.fn(),
+  getCctvAnalysisConfig: vi.fn(),
   listTrafficObservations: vi.fn(),
   privateImageUrl: vi.fn(),
   authState: { status: 'authenticated' as string },
+  appConfigState: { privateMediaEnabled: true, roiDensityEnabled: false },
 }))
 
 vi.mock('../auth/session', () => ({ authSession: { state: authState } }))
-vi.mock('../config/app', () => ({ appConfig: { privateMediaEnabled: true } }))
+vi.mock('../config/app', () => ({ appConfig: appConfigState }))
 vi.mock('../lib/supabase', () => ({ supabaseClient: {} }))
 vi.mock('../data/cctvDetail', () => ({ getCctvDetail }))
 vi.mock('../data/cctvDemoVideo', () => ({ getCctvDemoAssociation }))
+vi.mock('../data/cctvAnalysisConfig', () => ({ getCctvAnalysisConfig }))
 vi.mock('../data/trafficObservations', () => ({ listTrafficObservations }))
 vi.mock('../data/privateMedia', () => ({ privateImageUrl }))
 
@@ -56,6 +59,8 @@ beforeEach(() => {
   }])
   getCctvDemoAssociation.mockReset().mockResolvedValue({ video: null, editable: true })
   privateImageUrl.mockReset().mockResolvedValue('signed-photo')
+  getCctvAnalysisConfig.mockReset().mockResolvedValue(null)
+  appConfigState.roiDensityEnabled = false
 })
 
 afterEach(() => {
@@ -105,6 +110,9 @@ describe('CCTV detail page', () => {
     expect(host?.textContent).toContain('not unique vehicles')
     expect(host?.textContent).toContain('25 line-crossing events')
     expect(host?.textContent).toContain('ground truth not available')
+    expect(host?.textContent).toContain('10-second ROI window')
+    expect(host?.textContent).toContain('average presence')
+    expect(host?.querySelector('.cctv-detail-roi polygon')).not.toBeNull()
     expect(host?.textContent).toContain('does not depict current traffic at this camera location')
 
     video?.dispatchEvent(new Event('error'))
@@ -120,6 +128,23 @@ describe('CCTV detail page', () => {
     expect(getCctvDemoAssociation).not.toHaveBeenCalled()
     expect(host?.querySelector('video')).toBeNull()
     authState.status = 'authenticated'
+  })
+
+  it('withholds stale ROI statistics when an authorized camera has changed its saved ROI', async () => {
+    const { trafficDemoVideos } = await import('../data/trafficDemo')
+    const video = trafficDemoVideos[0]!
+    appConfigState.roiDensityEnabled = true
+    getCctvDemoAssociation.mockResolvedValue({ video, editable: true })
+    getCctvAnalysisConfig.mockResolvedValue({
+      configuration: { ...video.roiDensity.configuration_snapshot, roi_geometry: [0.1, 0.1, 0.5, 0.5] },
+      configurationVersion: 2,
+      updatedAt: '2026-11-06T00:00:00Z',
+    })
+    await mountPage()
+
+    expect(getCctvAnalysisConfig).toHaveBeenCalledWith({}, 'camera-1')
+    expect(host?.textContent).toContain('This analysis is stale')
+    expect(host?.textContent).not.toContain('10-second ROI window')
   })
 
   it('waits for the authorized video lookup before rendering the image fallback', async () => {

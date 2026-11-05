@@ -10,6 +10,7 @@ export const approvedHashes = new Map([
   ['20261105000200', 'e3ea8d7c5fc9f72ee45566bb4aadbddeab4a74133af29daf09fb4f5bfa101d99'],
   ['20261105000400', '3a53ae34079d7352f520fe8ee94e9420f3bf495cf8fff98c55e96289237465d3'],
   ['20261105000500', '374cecda12bd657cc4be45590b0bb07a98091501e9a8a6c959bc4c0772c4a982'],
+  ['20261106000100', 'b3adb0e3fd76134a388c045b3a37b97b6d1acc335bfe37306c7c8223643c0f18'],
 ]);
 
 const approvedVersions = [...approvedHashes.keys()];
@@ -172,6 +173,12 @@ export function assertPhase3d1CctvDeleteOnlyPending(pendingVersions) {
   }
 }
 
+export function assertPhase3eRoiDensityOnlyPending(pendingVersions) {
+  if (pendingVersions.length !== 1 || pendingVersions[0] !== '20261106000100') {
+    throw new Error('This deployment is authorized only for ROI density configuration migration 20261106000100; refusing any other pending set.');
+  }
+}
+
 export function assertRecoveryAvailable(payload, now = Date.now()) {
   if (!Array.isArray(payload?.backups)) throw new Error('Supabase backup API returned an invalid response.');
   const available = payload.backups.filter((backup) =>
@@ -226,6 +233,12 @@ if (process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.ar
       const pending = await inspectHistory(first);
       assertPhase3d1CctvDeleteOnlyPending(pending);
       console.log('The only pending migration is the approved CCTV permanent-delete RPC migration 20261105000500.');
+    } else if (command === 'phase3e-roi-density' && first) {
+      const pending = await inspectHistory(first);
+      if (pending.includes('20261106000100')) assertPhase3eRoiDensityOnlyPending(pending);
+      console.log(pending.includes('20261106000100')
+        ? 'The only pending migration is the ROI density configuration migration 20261106000100.'
+        : 'ROI density configuration migration 20261106000100 is not pending.');
     } else if (command === 'dry-run' && first && second) {
       const pending = await inspectHistory(first);
       const dryRun = await readFile(second, 'utf8');
@@ -246,7 +259,7 @@ if (process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.ar
       });
       console.log(`Explicit development data-loss waiver accepted for approved pending migrations: ${waivedVersions.join(', ')}.`);
     } else {
-      throw new Error('Usage: snapshot | history <migration-list-output> | applied <migration-list-output> | phase2e <migration-list-output> | phase2e-acl-fix <migration-list-output> | dry-run <migration-list-output> <dry-run-output> | backup <backup-api-json> | waiver <migration-list-output>');
+      throw new Error('Usage: snapshot | history <migration-list-output> | applied <migration-list-output> | phase2e <migration-list-output> | phase2e-acl-fix <migration-list-output> | phase3d-cctv-cleanup <migration-list-output> | phase3d1-cctv-delete <migration-list-output> | phase3e-roi-density <migration-list-output> | dry-run <migration-list-output> <dry-run-output> | backup <backup-api-json> | waiver <migration-list-output>');
     }
   } catch (error) {
     console.error(error.message);

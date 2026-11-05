@@ -4,6 +4,7 @@ import { RouterLink, useRoute, useRouter } from 'vue-router'
 
 import { authSession } from '../auth/session'
 import TrafficMap from '../components/map/TrafficMap.vue'
+import TrafficAnalysisConfig from '../components/cctv/TrafficAnalysisConfig.vue'
 import { getCctvDemoAssociation, saveCctvDemoVideo, type TrafficDemoId } from '../data/cctvDemoVideo'
 import { trafficDemoVideos } from '../data/trafficDemo'
 import { createCctvLocation, getCctvLocation, getCctvSnapshotUrl, listCctvAgencies, replaceCctvSnapshot, updateCctvLocation, validateCctvLocationInput, type CctvAgencyOption, type CctvLocationInput } from '../data/cctvManagement'
@@ -42,6 +43,7 @@ const locationCoordinates = computed<[number, number] | null>(() => {
     ? [longitude, latitude]
     : null
 })
+const selectedDemoVideo = computed(() => trafficDemoVideos.find(({ id }) => id === demoVideoId.value) ?? null)
 let controller: AbortController | null = null
 let accessRevision = 0
 let loaded = false
@@ -295,6 +297,12 @@ onBeforeUnmount(() => {
             <template v-if="!demoVideoEditable"> This camera has a separate private video configuration that this form cannot change.</template>
           </p>
         </template>
+        <TrafficAnalysisConfig
+          v-if="editingId && appConfig.roiDensityEnabled"
+          :camera-id="editingId"
+          :video="form.category === 'analytic' ? selectedDemoVideo : null"
+          :editable="demoVideoEditable && agencies.some(({ id }) => id === form.agencyId)"
+        />
         <p class="cctv-form-note">Camera stream credentials and URLs are managed separately and are not part of this form. New camera locations remain private on the public map by default.</p>
         <div class="cctv-form-actions"><RouterLink class="legacy-button legacy-button--outline" to="/cctv">Cancel</RouterLink><button class="legacy-button legacy-button--primary" type="submit" :disabled="saving || agencies.length === 0">{{ saving ? 'Saving…' : 'Submit' }}</button></div>
       </div>

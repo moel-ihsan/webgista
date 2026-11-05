@@ -8,7 +8,10 @@ import { getCctvDetail, type CctvDetail } from '../data/cctvDetail'
 import { getCctvDemoAssociation } from '../data/cctvDemoVideo'
 import { listTrafficObservations } from '../data/trafficObservations'
 import { privateImageUrl } from '../data/privateMedia'
+import { getCctvAnalysisConfig, type StoredRoiDensityConfig } from '../data/cctvAnalysisConfig'
 import { demoDetectionTotal, demoFrameAt, type TrafficDemoVideo } from '../data/trafficDemo'
+import { rectangleToPolygon, type RoiDensityConfig } from '../domain/roiDensity'
+import { roiDensityFrameAt } from '../domain/roiDensityResult'
 import type { TrafficObservation } from '../domain/traffic'
 import { supabaseClient } from '../lib/supabase'
 
@@ -21,6 +24,9 @@ const observationStatus = ref<'loading' | 'ready' | 'unavailable' | 'error'>('lo
 const imageUrl = ref<string | null>(null)
 const imageFailed = ref(false)
 const demoVideo = ref<TrafficDemoVideo | null>(null)
+const demoAnalysisConfig = ref<StoredRoiDensityConfig | null>(null)
+const demoAssociationEditable = ref(false)
+const demoConfigStatus = ref<'unchecked' | 'loading' | 'ready' | 'error'>('unchecked')
 const videoAssociationReady = ref(false)
 const videoLoading = ref(false)
 const videoFailed = ref(false)
@@ -34,6 +40,28 @@ const latest = computed(() => observations.value[0] ?? null)
 const categoryLabel = computed(() => camera.value?.category === 'analytic' ? 'Analytic' : 'Regular')
 const demoFrame = computed(() => demoVideo.value ? demoFrameAt(demoVideo.value.analysis, videoTime.value) : null)
 const demoDetections = computed(() => demoVideo.value ? demoDetectionTotal(demoVideo.value.analysis) : 0)
+const demoDensityFrame = computed(() => demoVideo.value ? roiDensityFrameAt(demoVideo.value.roiDensity, videoTime.value) : null)
+const demoDensityWindow = computed(() => demoVideo.value?.roiDensity.windows.find((window) => videoTime.value >= window.window_started_at_seconds && videoTime.value < window.window_ended_at_seconds) ?? null)
+function configKey(config: RoiDensityConfig): string {
+  return JSON.stringify([
+    config.roi_type, config.roi_geometry, config.video_dimensions, config.observation_window_seconds,
+    config.refresh_seconds, config.sampled_fps, config.minimum_detection_confidence,
+    [...config.included_classes].sort(), config.busy_threshold_vehicles, config.minimum_valid_coverage,
+    config.density_thresholds, config.calibration_status, config.calibration_note,
+  ])
+}
+const demoDensityStale = computed(() => {
+  if (!demoVideo.value || !appConfig.roiDensityEnabled || !demoAssociationEditable.value) return false
+  if (demoConfigStatus.value !== 'ready') return true
+  return demoAnalysisConfig.value !== null
+    && configKey(demoAnalysisConfig.value.configuration) !== configKey(demoVideo.value.roiDensity.configuration_snapshot)
+})
+const demoRoiPoints = computed(() => {
+  const result = demoVideo.value?.roiDensity
+  if (!result) return []
+  const config = demoAnalysisConfig.value?.configuration ?? result.configuration_snapshot
+  return config.roi_type === 'rectangle' ? rectangleToPolygon(config.roi_geometry as number[]) : config.roi_geometry as [number, number][]
+})
 
 function dateLabel(value: string): string {
   const date = new Date(value)
@@ -76,6 +104,9 @@ function onDemoVideoError(): void {
   videoFailed.value = true
   videoLoading.value = false
   demoVideo.value = null
+  demoAnalysisConfig.value = null
+  demoAssociationEditable.value = false
+  demoConfigStatus.value = 'unchecked'
 }
 
 watch([() => String(route.params.id ?? ''), () => authSession.state.status], ([id, authStatus]) => {
@@ -117,15 +148,30 @@ watch([() => String(route.params.id ?? ''), () => authSession.state.status], ([i
       pageStatus.value = 'ready'
 
       if (authStatus === 'authenticated') {
-        void getCctvDemoAssociation(client, id).then(({ video }) => {
+        void getCctvDemoAssociation(client, id).then(({ video, editable }) => {
           if (revision === loadRevision) {
             demoVideo.value = video
+            demoAssociationEditable.value = editable
             videoAssociationReady.value = true
             videoLoading.value = video !== null
+            if (video && appConfig.roiDensityEnabled && editable) {
+              demoConfigStatus.value = 'loading'
+              void getCctvAnalysisConfig(client, id).then((configuration) => {
+                if (revision === loadRevision) {
+                  demoAnalysisConfig.value = configuration
+                  demoConfigStatus.value = 'ready'
+                }
+              }).catch(() => {
+                if (revision === loadRevision) demoConfigStatus.value = 'error'
+              })
+            }
           }
         }).catch(() => {
           // Restricted or unavailable sources use the authorized CCTV image fallback.
-          if (revision === loadRevision) videoAssociationReady.value = true
+          if (revision === loadRevision) {
+            videoAssociationReady.value = true
+            demoConfigStatus.value = 'error'
+          }
         })
       }
 
@@ -191,23 +237,28 @@ onBeforeUnmount(() => {
       <div class="cctv-detail-layout">
         <section class="cctv-detail-media" :aria-label="`${camera.name} camera media`">
           <template v-if="demoVideo && !videoFailed">
-            <video
-              ref="demoVideoElement"
-              :key="demoVideo.id"
-              class="cctv-detail-video"
-              :src="demoVideo.videoUrl"
-              :poster="imageUrl || undefined"
-              autoplay
-              muted
-              controls
-              playsinline
-              preload="metadata"
-              :aria-label="`Demo video, not live CCTV: ${demoVideo.title}`"
-              @loadeddata="videoLoading = false"
-              @canplay="attemptDemoAutoplay"
-              @timeupdate="updateDemoTime"
-              @error="onDemoVideoError"
-            >Your browser does not support H.264 playback.</video>
+            <div class="cctv-detail-video-stage" :style="{ aspectRatio: `${demoVideo.analysis.video_dimensions.width} / ${demoVideo.analysis.video_dimensions.height}` }">
+              <video
+                ref="demoVideoElement"
+                :key="demoVideo.id"
+                class="cctv-detail-video"
+                :src="demoVideo.videoUrl"
+                :poster="imageUrl || undefined"
+                autoplay
+                muted
+                controls
+                playsinline
+                preload="metadata"
+                :aria-label="`Demo video, not live CCTV: ${demoVideo.title}`"
+                @loadeddata="videoLoading = false"
+                @canplay="attemptDemoAutoplay"
+                @timeupdate="updateDemoTime"
+                @error="onDemoVideoError"
+              >Your browser does not support H.264 playback.</video>
+              <svg class="cctv-detail-roi" viewBox="0 0 1000 1000" preserveAspectRatio="none" aria-label="Experimental detection area">
+                <polygon :points="demoRoiPoints.map(([x, y]) => `${x * 1000},${y * 1000}`).join(' ')" />
+              </svg>
+            </div>
             <p class="cctv-detail-demo-label">DEMO VIDEO — NOT LIVE CCTV</p>
             <p v-if="videoLoading" class="cctv-detail-media-note" role="status">Loading demo video…</p>
             <button v-if="videoAutoplayBlocked" class="legacy-button legacy-button--outline" type="button" @click="attemptDemoAutoplay">Play demo video</button>
@@ -248,6 +299,19 @@ onBeforeUnmount(() => {
             <span>Model: {{ demoVideo.analysis.model.name }} {{ demoVideo.analysis.model.version }} · sampled at {{ demoVideo.analysis.sampled_fps }} FPS · processed {{ dateLabel(demoVideo.analysis.created_at) }}.</span>
             <span v-if="demoVideo.analysis.tracking.algorithm">Tracker: {{ demoVideo.analysis.tracking.algorithm }}; {{ demoVideo.analysis.tracking.quality }}.</span>
             <span v-if="demoFrame">Frame at {{ demoFrame.offset_seconds.toFixed(1) }}s: {{ demoFrame.detections.length }} vehicle detections.</span>
+            <span v-if="demoConfigStatus === 'loading'" role="status">Checking whether the stored ROI matches this analysis…</span>
+            <span v-else-if="demoConfigStatus === 'error'" role="status">Saved ROI status is unavailable; ROI results are withheld until it can be checked.</span>
+            <span v-else-if="demoDensityStale" role="status">This analysis is stale: the saved ROI or analysis settings changed. Re-run the offline pipeline with the exported configuration.</span>
+            <template v-else>
+              <span v-if="demoDensityFrame">Bundled demo ROI presence at current sampled frame: {{ demoDensityFrame.vehicle_presence_total }} detections · image coverage {{ ((demoDensityFrame.roi_image_coverage ?? 0) * 100).toFixed(1) }}%.</span>
+              <template v-if="demoDensityWindow">
+                <span>10-second ROI window {{ demoDensityWindow.window_started_at_seconds }}–{{ demoDensityWindow.window_ended_at_seconds }}s ({{ demoDensityWindow.status }}): average presence {{ demoDensityWindow.average_vehicles_present?.toFixed(2) ?? 'unavailable' }}, peak {{ demoDensityWindow.peak_vehicles_present ?? 'unavailable' }}.</span>
+                <span>Busy {{ demoDensityWindow.busy_duration_seconds.toFixed(1) }}s; valid coverage {{ (demoDensityWindow.data_quality.valid_observation_coverage * 100).toFixed(1) }}%; estimate state {{ demoDensityWindow.classification_status.replaceAll('_', ' ') }}{{ demoDensityWindow.condition ? ` (${demoDensityWindow.condition})` : '' }}.</span>
+                <span>Average presence by class — LV {{ demoDensityWindow.traffic_category_statistics.LV.average?.toFixed(2) ?? '—' }}, HV {{ demoDensityWindow.traffic_category_statistics.HV.average?.toFixed(2) ?? '—' }}, MC {{ demoDensityWindow.traffic_category_statistics.MC.average?.toFixed(2) ?? '—' }}, bicycle {{ demoDensityWindow.traffic_category_statistics.bicycle.average?.toFixed(2) ?? '—' }}.</span>
+              </template>
+              <span v-if="!demoAnalysisConfig && appConfig.roiDensityEnabled">No camera-specific ROI is saved; values use the demo's bundled ROI only.</span>
+            </template>
+            <span>ROI density is visual presence only. Demo footage does not update the saved Traffic Condition or Observation History.</span>
             <span>Experimental demo footage; it does not depict current traffic at this camera location.</span>
           </section>
 
@@ -285,9 +349,12 @@ onBeforeUnmount(() => {
 <style scoped>
 .cctv-detail-page { width: 100%; min-width: 0; }
 .cctv-detail-layout { display: grid; grid-template-columns: minmax(0, 5fr) minmax(280px, 3fr); gap: 30px; align-items: start; }
-.cctv-detail-media { position: relative; min-height: 550px; overflow: hidden; border-radius: 10px; background: var(--color-secondary); box-shadow: var(--shadow); }
+.cctv-detail-media { position: relative; display: flex; flex-direction: column; justify-content: center; min-height: 550px; overflow: hidden; border-radius: 10px; background: var(--color-secondary); box-shadow: var(--shadow); }
 .cctv-detail-media > img { display: block; width: 100%; height: 550px; object-fit: cover; }
-.cctv-detail-video { display: block; width: 100%; height: 550px; object-fit: contain; background: #101311; }
+.cctv-detail-video-stage { position: relative; width: 100%; overflow: hidden; background: #101311; }
+.cctv-detail-video { display: block; width: 100%; height: 100%; object-fit: fill; background: #101311; }
+.cctv-detail-roi { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+.cctv-detail-roi polygon { fill: #21c55e24; stroke: #21c55e; stroke-width: 6; vector-effect: non-scaling-stroke; }
 .cctv-detail-demo-label { position: absolute; top: 12px; left: 12px; z-index: 1; margin: 0; padding: 7px 10px; border-radius: 6px; color: #fff; background: #a13b20; font-size: .78rem; font-weight: 700; }
 .cctv-detail-fallback { display: grid; min-height: 550px; place-content: center; gap: 10px; padding: 28px; color: var(--text-color); text-align: center; }
 .cctv-detail-fallback span, .cctv-detail-observation-meta, .cctv-detail-history span { color: var(--ink-500); font-size: .82rem; }
@@ -308,5 +375,5 @@ onBeforeUnmount(() => {
 .cctv-detail-history ol { display: grid; gap: 9px; max-height: 220px; margin: 0; padding: 0; overflow: auto; list-style: none; }
 .cctv-detail-history li { display: grid; gap: 3px; font-size: .82rem; }
 .cctv-detail-actions { display: flex; gap: 10px; margin-top: 22px; }
-@media (max-width: 760px) { .cctv-detail-layout { grid-template-columns: minmax(0, 1fr); gap: 16px; } .cctv-detail-media, .cctv-detail-fallback { min-height: 320px; } .cctv-detail-media > img, .cctv-detail-video { height: 320px; } }
+@media (max-width: 760px) { .cctv-detail-layout { grid-template-columns: minmax(0, 1fr); gap: 16px; } .cctv-detail-media, .cctv-detail-fallback { min-height: 320px; } .cctv-detail-media > img { height: 320px; } }
 </style>

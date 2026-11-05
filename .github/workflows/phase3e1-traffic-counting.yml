@@ -2,7 +2,7 @@ name: Phase 3E.1 vehicle counting verification
 
 on:
   push:
-    branches: [feat/webgista-v2]
+    branches: [feat/webgista-v2, ci/phase3e-roi-density-20261106]
     paths:
       - "tools/traffic-analytics/**"
       - "apps/web/src/data/traffic-demo/**"

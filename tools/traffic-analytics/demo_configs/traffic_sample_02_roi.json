@@ -1,0 +1,17 @@
+{
+  "schema_version": "webgista.roi-density-config.v1",
+  "roi_type": "rectangle",
+  "roi_geometry": [0.02, 0.4, 0.96, 0.58],
+  "video_dimensions": { "width": 1280, "height": 720 },
+  "observation_window_seconds": 10,
+  "refresh_seconds": 10,
+  "sampled_fps": 5,
+  "minimum_detection_confidence": 0.35,
+  "included_classes": ["car", "bus", "truck", "motorcycle", "bicycle"],
+  "busy_threshold_vehicles": 0,
+  "minimum_valid_coverage": 0.8,
+  "density_thresholds": null,
+  "calibration_status": "uncalibrated",
+  "calibration_note": "",
+  "configuration_version": 1
+}

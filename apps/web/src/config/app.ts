@@ -13,6 +13,7 @@ export const appConfig = Object.freeze({
   versionLabel: 'v2 · Phase 2B',
   privateMediaEnabled: import.meta.env.VITE_SUPABASE_PRIVATE_MEDIA_ENABLED === 'true',
   profileFieldsEnabled: import.meta.env.VITE_SUPABASE_PROFILE_FIELDS_ENABLED === 'true',
+  roiDensityEnabled: import.meta.env.VITE_SUPABASE_ROI_DENSITY_ENABLED === 'true',
   agencyRemovalEnabled: import.meta.env.VITE_AGENCY_REMOVAL_ENABLED === 'true',
   map: {
     styles: mapStyles,
