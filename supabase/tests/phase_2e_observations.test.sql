@@ -23,7 +23,7 @@ values
   ('bbbbbbbb-1111-1111-1111-000000000001', 'bbbbbbbb-0000-0000-0000-000000000001', 'Traffic Camera One', 'Test address one', 95.32, 5.55),
   ('bbbbbbbb-1111-1111-1111-000000000002', 'bbbbbbbb-0000-0000-0000-000000000002', 'Traffic Camera Two', 'Test address two', 95.33, 5.56);
 
-select plan(25);
+select plan(26);
 
 select ok(to_regtype('public.traffic_condition') is not null, 'traffic condition enum exists');
 select has_column('public', 'traffic_observations', 'condition', 'condition is persisted per observation');
