@@ -285,14 +285,17 @@ try {
     method: 'DELETE',
     body: { prefixes: [imagePath] },
   });
-  assert.ok([400, 403, 404].includes(editorOrphanDelete.status), 'agency editor cannot delete an orphaned camera image');
+  assert.ok(
+    [200, 400, 403, 404].includes(editorOrphanDelete.status),
+    `agency editor orphan deletion returned an unexpected HTTP ${editorOrphanDelete.status}`,
+  );
   const anonymousOrphanRead = await storageRequest(apiUrl, `/storage/v1/object/authenticated/cctv-images/${imagePath}`, { apiKey: anonKey });
   assert.ok(anonymousOrphanRead.status >= 400, 'anonymous user cannot read an orphaned private camera image');
   const adminOrphanRead = await storageRequest(apiUrl, `/storage/v1/object/authenticated/cctv-images/${imagePath}`, {
     apiKey: anonKey,
     token: administrator.accessToken,
   });
-  assert.equal(adminOrphanRead.status, 200, 'administrator can read an orphan image for cleanup');
+  assert.equal(adminOrphanRead.status, 200, 'agency editor cannot delete an orphan image; administrator can still read it for cleanup');
   const adminOrphanDelete = await storageRequest(apiUrl, '/storage/v1/object/cctv-images', {
     apiKey: anonKey,
     token: administrator.accessToken,
