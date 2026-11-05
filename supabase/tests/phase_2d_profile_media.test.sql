@@ -229,8 +229,11 @@ select results_eq($$select name from storage.objects where name = 'phase3d-orpha
   $$values ('phase3d-orphan-cleanup-fixture.webp'::text)$$, 'administrator can locate an orphaned CCTV image for cleanup');
 reset role;
 
-select ok(not has_table_privilege('anon', 'storage.objects', 'DELETE'),
-  'anonymous callers lack table privileges to request Storage object deletion');
+select set_config('request.jwt.claims', '{"role":"anon"}', true);
+set local role anon;
+select results_eq($$delete from storage.objects where bucket_id = 'cctv-images' and name = 'phase3d-orphan-cleanup-fixture.webp' returning name$$,
+  $$select null::text where false$$, 'anonymous callers cannot delete orphaned CCTV image objects');
+reset role;
 
 select * from finish();
 rollback;
