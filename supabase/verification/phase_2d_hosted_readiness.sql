@@ -127,6 +127,43 @@ select jsonb_pretty(jsonb_build_object(
     'agency_editors', (select count(*) from public.user_roles where role = 'agency_editor'),
     'cameras_total', (select count(*) from public.cctv_locations)
   ),
+  'cctv_image_reference_integrity', jsonb_build_object(
+    'cameras_with_snapshot_path', (
+      select count(*) from public.cctv_locations where snapshot_path is not null
+    ),
+    'referenced_storage_objects', (
+      select count(*)
+      from public.cctv_locations cameras
+      join storage.objects objects
+        on objects.bucket_id = 'cctv-images' and objects.name = cameras.snapshot_path
+      where cameras.snapshot_path is not null
+    ),
+    'snapshot_paths_missing_storage_object', (
+      select count(*)
+      from public.cctv_locations cameras
+      where cameras.snapshot_path is not null
+        and not exists (
+          select 1 from storage.objects objects
+          where objects.bucket_id = 'cctv-images' and objects.name = cameras.snapshot_path
+        )
+    ),
+    'duplicate_snapshot_paths', (
+      select count(*)
+      from (
+        select snapshot_path from public.cctv_locations
+        where snapshot_path is not null
+        group by snapshot_path having count(*) > 1
+      ) duplicate_paths
+    ),
+    'orphaned_cctv_image_objects', (
+      select count(*) from storage.objects objects
+      where objects.bucket_id = 'cctv-images'
+        and not exists (
+          select 1 from public.cctv_locations cameras
+          where cameras.snapshot_path = objects.name
+        )
+    )
+  ),
   'phase_2d_test_fixture_preflight', jsonb_build_object(
     'matching_agencies', coalesce((
       select jsonb_agg(jsonb_build_object('id', id, 'name', name, 'is_public', is_public))
