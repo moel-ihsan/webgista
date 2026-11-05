@@ -84,6 +84,13 @@ function sqlText(value) {
 }
 
 async function cleanupFixtures(cameras, agencies, users, imagePaths, apiUrl, anonKey, adminToken) {
+  const ids = (values) => values.length
+    ? values.map((value) => {
+      assert.match(value, /^[0-9a-f-]{36}$/i);
+      return `'${value}'::uuid`;
+    }).join(', ')
+    : 'NULL::uuid';
+  runLocalSql(`update public.cctv_locations set snapshot_path = null where id in (${ids(cameras)})`);
   if (adminToken) {
     for (const imagePath of imagePaths) {
       const result = await storageRequest(apiUrl, '/storage/v1/object/cctv-images', {
@@ -95,13 +102,8 @@ async function cleanupFixtures(cameras, agencies, users, imagePaths, apiUrl, ano
       assert.ok(result.status >= 200 && result.status < 300, `local QA media cleanup failed (HTTP ${result.status}).`);
     }
   }
-  const ids = (values) => values.length
-    ? values.map((value) => {
-      assert.match(value, /^[0-9a-f-]{36}$/i);
-      return `'${value}'::uuid`;
-    }).join(', ')
-    : 'NULL::uuid';
   for (const sql of [
+    `delete from public.traffic_observations where cctv_id in (${ids(cameras)})`,
     `delete from public.cctv_locations where id in (${ids(cameras)})`,
     `delete from auth.users where id in (${ids(users.map(({ userId }) => userId))})`,
     `delete from public.agencies where id in (${ids(agencies)})`,
@@ -148,6 +150,11 @@ try {
     ('${adminCamera}'::uuid, '${agencyA}'::uuid, ${sqlText(`Admin camera ${marker}`)}, ${sqlText(`Disposable CI fixture ${marker}`)}, 'regular', 95.33, 5.55, false, false),
     ('${editorCamera}'::uuid, '${agencyA}'::uuid, ${sqlText(`Editor camera ${marker}`)}, ${sqlText(`Disposable CI fixture ${marker}`)}, 'regular', 95.33, 5.55, false, false),
     ('${foreignCamera}'::uuid, '${agencyB}'::uuid, ${sqlText(`Foreign camera ${marker}`)}, ${sqlText(`Disposable CI fixture ${marker}`)}, 'regular', 95.33, 5.55, false, false)`);
+  runLocalSql(`insert into public.traffic_observations (cctv_id, window_started_at, window_ended_at, counting_method, processing_status, source_kind, condition)
+    values
+      ('${adminCamera}'::uuid, now() - interval '5 minutes', now(), 'manual', 'completed', 'manual', 'good'),
+      ('${editorCamera}'::uuid, now() - interval '5 minutes', now(), 'manual', 'completed', 'manual', 'average'),
+      ('${foreignCamera}'::uuid, now() - interval '5 minutes', now(), 'manual', 'completed', 'manual', 'poor')`);
   runLocalSql(`insert into public.cctv_private_config (cctv_id, source_kind, source_uri, notes)
     values ('${foreignCamera}'::uuid, 'stored_clip', '/ci/foreign.mp4', 'disposable CI fixture')`);
 
@@ -239,6 +246,13 @@ try {
   });
   deniedByRls(anonymousRead, 'anonymous private-config read');
 
+  const anonymousDelete = await request(apiUrl, '/rest/v1/rpc/delete_cctv_permanently', {
+    apiKey: anonKey,
+    method: 'POST',
+    body: { p_cctv_id: foreignCamera, p_expected_observation_count: 1 },
+  });
+  deniedByRls(anonymousDelete, 'anonymous permanent CCTV deletion');
+
   const imagePath = `${foreignCamera}/phase3d-orphan-cleanup.webp`;
   imagePaths.push(imagePath);
   const uploaded = await storageRequest(apiUrl, `/storage/v1/object/cctv-images/${imagePath}`, {
@@ -249,6 +263,7 @@ try {
     body: new Uint8Array([82, 73, 70, 70, 4, 0, 0, 0, 87, 69, 66, 80]),
   });
   assert.ok(uploaded.status >= 200 && uploaded.status < 300, `administrator camera-image upload failed (HTTP ${uploaded.status}).`);
+  runLocalSql(`update public.cctv_locations set snapshot_path = ${sqlText(imagePath)} where id in ('${adminCamera}'::uuid, '${foreignCamera}'::uuid)`);
 
   const privateImage = await storageRequest(apiUrl, `/storage/v1/object/authenticated/cctv-images/${imagePath}`, { apiKey: anonKey });
   assert.ok(privateImage.status >= 400, 'anonymous user cannot read a private CCTV image');
@@ -270,14 +285,42 @@ try {
     'unrelated agency editor cannot delete another agency camera',
   );
 
-  const cameraDelete = await request(apiUrl, `/rest/v1/cctv_locations?id=eq.${foreignCamera}&select=id`, {
+  const editorPermanentDelete = await request(apiUrl, '/rest/v1/rpc/delete_cctv_permanently', {
+    apiKey: anonKey,
+    token: editor.accessToken,
+    method: 'POST',
+    body: { p_cctv_id: foreignCamera, p_expected_observation_count: 1 },
+  });
+  deniedByRls(editorPermanentDelete, 'agency editor permanent CCTV deletion');
+
+  const cameraDelete = await request(apiUrl, '/rest/v1/rpc/delete_cctv_permanently', {
+    apiKey: anonKey,
+    token: administrator.accessToken,
+    method: 'POST',
+    body: { p_cctv_id: foreignCamera, p_expected_observation_count: 1 },
+  });
+  requireSuccess(cameraDelete, 'administrator deletion of CCTV QA fixture with history and private video config');
+  assert.equal(cameraDelete.data?.[0]?.deleted_cctv_id, foreignCamera, 'administrator removes the requested QA camera');
+  assert.equal(cameraDelete.data?.[0]?.deleted_observation_count, 1, 'RPC returns the exact observation count');
+  assert.equal(cameraDelete.data?.[0]?.deleted_private_config, true, 'RPC removes the selected private video configuration');
+  const remainingHistory = requireSuccess(await request(apiUrl, `/rest/v1/traffic_observations?select=cctv_id&cctv_id=in.(${adminCamera},${editorCamera})`, {
+    apiKey: anonKey,
+    token: administrator.accessToken,
+  }), 'unrelated observations after deletion');
+  assert.deepEqual(remainingHistory.map((row) => row.cctv_id).sort(), [adminCamera, editorCamera].sort(), 'other CCTV histories remain intact');
+  const protectedSharedImageDelete = await storageRequest(apiUrl, '/storage/v1/object/cctv-images', {
     apiKey: anonKey,
     token: administrator.accessToken,
     method: 'DELETE',
-    prefer: 'return=representation',
+    body: { prefixes: [imagePath] },
   });
-  requireSuccess(cameraDelete, 'administrator deletion of dependency-free CCTV QA fixture');
-  assert.equal(cameraDelete.data?.[0]?.id, foreignCamera, 'administrator removes the requested QA camera');
+  assert.ok([200, 400, 403].includes(protectedSharedImageDelete.status), `shared image deletion returned HTTP ${protectedSharedImageDelete.status}`);
+  const sharedImageRead = await storageRequest(apiUrl, `/storage/v1/object/authenticated/cctv-images/${imagePath}`, {
+    apiKey: serviceKey,
+    token: serviceKey,
+  });
+  assert.equal(sharedImageRead.status, 200, 'shared image remains after its first CCTV reference is deleted');
+  runLocalSql(`update public.cctv_locations set snapshot_path = null where id = '${adminCamera}'::uuid`);
 
   const editorOrphanDelete = await storageRequest(apiUrl, '/storage/v1/object/cctv-images', {
     apiKey: anonKey,

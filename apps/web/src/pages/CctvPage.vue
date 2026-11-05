@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, ref, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue'
 import { RouterLink, useRoute, useRouter } from 'vue-router'
 
 import { authSession } from '../auth/session'
-import { deleteCctvLocation, listCctvAgencies, listCctvLocations, canManageCctvLocation, pageCctvLocations, searchCctvLocations, setCctvLocationActive, sortCctvLocations, type CctvManagementLocation, type CctvSortField } from '../data/cctvManagement'
+import { inspectCctvDeleteDependencies, isCctvSnapshotReferenced, listCctvAgencies, listCctvLocations, canManageCctvLocation, pageCctvLocations, permanentlyDeleteCctvLocation, searchCctvLocations, setCctvLocationActive, sortCctvLocations, type CctvDeleteDependencies, type CctvManagementLocation, type CctvSortField } from '../data/cctvManagement'
 import { removePrivateImage } from '../data/privateMedia'
 import { supabaseClient } from '../lib/supabase'
 
@@ -21,6 +21,10 @@ const status = ref<'loading' | 'ready' | 'error'>('loading')
 const errorMessage = ref('')
 const mutationMessage = ref(route.query.saved === 'created' ? 'CCTV location created.' : route.query.saved === 'updated' ? 'CCTV location updated.' : '')
 const busyId = ref<string | null>(null)
+const deleteDialog = ref<HTMLDialogElement | null>(null)
+const deleteCandidate = ref<{ location: CctvManagementLocation; dependencies: CctvDeleteDependencies } | null>(null)
+const deleteNameConfirmation = ref('')
+const pendingImageCleanupPath = ref<string | null>(null)
 let controller: AbortController | null = null
 let accessRevision = 0
 
@@ -41,6 +45,8 @@ watch(() => authSession.state.status, async (authStatus) => {
     locations.value = []
     agencyCount.value = 0
     busyId.value = null
+    pendingImageCleanupPath.value = null
+    closeDeleteDialog()
     mutationMessage.value = ''
     status.value = authStatus === 'loading' ? 'loading' : 'ready'
     if (authStatus !== 'loading') void router.replace({ name: 'login', query: { redirect: route.fullPath } })
@@ -78,9 +84,9 @@ async function refresh(): Promise<void> {
   }
 }
 
-async function changeActive(location: CctvManagementLocation): Promise<void> {
+async function changeActive(location: CctvManagementLocation, confirmDeactivation = true): Promise<void> {
   if (authSession.state.status !== 'authenticated' || !supabaseClient || busyId.value) return
-  if (location.isActive && !window.confirm(`Deactivate “${location.name}”?`)) return
+  if (confirmDeactivation && location.isActive && !window.confirm(`Deactivate “${location.name}”?`)) return
   const revision = accessRevision
   busyId.value = location.id
   mutationMessage.value = ''
@@ -99,28 +105,94 @@ async function changeActive(location: CctvManagementLocation): Promise<void> {
 
 async function removeLocation(location: CctvManagementLocation): Promise<void> {
   if (authSession.state.status !== 'authenticated' || authSession.state.role !== 'administrator' || !supabaseClient || busyId.value) return
-  if (!window.confirm(`Permanently delete “${location.name}”? This cannot be undone.`)) return
+  if (pendingImageCleanupPath.value) {
+    mutationMessage.value = 'Retry the pending CCTV image cleanup before starting another permanent delete.'
+    return
+  }
   const revision = accessRevision
   busyId.value = location.id
   mutationMessage.value = ''
   try {
-    const deleted = await deleteCctvLocation(supabaseClient, location.id)
+    const dependencies = await inspectCctvDeleteDependencies(supabaseClient, location)
     if (revision !== accessRevision) return
-    if (!deleted) throw new Error('The record was not deleted or is no longer accessible.')
-    mutationMessage.value = `“${location.name}” deleted.`
-    await refresh()
-    if (location.snapshotPath) {
-      try {
-        await removePrivateImage(supabaseClient, 'cctv-images', location.snapshotPath)
-      } catch {
-        mutationMessage.value = `“${location.name}” was deleted, but its image could not be cleaned up from private storage.`
-      }
-    }
+    deleteCandidate.value = { location, dependencies }
+    deleteNameConfirmation.value = ''
+    await nextTick()
+    deleteDialog.value?.showModal()
   } catch (error) {
-    if (revision === accessRevision) mutationMessage.value = error instanceof Error ? error.message : 'CCTV record could not be deleted.'
+    if (revision === accessRevision) mutationMessage.value = error instanceof Error ? error.message : 'CCTV dependencies could not be checked.'
   } finally {
     if (revision === accessRevision) busyId.value = null
   }
+}
+
+function closeDeleteDialog(): void {
+  deleteDialog.value?.close()
+  deleteCandidate.value = null
+  deleteNameConfirmation.value = ''
+}
+
+async function deactivateInstead(): Promise<void> {
+  const location = deleteCandidate.value?.location
+  closeDeleteDialog()
+  if (location) await changeActive(location, false)
+}
+
+async function confirmPermanentDelete(): Promise<void> {
+  const candidate = deleteCandidate.value
+  if (!candidate || authSession.state.status !== 'authenticated' || authSession.state.role !== 'administrator' || !supabaseClient || busyId.value) return
+  const { location, dependencies } = candidate
+  if (dependencies.observationCount > 0 && deleteNameConfirmation.value !== location.name) return
+  const revision = accessRevision
+  busyId.value = location.id
+  mutationMessage.value = ''
+  try {
+    const deleted = await permanentlyDeleteCctvLocation(supabaseClient, location.id, dependencies)
+    closeDeleteDialog()
+    mutationMessage.value = `“${location.name}” permanently deleted; ${deleted.observationCount} traffic observations removed.`
+    if (revision === accessRevision) await refresh()
+    if (deleted.snapshotPath) {
+      try {
+        if (authSession.state.status !== 'authenticated' || authSession.state.role !== 'administrator') throw new Error('Administrator session ended before storage cleanup.')
+        if (await isCctvSnapshotReferenced(supabaseClient, deleted.snapshotPath)) {
+          mutationMessage.value = `“${location.name}” deleted. Its image was retained because another CCTV still references it.`
+        } else {
+          await removePrivateImage(supabaseClient, 'cctv-images', deleted.snapshotPath)
+        }
+      } catch {
+        pendingImageCleanupPath.value = deleted.snapshotPath
+        mutationMessage.value = 'CCTV deleted, but image cleanup requires attention.'
+      }
+    }
+  } catch (error) {
+    if (revision === accessRevision) mutationMessage.value = error instanceof Error ? error.message : 'CCTV could not be permanently deleted.'
+  } finally {
+    if (revision === accessRevision) busyId.value = null
+  }
+}
+
+async function retryImageCleanup(): Promise<void> {
+  const path = pendingImageCleanupPath.value
+  if (!path || authSession.state.status !== 'authenticated' || authSession.state.role !== 'administrator' || !supabaseClient || busyId.value) return
+  busyId.value = 'image-cleanup'
+  try {
+    if (await isCctvSnapshotReferenced(supabaseClient, path)) {
+      mutationMessage.value = 'The image was retained because a CCTV still references it.'
+    } else {
+      await removePrivateImage(supabaseClient, 'cctv-images', path)
+      mutationMessage.value = 'CCTV image cleanup completed.'
+    }
+    pendingImageCleanupPath.value = null
+  } catch {
+    mutationMessage.value = 'CCTV deleted, but image cleanup still requires attention.'
+  } finally {
+    busyId.value = null
+  }
+}
+
+function onDeleteDialogClose(): void {
+  deleteCandidate.value = null
+  deleteNameConfirmation.value = ''
 }
 
 function canManage(location: CctvManagementLocation): boolean {
@@ -153,7 +225,10 @@ onBeforeUnmount(() => {
       <input id="cctv-search" v-model="search" class="legacy-input legacy-search" type="search" placeholder="Type to search" />
     </div>
 
-    <p v-if="mutationMessage" class="cctv-management-message" role="status">{{ mutationMessage }}</p>
+    <p v-if="mutationMessage" class="cctv-management-message" role="status">
+      {{ mutationMessage }}
+      <button v-if="pendingImageCleanupPath" class="legacy-button legacy-button--outline" type="button" :disabled="busyId === 'image-cleanup'" @click="retryImageCleanup">Retry image cleanup</button>
+    </p>
     <p v-if="status === 'error'" class="cctv-management-error" role="alert">
       {{ errorMessage }} <button class="legacy-button legacy-button--outline" type="button" @click="refresh">Retry</button>
     </p>
@@ -203,5 +278,48 @@ onBeforeUnmount(() => {
         <button type="button" aria-label="Next page" :disabled="page >= pageCount" @click="page++">›</button>
       </div>
     </div>
+
+    <dialog ref="deleteDialog" class="cctv-delete-dialog" aria-labelledby="cctv-delete-title" @close="onDeleteDialogClose">
+      <template v-if="deleteCandidate">
+        <h2 id="cctv-delete-title">Delete CCTV Permanently?</h2>
+        <p>Camera: <strong>{{ deleteCandidate.location.name }}</strong></p>
+        <p>This CCTV contains:</p>
+        <ul>
+          <li>{{ deleteCandidate.dependencies.observationCount }} Traffic Observations</li>
+          <li>{{ deleteCandidate.dependencies.hasPrivateConfig ? 'Associated video configuration' : 'No associated video configuration' }}</li>
+          <li v-if="deleteCandidate.dependencies.snapshotPath">
+            {{ deleteCandidate.dependencies.imageShared ? 'Associated image shared with another CCTV (will be retained)' : 'Associated image (will be removed if orphaned)' }}
+          </li>
+          <li v-else>No associated image</li>
+        </ul>
+        <p v-if="deleteCandidate.dependencies.observationCount > 0" class="cctv-delete-dialog__warning">
+          Deleting this CCTV will permanently remove the selected camera and its associated observation history.
+        </p>
+        <p v-else>Deleting this CCTV permanently removes the selected camera and its linked configuration.</p>
+        <p><strong>This action cannot be undone.</strong></p>
+        <label v-if="deleteCandidate.dependencies.observationCount > 0" class="cctv-delete-dialog__confirm-label" for="confirm-cctv-name">
+          Type the exact CCTV name to enable permanent deletion.
+        </label>
+        <input
+          v-if="deleteCandidate.dependencies.observationCount > 0"
+          id="confirm-cctv-name"
+          v-model="deleteNameConfirmation"
+          class="legacy-input"
+          type="text"
+          autocomplete="off"
+          :placeholder="deleteCandidate.location.name"
+        />
+        <div class="cctv-delete-dialog__actions">
+          <button class="legacy-button legacy-button--outline" type="button" @click="closeDeleteDialog">Cancel</button>
+          <button v-if="deleteCandidate.location.isActive" class="legacy-button legacy-button--outline" type="button" :disabled="busyId !== null" @click="deactivateInstead">Deactivate Instead</button>
+          <button
+            class="legacy-button cctv-delete-dialog__delete"
+            type="button"
+            :disabled="busyId !== null || (deleteCandidate.dependencies.observationCount > 0 && deleteNameConfirmation !== deleteCandidate.location.name)"
+            @click="confirmPermanentDelete"
+          >Delete Permanently</button>
+        </div>
+      </template>
+    </dialog>
   </section>
 </template>

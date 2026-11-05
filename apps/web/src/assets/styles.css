@@ -2625,3 +2625,24 @@ strong {
     display: none;
   }
 }
+.cctv-delete-dialog {
+  width: min(560px, calc(100vw - 32px));
+  max-height: min(85vh, 760px);
+  padding: 28px;
+  color: var(--ink-100, #e9f2f2);
+  background: var(--ink-850, #10212c);
+  border: 1px solid var(--ink-700, #203c47);
+  border-radius: 10px;
+  box-shadow: 0 16px 48px rgba(0, 0, 0, .28);
+}
+
+.cctv-delete-dialog::backdrop { background: rgba(10, 20, 24, .62); }
+.cctv-delete-dialog h2 { margin: 0 0 16px; font-size: 1.25rem; }
+.cctv-delete-dialog p { margin: 10px 0; line-height: 1.5; }
+.cctv-delete-dialog ul { margin: 8px 0 16px; padding-left: 22px; }
+.cctv-delete-dialog__warning { color: #9b2c22; font-weight: 600; }
+.cctv-delete-dialog__confirm-label { display: block; margin: 16px 0 8px; font-weight: 600; }
+.cctv-delete-dialog input { width: 100%; }
+.cctv-delete-dialog__actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; margin-top: 22px; }
+.cctv-delete-dialog__delete { color: #fff; background: #a52c25; border: 1px solid #a52c25; }
+.cctv-delete-dialog__delete:disabled { opacity: .55; }

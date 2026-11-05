@@ -36,6 +36,19 @@ export interface CctvAgencyOption {
   name: string
 }
 
+export interface CctvDeleteDependencies {
+  observationCount: number
+  hasPrivateConfig: boolean
+  snapshotPath: string | null
+  imageShared: boolean
+}
+
+export interface CctvDeleteResult {
+  observationCount: number
+  privateConfigDeleted: boolean
+  snapshotPath: string | null
+}
+
 export type CctvSortField = 'name' | 'address' | 'coordinate' | 'agency' | 'category'
 
 export function sortCctvLocations(
@@ -220,8 +233,65 @@ export async function setCctvLocationActive(client: SupabaseClient, id: string, 
   return typeof data?.id === 'string'
 }
 
-export async function deleteCctvLocation(client: SupabaseClient, id: string): Promise<boolean> {
-  const { data, error } = await client.from('cctv_locations').delete().eq('id', id).select('id').maybeSingle()
-  if (error) throw readableError(error, 'delete')
-  return typeof data?.id === 'string'
+export async function inspectCctvDeleteDependencies(
+  client: SupabaseClient,
+  location: Pick<CctvManagementLocation, 'id' | 'snapshotPath'>,
+): Promise<CctvDeleteDependencies> {
+  const [observations, config, imageReferences] = await Promise.all([
+    client.from('traffic_observations').select('id', { count: 'exact', head: true }).eq('cctv_id', location.id),
+    client.from('cctv_private_config').select('cctv_id').eq('cctv_id', location.id).maybeSingle(),
+    location.snapshotPath
+      ? client.from('cctv_locations').select('id', { count: 'exact', head: true }).eq('snapshot_path', location.snapshotPath).neq('id', location.id)
+      : Promise.resolve({ count: 0, error: null }),
+  ])
+  if (observations.error || config.error || imageReferences.error || observations.count == null || imageReferences.count == null) {
+    throw new Error('CCTV deletion dependencies could not be checked. No records were changed.')
+  }
+  return {
+    observationCount: observations.count,
+    hasPrivateConfig: config.data !== null,
+    snapshotPath: location.snapshotPath,
+    imageShared: imageReferences.count > 0,
+  }
+}
+
+export async function isCctvSnapshotReferenced(client: SupabaseClient, path: string): Promise<boolean> {
+  const { count, error } = await client.from('cctv_locations')
+    .select('id', { count: 'exact', head: true }).eq('snapshot_path', path)
+  if (error || count == null) throw new Error('The CCTV image reference could not be verified.')
+  return count > 0
+}
+
+export async function permanentlyDeleteCctvLocation(
+  client: SupabaseClient,
+  id: string,
+  dependencies: CctvDeleteDependencies,
+): Promise<CctvDeleteResult> {
+  const { data, error } = await client.rpc('delete_cctv_permanently', {
+    p_cctv_id: id,
+    p_expected_observation_count: dependencies.observationCount,
+  })
+  if (error) {
+    if (error.code === '40001') throw new Error('CCTV observation history changed. Review the deletion summary and try again.')
+    if (error.code === 'P0002') throw new Error('This CCTV no longer exists or is no longer available.')
+    if (['PGRST202', '42883'].includes(error.code ?? '')) {
+      if (dependencies.observationCount > 0) throw new Error('Permanent deletion with observation history is unavailable until the approved database update is deployed. No records were changed.')
+      const { data: removed, error: deleteError } = await client.from('cctv_locations').delete().eq('id', id).select('id').maybeSingle()
+      if (deleteError) throw readableError(deleteError, 'permanent delete')
+      if (removed?.id !== id) throw new Error('The CCTV was not deleted or is no longer available.')
+      return { observationCount: 0, privateConfigDeleted: dependencies.hasPrivateConfig, snapshotPath: dependencies.snapshotPath }
+    }
+    throw readableError(error, 'permanent delete')
+  }
+  const row = Array.isArray(data) ? data[0] : data
+  if (!row || typeof row !== 'object') throw new Error('The database did not confirm CCTV deletion.')
+  const result = row as Record<string, unknown>
+  if (result.deleted_cctv_id !== id || !Number.isSafeInteger(Number(result.deleted_observation_count))) {
+    throw new Error('The database returned an invalid CCTV deletion result.')
+  }
+  return {
+    observationCount: Number(result.deleted_observation_count),
+    privateConfigDeleted: result.deleted_private_config === true,
+    snapshotPath: typeof result.snapshot_path === 'string' ? result.snapshot_path : null,
+  }
 }

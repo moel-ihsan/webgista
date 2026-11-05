@@ -3,7 +3,7 @@ begin;
 create extension if not exists pgtap with schema extensions;
 set search_path = public, extensions;
 
-select plan(131);
+select plan(132);
 
 select has_table('public', 'profiles', 'profiles table exists');
 select has_table('public', 'user_roles', 'user roles table exists');
@@ -1327,8 +1327,11 @@ select throws_matching(
   'row-level security',
   'agency editors cannot insert a camera for another agency'
 );
-delete from public.cctv_locations
-where name = 'Editor Camera';
+select throws_matching(
+  $$delete from public.cctv_locations where name = 'Editor Camera'$$,
+  'permission denied',
+  'agency editors cannot issue direct CCTV deletion'
+);
 reset role;
 select results_eq(
   $$select count(*)::bigint from public.cctv_locations where name = 'Editor Camera'$$,
@@ -1361,18 +1364,17 @@ insert into public.user_roles (user_id, role)
 values ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa3', 'agency_editor');
 
 select lives_ok(
-  $$delete from public.cctv_locations where name = 'Editor Camera'$$,
-  'administrators can delete an unreferenced CCTV location'
+  $$select deleted_cctv_id from public.delete_cctv_permanently((select id from public.cctv_locations where name = 'Editor Camera'), 0)$$,
+  'administrators can delete an unreferenced CCTV location through the guarded RPC'
 );
 select results_eq(
   $$select count(*)::bigint from public.cctv_locations where name = 'Editor Camera'$$,
   array[0::bigint],
   'administrator CCTV delete removes only its target location'
 );
-select throws_matching(
-  $$delete from public.cctv_locations where id = 'c0000000-0000-0000-0000-000000000001'$$,
-  'foreign key constraint',
-  'traffic observation history prevents camera deletion'
+select lives_ok(
+  $$select deleted_cctv_id from public.delete_cctv_permanently('c0000000-0000-0000-0000-000000000001', (select count(*) from public.traffic_observations where cctv_id = 'c0000000-0000-0000-0000-000000000001'))$$,
+  'administrators can permanently remove selected CCTV observation history through the guarded RPC'
 );
 
 reset role;

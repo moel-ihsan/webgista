@@ -9,6 +9,7 @@ export const approvedHashes = new Map([
   ['20261105000100', 'cc3ee6456022f67c9169469bc5a15bab4505fb816b81d3766e52c22547d2381c'],
   ['20261105000200', 'e3ea8d7c5fc9f72ee45566bb4aadbddeab4a74133af29daf09fb4f5bfa101d99'],
   ['20261105000400', '3a53ae34079d7352f520fe8ee94e9420f3bf495cf8fff98c55e96289237465d3'],
+  ['20261105000500', '374cecda12bd657cc4be45590b0bb07a98091501e9a8a6c959bc4c0772c4a982'],
 ]);
 
 const approvedVersions = [...approvedHashes.keys()];
@@ -162,6 +163,12 @@ export function assertPhase3dCctvCleanupOnlyPending(pendingVersions) {
   }
 }
 
+export function assertPhase3d1CctvDeleteOnlyPending(pendingVersions) {
+  if (pendingVersions.length !== 1 || pendingVersions[0] !== '20261105000500') {
+    throw new Error('This deployment is authorized only for CCTV permanent-delete migration 20261105000500; refusing any other pending set.');
+  }
+}
+
 export function assertRecoveryAvailable(payload, now = Date.now()) {
   if (!Array.isArray(payload?.backups)) throw new Error('Supabase backup API returned an invalid response.');
   const available = payload.backups.filter((backup) =>
@@ -212,6 +219,10 @@ if (process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.ar
       const pending = await inspectHistory(first);
       assertPhase3dCctvCleanupOnlyPending(pending);
       console.log('The only pending migration is the approved CCTV image cleanup migration 20261105000400.');
+    } else if (command === 'phase3d1-cctv-delete' && first) {
+      const pending = await inspectHistory(first);
+      assertPhase3d1CctvDeleteOnlyPending(pending);
+      console.log('The only pending migration is the approved CCTV permanent-delete RPC migration 20261105000500.');
     } else if (command === 'dry-run' && first && second) {
       const pending = await inspectHistory(first);
       const dryRun = await readFile(second, 'utf8');

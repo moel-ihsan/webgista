@@ -3,10 +3,12 @@ import { describe, expect, it, vi } from 'vitest'
 import {
   canManageCctvLocation,
   createCctvLocation,
-  deleteCctvLocation,
+  inspectCctvDeleteDependencies,
+  isCctvSnapshotReferenced,
   listCctvAgencies,
   listCctvLocations,
   pageCctvLocations,
+  permanentlyDeleteCctvLocation,
   searchCctvLocations,
   sortCctvLocations,
   setCctvLocationActive,
@@ -25,9 +27,9 @@ const input: CctvLocationInput = {
   name: 'Simpang Lima', address: 'Banda Aceh', category: 'regular', agencyId: 'agency-1', longitude: 95.3238, latitude: 5.5483,
 }
 
-function clientMock(response: { data: unknown; error: { code?: string; constraint?: string; details?: string } | null }) {
+function clientMock(response: { data: unknown; error: { code?: string; constraint?: string; details?: string } | null; count?: number | null }) {
   const query: Record<string, ReturnType<typeof vi.fn> | ((resolve: (value: unknown) => unknown, reject: (reason: unknown) => unknown) => unknown)> = {}
-  for (const method of ['select', 'order', 'eq', 'in', 'abortSignal', 'insert', 'update', 'delete']) {
+  for (const method of ['select', 'order', 'eq', 'neq', 'in', 'abortSignal', 'insert', 'update', 'delete']) {
     query[method] = vi.fn().mockReturnValue(query)
   }
   query.maybeSingle = vi.fn().mockResolvedValue(response)
@@ -36,7 +38,8 @@ function clientMock(response: { data: unknown; error: { code?: string; constrain
     reject?: (reason: unknown) => unknown,
   ) => Promise.resolve(response).then(resolve, reject)
   const from = vi.fn().mockReturnValue(query)
-  return { client: { from } as never, from, query }
+  const rpc = vi.fn().mockResolvedValue(response)
+  return { client: { from, rpc } as never, from, query, rpc }
 }
 
 describe('CCTV management data access', () => {
@@ -83,16 +86,52 @@ describe('CCTV management data access', () => {
     await expect(createCctvLocation(noRows.client, input)).resolves.toBeNull()
   })
 
-  it('targets update, status and delete by the requested camera id', async () => {
+  it('targets update and status by id and permanent deletion through the guarded RPC', async () => {
     const update = clientMock({ data: { id: 'camera-1' }, error: null })
     await expect(updateCctvLocation(update.client, 'camera-1', input)).resolves.toBe(true)
     expect(update.query.eq).toHaveBeenCalledWith('id', 'camera-1')
     const status = clientMock({ data: { id: 'camera-1' }, error: null })
     await setCctvLocationActive(status.client, 'camera-1', false)
     expect(status.query.update).toHaveBeenCalledWith({ is_active: false })
-    const deletion = clientMock({ data: null, error: null })
-    await expect(deleteCctvLocation(deletion.client, 'camera-1')).resolves.toBe(false)
-    expect(deletion.query.eq).toHaveBeenCalledWith('id', 'camera-1')
+    const deletion = clientMock({ data: [{ deleted_cctv_id: 'camera-1', deleted_observation_count: 2, deleted_private_config: true, snapshot_path: 'camera-1/photo.webp' }], error: null })
+    await expect(permanentlyDeleteCctvLocation(deletion.client, 'camera-1', {
+      observationCount: 2, hasPrivateConfig: true, snapshotPath: 'camera-1/photo.webp', imageShared: false,
+    })).resolves.toEqual({
+      observationCount: 2, privateConfigDeleted: true, snapshotPath: 'camera-1/photo.webp',
+    })
+    expect(deletion.rpc).toHaveBeenCalledWith('delete_cctv_permanently', {
+      p_cctv_id: 'camera-1', p_expected_observation_count: 2,
+    })
+  })
+
+  it('checks observation, private configuration, and shared image dependencies before confirmation', async () => {
+    const mock = clientMock({ data: { cctv_id: 'camera-1' }, count: 2, error: null })
+    await expect(inspectCctvDeleteDependencies(mock.client, { id: 'camera-1', snapshotPath: 'camera-1/photo.webp' })).resolves.toEqual({
+      observationCount: 2, hasPrivateConfig: true, snapshotPath: 'camera-1/photo.webp', imageShared: true,
+    })
+    expect(mock.from).toHaveBeenCalledWith('traffic_observations')
+    expect(mock.query.neq).toHaveBeenCalledWith('id', 'camera-1')
+    const noImage = clientMock({ data: null, count: 0, error: null })
+    await expect(inspectCctvDeleteDependencies(noImage.client, { id: 'camera-2', snapshotPath: null })).resolves.toMatchObject({ imageShared: false })
+    await expect(isCctvSnapshotReferenced(noImage.client, 'camera-2/photo.webp')).resolves.toBe(false)
+  })
+
+  it('does not hide deletion failure or a stale observation summary', async () => {
+    const dependencies = { observationCount: 1, hasPrivateConfig: false, snapshotPath: null, imageShared: false }
+    await expect(permanentlyDeleteCctvLocation(clientMock({ data: null, error: { code: '40001' } }).client, 'camera-1', dependencies))
+      .rejects.toThrow('history changed')
+    await expect(permanentlyDeleteCctvLocation(clientMock({ data: null, error: { code: '42501' } }).client, 'camera-1', { ...dependencies, observationCount: 0 }))
+      .rejects.toThrow('not authorized')
+    await expect(permanentlyDeleteCctvLocation(clientMock({ data: null, error: { code: '23503', constraint: 'other_reference_fk' } }).client, 'camera-1', { ...dependencies, observationCount: 0 }))
+      .rejects.toThrow('protected related records')
+    const beforeMigration = clientMock({ data: { id: 'camera-1' }, error: null })
+    beforeMigration.rpc.mockResolvedValue({ data: null, error: { code: 'PGRST202' } })
+    await expect(permanentlyDeleteCctvLocation(beforeMigration.client, 'camera-1', {
+      observationCount: 0, hasPrivateConfig: true, snapshotPath: 'camera-1/image.webp', imageShared: false,
+    })).resolves.toMatchObject({ observationCount: 0, privateConfigDeleted: true, snapshotPath: 'camera-1/image.webp' })
+    const unavailableHistory = clientMock({ data: null, error: { code: 'PGRST202' } })
+    await expect(permanentlyDeleteCctvLocation(unavailableHistory.client, 'camera-1', dependencies)).rejects.toThrow('No records were changed')
+    expect(unavailableHistory.from).not.toHaveBeenCalled()
   })
 
   it('validates coordinates, lengths and agency assignment and mirrors the agency role scope', () => {
@@ -120,11 +159,12 @@ describe('CCTV management data access', () => {
   })
 
   it('does not expose database details in permission or foreign-key errors', async () => {
-    await expect(deleteCctvLocation(clientMock({ data: null, error: { code: '23503', constraint: 'traffic_observations_cctv_id_fkey' } }).client, 'camera-1'))
+    const dependencies = { observationCount: 1, hasPrivateConfig: false, snapshotPath: null, imageShared: false }
+    await expect(permanentlyDeleteCctvLocation(clientMock({ data: null, error: { code: '23503', constraint: 'traffic_observations_cctv_id_fkey' } }).client, 'camera-1', dependencies))
       .rejects.toThrow('traffic observation history')
-    await expect(deleteCctvLocation(clientMock({ data: null, error: { code: '23503', details: 'Key is still referenced from table traffic_observations' } }).client, 'camera-1'))
+    await expect(permanentlyDeleteCctvLocation(clientMock({ data: null, error: { code: '23503', details: 'Key is still referenced from table traffic_observations' } }).client, 'camera-1', dependencies))
       .rejects.toThrow('Deactivate it to preserve those records.')
-    await expect(deleteCctvLocation(clientMock({ data: null, error: { code: '42501' } }).client, 'camera-1'))
+    await expect(permanentlyDeleteCctvLocation(clientMock({ data: null, error: { code: '42501' } }).client, 'camera-1', dependencies))
       .rejects.toThrow('not authorized')
   })
 })
