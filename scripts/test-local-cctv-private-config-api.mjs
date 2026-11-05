@@ -79,8 +79,8 @@ function cleanupFixtures(cameras, agencies, users) {
     : 'NULL::uuid';
   for (const sql of [
     `delete from public.cctv_locations where id in (${ids(cameras)})`,
-    `delete from public.agencies where id in (${ids(agencies)})`,
     `delete from auth.users where id in (${ids(users.map(({ userId }) => userId))})`,
+    `delete from public.agencies where id in (${ids(agencies)})`,
   ]) {
     execFileSync('supabase', ['db', 'query', sql, '--yes', '--local'], { stdio: ['ignore', 'ignore', 'pipe'] });
   }
