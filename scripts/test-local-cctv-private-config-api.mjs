@@ -258,7 +258,7 @@ try {
   });
   assert.ok(unrelatedEditorImage.status >= 400, 'unrelated agency editor cannot read another agency image');
 
-  const editorCameraDelete = await request(apiUrl, `/rest/v1/cctv_locations?id=eq.${foreignCamera}`, {
+  const editorCameraDelete = await request(apiUrl, `/rest/v1/cctv_locations?id=eq.${foreignCamera}&select=id`, {
     apiKey: anonKey,
     token: editor.accessToken,
     method: 'DELETE',
@@ -270,7 +270,7 @@ try {
     'unrelated agency editor cannot delete another agency camera',
   );
 
-  const cameraDelete = await request(apiUrl, `/rest/v1/cctv_locations?id=eq.${foreignCamera}`, {
+  const cameraDelete = await request(apiUrl, `/rest/v1/cctv_locations?id=eq.${foreignCamera}&select=id`, {
     apiKey: anonKey,
     token: administrator.accessToken,
     method: 'DELETE',
