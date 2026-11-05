@@ -24,8 +24,8 @@ The v2 implementation does not carry over the buggy per-frame condition threshol
 
 - Frontend `npm run verify`: passed (135 tests across 27 files, TypeScript, ESLint, production build).
 - Database security suite `phase_2e_observations.test.sql`: 26 assertions. The CI runner is the database execution environment because Supabase CLI, Docker and PostgreSQL test tools are unavailable locally.
-- Combined CI target: 201 assertions (existing 175 plus 26). CI exposed and corrected a collation ambiguity and a stale plan count. A later preflight failure also showed the disposable Phase 2D fixture's explicit schema contract needed the new approved migration 005; that contract is updated and final CI confirmation is pending.
-- No hosted migration was applied. Migration 005 needs isolated CI and then the existing protected development deployment/authorization process. The currently observed remote deployment workflow must be reviewed before any hosted apply.
+- Combined isolated CI: 201/201 assertions passed (119 + 36 + 20 + 26). Run [41964786459](https://github.com/moel-ihsan/webgista/actions/runs/41964786459), tested commit `7b5bec52e08ac95902f2d26fe992a12eb5b686a5`. Disposable migrations, deployment preflight, database lint, fixture validation, and cleanup passed. The test run caught and fixed the enum comparison collation, assertion plan count, and fixture migration contract.
+- No hosted migration was applied. Migration 005 is isolated-CI verified only. The protected hosted deployment guard and recovery gate currently authorize only migrations 003/004; migration 005 requires separate reviewed deployment-guard and recovery authorization before any hosted apply.
 - No manual observations have been inserted into hosted Supabase.
 
 ## Limitations
