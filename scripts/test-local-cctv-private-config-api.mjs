@@ -33,6 +33,19 @@ async function request(apiUrl, path, { apiKey, token = apiKey, method = 'GET', b
   return { status: response.status, data };
 }
 
+async function storageRequest(apiUrl, path, { apiKey, token = apiKey, method = 'GET', body, contentType } = {}) {
+  const response = await fetch(`${apiUrl}${path}`, {
+    method,
+    headers: {
+      apikey: apiKey,
+      Authorization: `Bearer ${token}`,
+      ...(contentType ? { 'Content-Type': contentType } : body === undefined ? {} : { 'Content-Type': 'application/json' }),
+    },
+    ...(body === undefined ? {} : { body: contentType ? body : JSON.stringify(body) }),
+  });
+  return { status: response.status, body: await response.text() };
+}
+
 function requireSuccess(result, label) {
   assert.ok(result.status >= 200 && result.status < 300, `${label} failed (HTTP ${result.status}, ${result.data?.code ?? 'no database code'}).`);
   return result.data;
@@ -70,7 +83,18 @@ function sqlText(value) {
   return `'${value.replaceAll("'", "''")}'`;
 }
 
-function cleanupFixtures(cameras, agencies, users) {
+async function cleanupFixtures(cameras, agencies, users, imagePaths, apiUrl, anonKey, adminToken) {
+  if (adminToken) {
+    for (const imagePath of imagePaths) {
+      const result = await storageRequest(apiUrl, '/storage/v1/object/cctv-images', {
+        apiKey: anonKey,
+        token: adminToken,
+        method: 'DELETE',
+        body: { prefixes: [imagePath] },
+      });
+      assert.ok(result.status >= 200 && result.status < 300, `local QA media cleanup failed (HTTP ${result.status}).`);
+    }
+  }
   const ids = (values) => values.length
     ? values.map((value) => {
       assert.match(value, /^[0-9a-f-]{36}$/i);
@@ -91,9 +115,12 @@ const marker = randomUUID();
 const users = [];
 const agencies = [];
 const cameras = [];
+const imagePaths = [];
+let adminAccessToken;
 
 try {
   const administrator = await createUser(apiUrl, serviceKey, anonKey, 'administrator');
+  adminAccessToken = administrator.accessToken;
   users.push(administrator);
   const editor = await createUser(apiUrl, serviceKey, anonKey, 'editor');
   users.push(editor);
@@ -212,7 +239,67 @@ try {
   });
   deniedByRls(anonymousRead, 'anonymous private-config read');
 
-  console.log('PostgREST private-config API checks passed: column-scoped admin/editor writes, actor trigger, cross-agency and anonymous denials.');
+  const imagePath = `${foreignCamera}/phase3d-orphan-cleanup.webp`;
+  imagePaths.push(imagePath);
+  const uploaded = await storageRequest(apiUrl, `/storage/v1/object/cctv-images/${imagePath}`, {
+    apiKey: anonKey,
+    token: administrator.accessToken,
+    method: 'POST',
+    contentType: 'image/webp',
+    body: new Uint8Array([82, 73, 70, 70, 4, 0, 0, 0, 87, 69, 66, 80]),
+  });
+  assert.ok(uploaded.status >= 200 && uploaded.status < 300, `administrator camera-image upload failed (HTTP ${uploaded.status}).`);
+
+  const privateImage = await storageRequest(apiUrl, `/storage/v1/object/authenticated/cctv-images/${imagePath}`, { apiKey: anonKey });
+  assert.ok(privateImage.status >= 400, 'anonymous user cannot read a private CCTV image');
+  const unrelatedEditorImage = await storageRequest(apiUrl, `/storage/v1/object/authenticated/cctv-images/${imagePath}`, {
+    apiKey: anonKey,
+    token: editor.accessToken,
+  });
+  assert.ok(unrelatedEditorImage.status >= 400, 'unrelated agency editor cannot read another agency image');
+
+  const editorCameraDelete = await request(apiUrl, `/rest/v1/cctv_locations?id=eq.${foreignCamera}`, {
+    apiKey: anonKey,
+    token: editor.accessToken,
+    method: 'DELETE',
+    prefer: 'return=representation',
+  });
+  assert.equal(editorCameraDelete.status, 200);
+  assert.deepEqual(editorCameraDelete.data, [], 'unrelated agency editor cannot delete another agency camera');
+
+  const cameraDelete = await request(apiUrl, `/rest/v1/cctv_locations?id=eq.${foreignCamera}`, {
+    apiKey: anonKey,
+    token: administrator.accessToken,
+    method: 'DELETE',
+    prefer: 'return=representation',
+  });
+  requireSuccess(cameraDelete, 'administrator deletion of dependency-free CCTV QA fixture');
+  assert.equal(cameraDelete.data?.[0]?.id, foreignCamera, 'administrator removes the requested QA camera');
+
+  const editorOrphanDelete = await storageRequest(apiUrl, '/storage/v1/object/cctv-images', {
+    apiKey: anonKey,
+    token: editor.accessToken,
+    method: 'DELETE',
+    body: { prefixes: [imagePath] },
+  });
+  assert.ok([400, 403, 404].includes(editorOrphanDelete.status), 'agency editor cannot delete an orphaned camera image');
+  const anonymousOrphanRead = await storageRequest(apiUrl, `/storage/v1/object/authenticated/cctv-images/${imagePath}`, { apiKey: anonKey });
+  assert.ok(anonymousOrphanRead.status >= 400, 'anonymous user cannot read an orphaned private camera image');
+  const adminOrphanRead = await storageRequest(apiUrl, `/storage/v1/object/authenticated/cctv-images/${imagePath}`, {
+    apiKey: anonKey,
+    token: administrator.accessToken,
+  });
+  assert.equal(adminOrphanRead.status, 200, 'administrator can read an orphan image for cleanup');
+  const adminOrphanDelete = await storageRequest(apiUrl, '/storage/v1/object/cctv-images', {
+    apiKey: anonKey,
+    token: administrator.accessToken,
+    method: 'DELETE',
+    body: { prefixes: [imagePath] },
+  });
+  assert.ok(adminOrphanDelete.status >= 200 && adminOrphanDelete.status < 300, `administrator orphan cleanup failed (HTTP ${adminOrphanDelete.status}).`);
+  imagePaths.splice(imagePaths.indexOf(imagePath), 1);
+
+  console.log('Local Data API checks passed: private-config least privilege, cross-agency denials, admin-only CCTV image orphan cleanup, and safe camera deletion.');
 } finally {
-  cleanupFixtures(cameras, agencies, users);
+  await cleanupFixtures(cameras, agencies, users, imagePaths, apiUrl, anonKey, adminAccessToken);
 }
