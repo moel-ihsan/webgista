@@ -1,0 +1,3 @@
+# OpenCV Zoo YOLOX helper uses OpenCV DNN on CPU; no torch/TensorFlow runtime.
+numpy==2.0.2
+opencv-python-headless==4.10.0.84

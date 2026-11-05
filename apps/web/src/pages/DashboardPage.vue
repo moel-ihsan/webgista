@@ -7,16 +7,21 @@ import { appConfig } from '../config/app'
 import TrafficMap from '../components/map/TrafficMap.vue'
 import { accountPresentation } from '../data/accountPresentation'
 import { formatRecentDate, listRecentlyAddedCctv, type RecentCctv } from '../data/dashboard'
+import { listLatestTrafficObservations } from '../data/trafficObservations'
+import type { TrafficObservation } from '../domain/traffic'
 import { supabaseClient } from '../lib/supabase'
 
 const recentCctv = ref<readonly RecentCctv[]>([])
 const recentStatus = ref<'loading' | 'ready' | 'empty' | 'error'>('loading')
+const latestObservation = ref<TrafficObservation | null>(null)
+const conditionLabel = (value: TrafficObservation['condition']) => value ? value.charAt(0).toUpperCase() + value.slice(1) : 'No Data'
 let recentController: AbortController | null = null
 
 watch(() => authSession.state.status, (status) => {
   recentController?.abort()
   recentController = null
   recentCctv.value = []
+  latestObservation.value = null
   if (status === 'loading') {
     recentStatus.value = 'loading'
     return
@@ -28,10 +33,17 @@ watch(() => authSession.state.status, (status) => {
   const controller = new AbortController()
   recentController = controller
   recentStatus.value = 'loading'
-  void listRecentlyAddedCctv(supabaseClient, appConfig.privateMediaEnabled, controller.signal)
-    .then((rows) => {
+  const observations = status === 'authenticated'
+    ? listLatestTrafficObservations(supabaseClient).catch(() => [])
+    : Promise.resolve([])
+  void Promise.all([
+    listRecentlyAddedCctv(supabaseClient, appConfig.privateMediaEnabled, controller.signal),
+    observations,
+  ])
+    .then(([rows, traffic]) => {
       if (controller.signal.aborted) return
       recentCctv.value = rows
+      latestObservation.value = [...traffic].sort((left, right) => Date.parse(right.windowEndedAt) - Date.parse(left.windowEndedAt))[0] ?? null
       recentStatus.value = rows.length ? 'ready' : 'empty'
     })
     .catch(() => {
@@ -58,7 +70,8 @@ onBeforeUnmount(() => recentController?.abort())
           <h3>CCTV Category</h3>
           <div><span class="legend-dot legend-dot--analytic"></span>Analytic</div>
           <div><span class="legend-dot legend-dot--regular"></span>Regular</div>
-          <p>Traffic observations are not loaded.</p>
+          <p v-if="latestObservation">Latest authorized: {{ conditionLabel(latestObservation.condition) }} · {{ new Date(latestObservation.windowEndedAt).toLocaleString() }} ({{ latestObservation.sourceKind === 'manual' ? 'manual' : 'processed' }})</p>
+          <p v-else>Latest authorized observation: No Data.</p>
         </div>
       </div>
     </section>

@@ -136,7 +136,7 @@ export function attachCctvLayers(
             'circle-stroke-color': '#fff',
             'circle-color': compact
               ? ['match', ['get', 'category'], 'Regular', 'green', 'Analytic', 'yellow', '#0000ff']
-              : ['match', ['get', 'condition'], 'No Data', '#0000ff', '#0000ff'],
+              : ['match', ['get', 'condition'], 'great', '#98fb98', 'good', '#0b6623', 'average', '#ffff00', 'poor', '#d4a328', 'bad', '#ff5f00', 'terrible', '#ff0000', '#0000ff'],
           },
         } as AddLayerObject, firstSymbolLayer)
       }

@@ -62,6 +62,9 @@ jobs:
       - name: Run Phase 2D.5 settings security tests
         run: supabase test db supabase/tests/phase_2d5_settings.test.sql
 
+      - name: Run Phase 2E observation security tests
+        run: supabase test db supabase/tests/phase_2e_observations.test.sql
+
       - name: Validate the approved Phase 2D fixture in the disposable database
         shell: bash
         run: |

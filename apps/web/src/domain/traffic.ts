@@ -21,4 +21,5 @@ export interface TrafficObservation {
   countingMethod: CountingMethod
   condition: TrafficCondition | null
   qualityFlags: readonly string[]
+  sourceKind: 'browser' | 'worker' | 'manual' | 'v1_import'
 }
