@@ -3,8 +3,11 @@ begin read only;
 do $$
 declare
   config_delete_action "char";
+  analysis_config_delete_action "char";
   observations_delete_action "char";
   referencing_table_count integer;
+  expected_referencing_table_count integer;
+  analysis_config_exists boolean := to_regclass('public.cctv_analysis_config') is not null;
   image_bucket_private boolean;
   delete_policy text;
   delete_function oid := to_regprocedure('public.delete_cctv_permanently(uuid,bigint)');
@@ -19,6 +22,13 @@ begin
   where constraints.contype = 'f'
     and constraints.conrelid = 'public.traffic_observations'::regclass
     and constraints.confrelid = 'public.cctv_locations'::regclass;
+  if to_regclass('public.cctv_analysis_config') is not null then
+    select constraints.confdeltype into analysis_config_delete_action
+    from pg_catalog.pg_constraint as constraints
+    where constraints.contype = 'f'
+      and constraints.conrelid = 'public.cctv_analysis_config'::regclass
+      and constraints.confrelid = 'public.cctv_locations'::regclass;
+  end if;
   select count(*) into referencing_table_count
   from pg_catalog.pg_constraint as constraints
   where constraints.contype = 'f' and constraints.confrelid = 'public.cctv_locations'::regclass;
@@ -28,6 +38,7 @@ begin
   from pg_catalog.pg_policies as policies
   where policies.schemaname = 'storage' and policies.tablename = 'objects'
     and policies.policyname = 'cctv_images_delete_managed' and policies.cmd = 'DELETE';
+  expected_referencing_table_count := case when analysis_config_exists then 3 else 2 end;
 
   if config_delete_action is distinct from 'c' then
     raise exception 'private CCTV configuration must remain ON DELETE CASCADE';
@@ -35,8 +46,11 @@ begin
   if observations_delete_action is distinct from 'r' then
     raise exception 'traffic observations must remain ON DELETE RESTRICT';
   end if;
-  if referencing_table_count <> 2 then
+  if referencing_table_count <> expected_referencing_table_count then
     raise exception 'unexpected CCTV dependencies found: % referencing tables', referencing_table_count;
+  end if;
+  if analysis_config_exists and analysis_config_delete_action is distinct from 'c' then
+    raise exception 'ROI analysis configuration must be removed with its CCTV record';
   end if;
   if image_bucket_private is distinct from true then
     raise exception 'CCTV image bucket is missing or public';
