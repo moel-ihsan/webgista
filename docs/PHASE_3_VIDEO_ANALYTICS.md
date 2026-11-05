@@ -10,7 +10,7 @@ The legacy implementation has no multi-object tracker, unique passage counting, 
 
 `tools/traffic-analytics/analyze_video.py` processes an authorized MP4 using OpenCV Zoo YOLOX-S COCO in OpenCV DNN. It writes frame-level detections, timestamps, confidence, bounding boxes, per-frame vehicle detections, a peak-per-sampled-frame summary, provenance, and an H.264 annotated preview. Output marks `record_kind=demo_video_analysis`, `is_live_cctv=false`, and `condition=null`.
 
-Vehicle classes are mapped transparently: car → LV, bus/truck → HV, motorcycle → MC, bicycle → bicycle. Person detections do not become vehicle counts. Counts are detections in sampled frames, not distinct vehicles. There is no tracker and no calibrated mapping from these outputs to traffic condition. The JSON shape is a demo contract only; it is not inserted into `traffic_observations` automatically.
+Vehicle classes are mapped transparently: car → LV, bus/truck → HV, motorcycle → MC, bicycle → bicycle. Person detections and unsupported classes are excluded. The current v2 JSON separates repeated detection instances, heuristic track IDs, and finite-segment crossing events. Demo output is never inserted into `traffic_observations`.
 
 The detector is OpenCV Zoo's YOLOX-S COCO ONNX model (`object_detection_yolox_2022nov_int8.onnx`), Apache-2.0 according to the [official OpenCV Zoo model README](https://github.com/opencv/opencv_zoo/blob/main/models/object_detection_yolox/README.md). The upstream helper and model license are retained under `tools/traffic-analytics/`. No weights or sample videos are included in this repository. The CLI is offline and requires Python, OpenCV, NumPy and ffmpeg; it is not a continuous Vercel worker or a live-stream service.
 
@@ -32,9 +32,9 @@ Instead, two clips marked Free under the [Pexels Free Stock Photo & Video Licens
 | `traffic_sample_01.mp4` | [City Intersection with Traffic and Signals](https://www.pexels.com/video/city-intersection-with-traffic-and-signals-36330668/), SHOX ART | 0:23 | H.264, 960×540, 0.3 MB | 111 at 4.795 FPS | 574 total instances; peak car / bus / truck / motorcycle / bicycle: 8 / 1 / 2 / 0 / 0 |
 | `traffic_sample_02.mp4` | [Bustling Night Traffic at Ben Thanh Market](https://www.pexels.com/video/bustling-night-traffic-at-ben-thanh-market-29185480/), Media Dung | 0:26 | H.264, 960×540, 1.7 MB | 132 at 5 FPS | 1,032 total instances; peak car / bus / truck / motorcycle / bicycle: 7 / 1 / 1 / 12 / 0 |
 
-Counts are model outputs, not ground truth or unique vehicle totals. The original 1 FPS results miss between-frame movement. The clips are public stock footage and are demo material, never live CCTV.
+Those counts describe an earlier 4K-source run and are superseded by Phase 3E.1's reproducible run against the actual 1280×720 site assets below. All model counts are experimental, not ground truth or unique-vehicle totals. The clips are public stock footage and demo material, never live CCTV.
 
-The generated JSON includes timestamps, boxes, confidence, model identifier, source license reference, and no-condition metadata. Full-resolution source clips remain outside the repository; only compact annotated previews and corresponding JSON are included in the web app.
+The generated JSON includes timestamps, source frame indices, boxes, original COCO IDs/classes, mapped traffic categories, configuration, track summaries, crossing events, and provenance. Original full-resolution downloads and model weights remain outside the repository; the licensed compact site clips, annotated previews, and JSON are included in the web app.
 
 ## WebGISTA demo UI
 
@@ -44,10 +44,10 @@ The Pexels license permits use on websites/apps and modification subject to its 
 
 ## Acceptance status
 
-- Local offline detection, heuristic tracking, and annotation: executed on both licensed clips at about 4.8–5 FPS. See Phase 3C notes below for limitations and observed line counts.
+- Local offline detection, heuristic tracking, and annotation: executed again on the actual site assets at 5 FPS; see Phase 3E.1 results below.
 - `/analysis` sample selector, annotated playback, and actual per-frame JSON results: implemented with component regression coverage; browser verification pending.
 - Data contract and provenance output: generated and inspected.
-- Tracking: an experimental same-class nearest-centroid tracker can assign heuristic IDs and count one crossing per track for the configured virtual line. It is not validated against ground-truth tracks and must not be presented as reliable unique-vehicle counts.
+- Tracking: experimental same-class centroid association with linear velocity prediction, finite line-segment intersection, allowed direction, and once-per-track event suppression. No manual ground truth is present, so identity and event accuracy are not established.
 - Traffic condition derivation: not implemented; no calibration supports it.
 - V2 browser upload/playback workflow: not connected to this local CLI.
 - Live CCTV analysis: not implemented. It would need a separately authorized media-access and persistent worker architecture; Vercel Hobby is not treated as a continuous processing host.
@@ -87,11 +87,32 @@ score > 1.0        Terrible
 
 The result is posted to `/update/keterangan/{id}` after each frame, replacing the camera condition instead of appending an observation. It is not a time-window flow count: the per-frame counters reset, and repeated vehicle instances are used as though they were traffic volume. The 2024 paper describes 30-second observation/capture intervals, but this v1 browser handler reacts to video `timeupdate` frames instead of aggregating those 30-second intervals. The paper describes vehicle classes and an MKJI 1997 V/C ratio/capacity model; its intersection capacity example is 4,455 smp/hour, derived from 1,650 × three approaches × 0.90 city-size factor. This stock video has no verified local road geometry, direction-specific calibrated capacity, or ground-truth count, so the old ratio is not applied to it. See the [2024 paper](https://doi.org/10.1063/5.0203203) and its [available full text](https://www.researchgate.net/publication/379182827_Banda_Aceh_traffic_conditions_real-time-mapping-at-intersections-based-on-WebGIS-and-machine-learning).
 
-### Experimental tracker
+### Phase 3E.1 — tracking and ground-truth validation
 
-The offline CLI now accepts normalized `--roi` and `--counting-line` geometry and an inference sampling rate up to 10 FPS. It uses same-class greedy nearest-centroid association with a configurable pixel-distance limit and up to two missed frames. Each track contributes at most one crossing event per processing run. The output separates raw per-frame detections from heuristic track IDs and line-crossing counts. Synthetic tests verify stable association and one event despite crossing back; this only validates the implementation's intended semantics, not its accuracy on occluded real-world traffic. The JSON explicitly calls tracking experimental. A track may split/merge or be lost after occlusion, and a line count is not ground-truth unique vehicles or calibrated traffic volume.
+`tools/traffic-analytics/tracker.py` now predicts the next centroid from recent velocity when association resumes after missed samples. Same-class one-to-one greedy association remains intentionally lightweight; candidates are gated by a configurable distance scaled for missed samples. Line events require a trajectory to cross the finite configured segment, obey the selected direction, and are emitted at most once per heuristic track. Per-video ROI and line geometry, sampling rate, confidence, movement gate, and missed-frame allowance are recorded in each analysis JSON. Annotated previews display mapped class, heuristic track ID, and the event marker.
 
-For the current stock clips, detector execution at 4.8–5 FPS produced one heuristic line crossing for sample 01 and eleven for sample 02 with the saved demo ROI/line geometry. The output video is a compressed 960×540 annotated preview and JSON has 111/132 sampled frames. These are experimental detector outputs, not traffic flow rates or congestion conditions. `condition` stays null and demo outputs are not written to `traffic_observations`.
+COCO class mapping is explicit: COCO car→LV, motorcycle→MC, bus/truck→HV, and bicycle remains separate. Person and unsupported classes are ignored. Each raw detection retains COCO class ID/name, confidence, bounding box, and mapped category. Output separately reports detection instances, track IDs/track durations, and timestamped/frame-indexed crossing events. Track diagnostics such as one-sample track count are not accuracy scores.
+
+The current result files were regenerated from the exact 1280×720 MP4s served by the site, using the local OpenCV Zoo YOLOX-S INT8 model, 0.35 confidence, 5 FPS, a 35-pixel movement gate, and up to two missed samples:
+
+| Site sample | Duration / processed frames | Detection instances (car, bus, truck, motorcycle, bicycle) | Heuristic tracks | Heuristic crossing events |
+|---|---:|---|---:|---:|
+| 01 | 23.023 s / 111 | 510, 1, 29, 0, 0 (540 total) | 35; 5 one-sample tracks | 4: 3 car, 1 truck |
+| 02 | 26.000 s / 130 | 397, 37, 11, 456, 0 (901 total) | 263; 109 one-sample tracks | 25: 11 car, 14 motorcycle |
+
+These differ from the earlier 4K-source results because inference was rerun against the downscaled site MP4s. They are actual model/tracker outputs, not manually verified counts. In particular, 109 single-sample tracks in sample 02 highlight fragmentation/noise risk; do not interpret the 25 crossing events as 25 distinct real vehicles. No P/R/F1 or count-error metric is reported because the ground-truth CSV is header-only and no human labels have been supplied.
+
+`tools/traffic-analytics/ground_truth_template.csv` and `evaluate_ground_truth.py` provide the manual workflow. Annotators record a unique event ID, mapped vehicle category, direction relative to the directed line, source timestamp, and frame index. The evaluator performs one-to-one class/category + direction matching within a documented tolerance and reports TP/FP/FN, precision, recall, F1, absolute count error, and per-category error only after labels are present. Tracking identity accuracy (for example IDF1) remains unavailable because the current template labels crossing events, not every vehicle identity on every frame.
+
+The existing V/C module continues to accept only tracked-line-crossing inputs marked as ground-truth validated, at least 30 seconds, with explicit PCE and road-capacity configuration. Demo provenance is now rejected explicitly. The two clips are shorter than 30 seconds and have no ground-truth counts or camera-specific capacity, so `condition` remains null. Manual observation history is unaffected.
+
+### Phase 3E.1 status
+
+- Reproducible detector/tracker output and annotated previews: **implemented and locally executed** for both site samples.
+- Taxonomy, config validation, direction, finite-line crossing, velocity recovery, no-duplicate event semantics, CSV evaluation, and result contract: **unit tested**.
+- Ground-truth count accuracy and tracking accuracy: **not validated**; manual labels are still required.
+- Operational automatic Traffic Condition: **unavailable**, correctly; the demo clips do not meet duration, ground-truth, and road-capacity requirements.
+- Demo/operational separation: **enforced in the V/C module**; demo provenance cannot produce an operational condition.
 
 ### Phase 3C acceptance
 

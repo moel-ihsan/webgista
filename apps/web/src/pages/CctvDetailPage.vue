@@ -242,9 +242,9 @@ onBeforeUnmount(() => {
           <section v-if="demoVideo && !videoFailed" class="cctv-detail-cv" aria-label="Offline demo video analysis">
             <strong>DEMO VIDEO — NOT LIVE CCTV</strong>
             <span>Source: <a :href="demoVideo.sourceUrl" target="_blank" rel="noreferrer">{{ demoVideo.title }} — {{ demoVideo.creator }}</a> · <a href="https://www.pexels.com/license/" target="_blank" rel="noreferrer">Pexels Free License</a>.</span>
-            <span>{{ demoDetections }} detection instances across {{ demoVideo.analysis.frames.length }} sampled frames; not unique vehicles.</span>
-            <span v-if="demoVideo.analysis.line_crossing_total != null">Experimental heuristic line crossings: {{ demoVideo.analysis.line_crossing_total }}; not validated unique vehicles.</span>
-            <span v-else>Tracking {{ demoVideo.analysis.tracking.enabled ? 'IDs only; no validated line count.' : 'unavailable.' }} Traffic condition not calculated.</span>
+            <span>{{ demoDetections }} detection instances across {{ demoVideo.analysis.processed_frame_count }} sampled frames; not unique vehicles.</span>
+            <span>{{ demoVideo.analysis.tracked_objects_count }} heuristic track IDs and {{ demoVideo.analysis.crossing_event_count }} line-crossing events; ground truth {{ demoVideo.analysis.ground_truth_status.replaceAll('_', ' ') }}.</span>
+            <span>No traffic condition is calculated from this experimental footage: {{ demoVideo.analysis.condition_note }}</span>
             <span>Model: {{ demoVideo.analysis.model.name }} {{ demoVideo.analysis.model.version }} · sampled at {{ demoVideo.analysis.sampled_fps }} FPS · processed {{ dateLabel(demoVideo.analysis.created_at) }}.</span>
             <span v-if="demoVideo.analysis.tracking.algorithm">Tracker: {{ demoVideo.analysis.tracking.algorithm }}; {{ demoVideo.analysis.tracking.quality }}.</span>
             <span v-if="demoFrame">Frame at {{ demoFrame.offset_seconds.toFixed(1) }}s: {{ demoFrame.detections.length }} vehicle detections.</span>

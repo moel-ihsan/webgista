@@ -1,0 +1,61 @@
+name: Phase 3E.1 vehicle counting verification
+
+on:
+  push:
+    branches: [feat/webgista-v2]
+    paths:
+      - "tools/traffic-analytics/**"
+      - "apps/web/src/data/traffic-demo/**"
+      - "apps/web/src/data/trafficDemo.ts"
+      - "apps/web/src/data/trafficDemo.test.ts"
+      - "apps/web/src/components/TrafficDemoPanel.vue"
+      - "apps/web/src/components/TrafficDemoPanel.test.ts"
+      - "apps/web/src/domain/trafficCalculation.ts"
+      - "apps/web/src/domain/trafficCalculation.test.ts"
+      - "apps/web/src/pages/CctvDetailPage.vue"
+      - "apps/web/src/pages/CctvDetailPage.test.ts"
+      - "apps/web/public/traffic-demo/**"
+      - ".github/workflows/phase3e1-traffic-counting.yml"
+  pull_request:
+    paths:
+      - "tools/traffic-analytics/**"
+      - "apps/web/src/data/traffic-demo/**"
+      - "apps/web/src/data/trafficDemo.ts"
+      - "apps/web/src/data/trafficDemo.test.ts"
+      - "apps/web/src/components/TrafficDemoPanel.vue"
+      - "apps/web/src/components/TrafficDemoPanel.test.ts"
+      - "apps/web/src/domain/trafficCalculation.ts"
+      - "apps/web/src/domain/trafficCalculation.test.ts"
+      - "apps/web/src/pages/CctvDetailPage.vue"
+      - "apps/web/src/pages/CctvDetailPage.test.ts"
+      - "apps/web/public/traffic-demo/**"
+      - ".github/workflows/phase3e1-traffic-counting.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  verification:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: apps/web/package-lock.json
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install frontend and Python dependencies
+        run: |
+          npm ci --prefix apps/web
+          python -m pip install -r tools/traffic-analytics/requirements.txt
+      - name: Verify frontend
+        working-directory: apps/web
+        run: NODE="$(command -v node)" npm run verify
+      - name: Verify offline tracking and ground-truth tools
+        run: python -m unittest discover -s tools/traffic-analytics -v

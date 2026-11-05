@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 
-import { demoDetectionTotal, demoFrameAt, trafficDemoVideos } from '../data/trafficDemo'
+import { demoDetectionTotal, demoFrameAt, trafficDemoVideos, type DemoAnalysis } from '../data/trafficDemo'
 
 const selectedId = ref(trafficDemoVideos[0]?.id ?? '')
 const currentTime = ref(0)
@@ -19,6 +19,10 @@ function updateTime(event: Event): void {
 
 function resetTime(): void {
   currentTime.value = 0
+}
+
+function crossingDescription(event: NonNullable<DemoAnalysis['crossing_events']>[number]): string {
+  return `#${event.track_id} ${event.traffic_category ?? event.class} ${event.direction} at ${event.timestamp_seconds ?? 'unknown'}s`
 }
 </script>
 
@@ -54,7 +58,7 @@ function resetTime(): void {
     </video>
 
     <p class="traffic-demo__notice">
-      Licensed stock-footage demo processed locally at {{ analysis.sampled_fps }} sampled frame per second.
+      Licensed stock-footage demo processed locally at {{ analysis.sampled_fps }} sampled frames per second for {{ analysis.input_duration_seconds }} seconds.
       It is not a live camera, and its results are not saved as Traffic Observations.
     </p>
 
@@ -66,9 +70,14 @@ function resetTime(): void {
     <div class="traffic-demo__summary" aria-live="polite">
       <p><strong>Model:</strong> {{ analysis.model.name }} · {{ analysis.model.version }}</p>
       <p><strong>Processed:</strong> {{ new Date(analysis.created_at).toLocaleString() }}</p>
-      <p><strong>Detection instances:</strong> {{ totalDetections }} across {{ analysis.frames.length }} sampled frames. These are not unique vehicles.</p>
-      <p v-if="analysis.line_crossing_total != null"><strong>Experimental heuristic line crossings:</strong> {{ analysis.line_crossing_total }} across the configured line. This is not a validated unique-vehicle count.</p>
-      <p v-else><strong>Tracking:</strong> {{ analysis.tracking.enabled ? 'Heuristic IDs only; no line-crossing total is available.' : 'Not available.' }} <strong>Traffic condition:</strong> Not calculated.</p>
+      <p><strong>Detection instances:</strong> {{ totalDetections }} across {{ analysis.processed_frame_count }} sampled frames. These are repeated detections, not unique vehicles.</p>
+      <p><strong>Tracker IDs:</strong> {{ analysis.tracked_objects_count }} experimental tracks ({{ analysis.tracking_quality.single_detection_track_count }} observed in one sampled frame). Track IDs are not ground-truth unique vehicles.</p>
+      <p><strong>Experimental line-crossing events:</strong> {{ analysis.crossing_event_count }}; validation: {{ analysis.ground_truth_status.replaceAll('_', ' ') }}. These are not validated traffic counts.</p>
+      <p><strong>Traffic Condition:</strong> unavailable — {{ analysis.condition_note }}</p>
+      <h3>Detection instances by model class (repeated across frames)</h3>
+      <ul class="traffic-demo__counts">
+        <li v-for="[key, label] in vehicleLabels" :key="key">{{ label }} <strong>{{ analysis.detection_instances_by_class[key] }}</strong></li>
+      </ul>
       <h3>Peak detections in one sampled frame</h3>
       <ul class="traffic-demo__counts">
         <li v-for="[key, label] in vehicleLabels" :key="key">{{ label }} <strong>{{ analysis.peak_vehicles_in_sampled_frame[key] }}</strong></li>
@@ -80,11 +89,11 @@ function resetTime(): void {
         </ul>
         <ol class="traffic-demo__detections">
           <li v-for="(detection, index) in currentFrame.detections" :key="`${currentFrame.offset_seconds}-${index}`">
-            {{ detection.class }}<template v-if="detection.track_id != null"> · heuristic track {{ detection.track_id }}</template> · {{ Math.round(detection.confidence * 100) }}% confidence
+            {{ detection.class }} → {{ detection.traffic_category }}<template v-if="detection.track_id != null"> · heuristic track {{ detection.track_id }}</template> · {{ Math.round(detection.confidence * 100) }}% confidence
             · box [{{ detection.bbox_xyxy.join(', ') }}]
           </li>
         </ol>
-        <p v-if="currentFrame.line_crossings_this_frame?.length">Line crossings in this sampled frame: {{ currentFrame.line_crossings_this_frame.length }} experimental event(s).</p>
+        <p v-if="currentFrame.line_crossings_this_frame?.length">Line crossings in this sampled frame: {{ currentFrame.line_crossings_this_frame.map(crossingDescription).join('; ') }}.</p>
         <p v-if="!currentFrame.detections.length">No supported vehicle detections in this sampled frame.</p>
       </template>
       <p><strong>Vehicle count semantics:</strong> {{ analysis.vehicle_count_semantics }}</p>

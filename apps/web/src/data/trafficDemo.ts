@@ -5,23 +5,42 @@ export type DemoVehicleClass = 'bicycle' | 'car' | 'motorcycle' | 'bus' | 'truck
 
 export interface DemoDetection {
   class: string
+  coco_class_id: number
+  traffic_category: string
   confidence: number
   bbox_xyxy: number[]
   track_id?: number
 }
 
 export interface DemoFrame {
+  frame_index: number
   offset_seconds: number
   vehicle_counts_this_frame: Record<DemoVehicleClass, number>
   detections: DemoDetection[]
-  line_crossings_this_frame?: Array<{ track_id: number; class: string }>
+  line_crossings_this_frame?: DemoCrossingEvent[]
+}
+
+export interface DemoCrossingEvent {
+  track_id: number
+  class: string
+  traffic_category: string | null
+  direction: string
+  frame_index: number
+  timestamp_seconds: number | null
+  crossing_xy: number[]
 }
 
 export interface DemoAnalysis {
   schema_version: string
   record_kind: string
   is_live_cctv: boolean
+  source_video_identifier: string
+  source_reference: string
   input_duration_seconds: number
+  video_dimensions: { width: number; height: number }
+  source_frame_count: number
+  processed_frame_count: number
+  requested_sampled_fps: number
   sampled_fps: number
   model: { name: string; version: string; license: string }
   tracking: {
@@ -34,10 +53,26 @@ export interface DemoAnalysis {
     roi_normalized?: number[] | null
     counting_line_normalized?: number[] | null
   }
+  processing_config: {
+    minimum_detection_confidence: number
+    roi_normalized: number[] | null
+    counting_line_normalized: number[] | null
+    allowed_direction: string
+    tracking_algorithm: string
+    max_track_distance_pixels: number
+    max_missed_frames: number
+  }
+  detection_instances_by_class: Record<DemoVehicleClass, number>
+  detection_instances_by_traffic_category: Record<'LV' | 'HV' | 'MC' | 'bicycle', number>
+  tracked_objects_count: number
+  tracked_objects: Array<{ track_id: number; class: string; traffic_category: string | null; observations: number; crossed_counting_line: boolean }>
+  tracking_quality: { status: string; single_detection_track_count: number; mean_sampled_observations_per_track: number; note: string }
+  crossing_event_count: number
+  crossing_events: DemoCrossingEvent[]
+  ground_truth_evaluation: null | Record<string, unknown>
+  ground_truth_status: string
   vehicle_count_semantics: string
   peak_vehicles_in_sampled_frame: Record<DemoVehicleClass, number>
-  line_crossing_counts_by_class?: Record<DemoVehicleClass, number> | null
-  line_crossing_total?: number | null
   condition: null
   condition_note: string
   frames: DemoFrame[]
@@ -76,7 +111,7 @@ export const trafficDemoVideos: readonly TrafficDemoVideo[] = [
 ]
 
 export function demoDetectionTotal(analysis: DemoAnalysis): number {
-  return analysis.frames.reduce((sum, frame) => sum + frame.detections.length, 0)
+  return Object.values(analysis.detection_instances_by_class).reduce((sum, count) => sum + count, 0)
 }
 
 export function demoFrameAt(analysis: DemoAnalysis, seconds: number): DemoFrame | null {

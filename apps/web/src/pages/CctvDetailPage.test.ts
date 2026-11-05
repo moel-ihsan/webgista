@@ -103,7 +103,8 @@ describe('CCTV detail page', () => {
     expect(host?.querySelector('.cctv-detail-media > img')).toBeNull()
     expect(host?.textContent).toContain('DEMO VIDEO — NOT LIVE CCTV')
     expect(host?.textContent).toContain('not unique vehicles')
-    expect(host?.textContent).toContain('Experimental heuristic line crossings: 11')
+    expect(host?.textContent).toContain('25 line-crossing events')
+    expect(host?.textContent).toContain('ground truth not available')
     expect(host?.textContent).toContain('does not depict current traffic at this camera location')
 
     video?.dispatchEvent(new Event('error'))

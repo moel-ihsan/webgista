@@ -11,6 +11,7 @@ const config: TrafficCapacityConfig = {
 }
 
 const measurement = (overrides: Partial<TrafficFlowMeasurement> = {}): TrafficFlowMeasurement => ({
+  provenance: 'operational_cctv',
   counts: { lightVehicle: 0, heavyVehicle: 0, motorcycle: 0, bicycle: 0 },
   durationSeconds: 30,
   countingMethod: 'tracked_line_crossings',
@@ -38,6 +39,13 @@ describe('traffic volume/capacity method', () => {
       counts: { lightVehicle: 10, heavyVehicle: 2, motorcycle: 5, bicycle: 0 },
     }), config)
     expect(result).toMatchObject({ available: true, weightedVehicleUnits: 14.6, volumeSmpPerHour: 876, countingMethod: 'tracked_line_crossings', validationReference: 'count-sheet-v1' })
+  })
+
+  it('never accepts demo-video crossings as operational traffic measurements', () => {
+    expect(calculateTrafficCondition(measurement({ provenance: 'demo_video' }), config)).toMatchObject({
+      available: false,
+      reason: expect.stringContaining('Demo-video analysis'),
+    })
   })
 
   it.each([

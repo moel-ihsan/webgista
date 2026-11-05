@@ -17,6 +17,7 @@ export interface TrafficCapacityConfig {
 }
 
 export interface TrafficFlowMeasurement {
+  provenance: 'operational_cctv' | 'demo_video'
   counts: TrafficCounts
   durationSeconds: number
   countingMethod: 'tracked_line_crossings' | 'frame_detections' | 'manual'
@@ -58,6 +59,7 @@ export function calculateTrafficCondition(
   config: TrafficCapacityConfig,
 ): TrafficCalculation {
   const { counts, durationSeconds } = measurement
+  if (measurement.provenance !== 'operational_cctv') return { available: false, reason: 'Demo-video analysis is not an operational CCTV measurement.' }
   if (measurement.countingMethod !== 'tracked_line_crossings') return { available: false, reason: 'Only line-crossing counts measure flow; frame detections do not.' }
   if (!measurement.trackingValidated || !measurement.validationReference?.trim()) return { available: false, reason: 'Vehicle tracking has not been validated against a referenced count.' }
   if (!Number.isFinite(durationSeconds) || durationSeconds < MINIMUM_OBSERVATION_SECONDS) return { available: false, reason: 'A valid observation must cover at least 30 seconds.' }
