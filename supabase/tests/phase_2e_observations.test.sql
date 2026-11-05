@@ -23,7 +23,7 @@ values
   ('bbbbbbbb-1111-1111-1111-000000000001', 'bbbbbbbb-0000-0000-0000-000000000001', 'Traffic Camera One', 'Test address one', 95.32, 5.55),
   ('bbbbbbbb-1111-1111-1111-000000000002', 'bbbbbbbb-0000-0000-0000-000000000002', 'Traffic Camera Two', 'Test address two', 95.33, 5.56);
 
-select plan(26);
+select plan(27);
 
 select ok(to_regtype('public.traffic_condition') is not null, 'traffic condition enum exists');
 select has_column('public', 'traffic_observations', 'condition', 'condition is persisted per observation');
@@ -38,6 +38,14 @@ select has_view('public', 'latest_traffic_observations', 'RLS-scoped latest obse
 select ok((select 'security_invoker=true' = any(coalesce(reloptions, '{}'::text[])) from pg_class where oid = 'public.latest_traffic_observations'::regclass), 'latest view runs with caller privileges');
 select ok(has_table_privilege('authenticated', 'public.latest_traffic_observations', 'SELECT'), 'authenticated role can read latest observations through RLS');
 select ok(not has_table_privilege('anon', 'public.latest_traffic_observations', 'SELECT'), 'anonymous role cannot read latest observations');
+select ok(not exists (
+  select 1
+  from pg_class as relation
+  cross join lateral aclexplode(coalesce(relation.relacl, acldefault('r', relation.relowner))) as privilege
+  where relation.oid = 'public.latest_traffic_observations'::regclass
+    and privilege.grantee = 0
+    and privilege.privilege_type = 'SELECT'
+), 'latest observation view has no PUBLIC SELECT grant');
 select ok(not has_table_privilege('anon', 'public.traffic_observations', 'SELECT'), 'anonymous role cannot read observation rows');
 select ok(has_column_privilege('authenticated', 'public.traffic_observations', 'condition', 'INSERT'), 'authenticated role can submit condition on RLS-authorized observations');
 select ok(has_column_privilege('authenticated', 'public.traffic_observations', 'condition', 'UPDATE'), 'authenticated role can update condition on RLS-authorized observations');

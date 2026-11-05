@@ -259,6 +259,14 @@ begin
           from pg_class where oid = 'public.latest_traffic_observations'::regclass)
       or not has_table_privilege('authenticated', 'public.latest_traffic_observations', 'SELECT')
       or has_table_privilege('anon', 'public.latest_traffic_observations', 'SELECT')
+      or exists (
+        select 1
+        from pg_class as relation
+        cross join lateral aclexplode(coalesce(relation.relacl, acldefault('r', relation.relowner))) as privilege
+        where relation.oid = 'public.latest_traffic_observations'::regclass
+          and privilege.grantee = 0
+          and privilege.privilege_type = 'SELECT'
+      )
       or has_table_privilege('anon', 'public.traffic_observations', 'SELECT')
       or not has_column_privilege('authenticated', 'public.traffic_observations', 'condition', 'INSERT')
       or not has_column_privilege('authenticated', 'public.traffic_observations', 'condition', 'UPDATE')
