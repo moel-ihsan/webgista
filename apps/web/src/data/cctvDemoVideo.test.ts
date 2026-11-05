@@ -59,14 +59,15 @@ describe('authorized demo-video association', () => {
     expect(mock.selectCalls.every((fields) => fields === 'cctv_id')).toBe(true)
   })
 
-  it('stores only a selected demo asset with its provenance, never a caller URL or credentials', async () => {
+  it('stores only a selected demo asset with its provenance and leaves actor identity to the database trigger', async () => {
     const mock = cameraConfig(null)
     await saveCctvDemoVideo(mock.client, 'camera-1', 'user-1', 'traffic-sample-02')
     expect(mock.writes[0]).toEqual(expect.objectContaining({
-      cctv_id: 'camera-1', created_by: 'user-1', source_kind: 'stored_clip',
+      cctv_id: 'camera-1', source_kind: 'stored_clip',
       source_uri: '/traffic-demo/traffic_sample_02_annotated.mp4',
       notes: expect.stringContaining('DEMO VIDEO — NOT LIVE CCTV'),
     }))
+    expect(mock.writes[0]).not.toHaveProperty('created_by')
     expect(JSON.stringify(mock.writes)).not.toMatch(/credential_reference|rtsp|password/i)
     await expect(saveCctvDemoVideo(mock.client, 'camera-1', 'user-1', 'https://unknown.example/a.mp4' as never))
       .rejects.toThrow('Select a supported demo video.')

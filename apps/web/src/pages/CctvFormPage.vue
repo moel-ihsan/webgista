@@ -21,6 +21,7 @@ const title = editing ? 'Edit CCTV' : 'Add New CCTV'
 const agencies = ref<readonly CctvAgencyOption[]>([])
 const boundary = ref<BoundaryFeatureCollection | null>(null)
 const loading = ref(true)
+const formAvailable = ref(false)
 const saving = ref(false)
 const errorMessage = ref('')
 const successMessage = ref('')
@@ -69,6 +70,7 @@ watch(
     if (status !== 'authenticated') {
       accessRevision += 1
       loaded = false
+      formAvailable.value = false
       controller?.abort()
       agencies.value = []
       Object.assign(form, { name: '', address: '', category: 'regular', agencyId: '', longitude: '', latitude: '' })
@@ -79,6 +81,7 @@ watch(
     if (nextAccessKey !== accessKey) {
       accessRevision += 1
       loaded = false
+      formAvailable.value = false
       agencies.value = []
       Object.assign(form, { name: '', address: '', category: 'regular', agencyId: '', longitude: '', latitude: '' })
       accessKey = nextAccessKey
@@ -133,6 +136,7 @@ async function loadForm(): Promise<void> {
       originalDemoVideoId.value = demoVideoId.value
       demoVideoEditable.value = videoAssociation.editable
     }
+    formAvailable.value = true
   } catch (error) {
     if (current.signal.aborted) return
     errorMessage.value = error instanceof Error ? error.message : 'CCTV form data could not be loaded.'
@@ -172,6 +176,7 @@ async function submit(): Promise<void> {
   const revision = accessRevision
   const userId = authSession.state.user?.id
   let metadataSaved = false
+  let savingAssociation = false
   saving.value = true
   try {
     if (selectedImage.value && !appConfig.privateMediaEnabled) throw new Error('CCTV image storage is not enabled for this deployment.')
@@ -202,7 +207,9 @@ async function submit(): Promise<void> {
       imagePreview.value = null
     }
     if (demoVideoEditable.value && (form.category === 'analytic' || demoVideoId.value !== originalDemoVideoId.value)) {
+      savingAssociation = true
       await saveCctvDemoVideo(supabaseClient, cameraId, userId ?? '', demoVideoId.value)
+      savingAssociation = false
       originalDemoVideoId.value = demoVideoId.value
     }
     successMessage.value = editing ? 'CCTV location updated.' : 'CCTV location created. It is private on the public map until publication is approved.'
@@ -210,7 +217,9 @@ async function submit(): Promise<void> {
   } catch (error) {
     if (revision === accessRevision) {
       const message = error instanceof Error ? error.message : 'CCTV record could not be saved.'
-      errorMessage.value = metadataSaved && selectedImage.value
+      errorMessage.value = savingAssociation
+        ? `CCTV details were saved, but the video association could not be saved. ${message} Your selections remain available; retry after resolving the association permission.`
+        : metadataSaved && selectedImage.value
         ? `CCTV metadata was saved, but its image was not. ${message} Retry to attach the image without creating another camera.`
         : message
     }
@@ -255,7 +264,7 @@ onBeforeUnmount(() => {
     <p v-if="successMessage" role="status" class="cctv-form-feedback">{{ successMessage }}</p>
     <p v-if="!loading && agencies.length === 0" class="cctv-form-feedback" role="status">No agency is available for your account. Ask an administrator to configure an authorized agency before adding or editing camera metadata.</p>
 
-    <form v-if="!loading && !errorMessage" class="cctv-form-layout" @submit.prevent="submit">
+    <form v-if="!loading && formAvailable" class="cctv-form-layout" @submit.prevent="submit">
       <div class="cctv-form-fields">
         <label for="cctv-name">Name</label>
         <input id="cctv-name" v-model="form.name" class="legacy-input" required minlength="2" maxlength="160" autocomplete="off" />

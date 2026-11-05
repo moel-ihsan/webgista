@@ -3,13 +3,14 @@ import { createApp, nextTick } from 'vue'
 import { createMemoryHistory, createRouter, RouterView } from 'vue-router'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
-const { createCctvLocation, getCctvDemoAssociation, listCctvAgencies, replaceCctvSnapshot, saveCctvDemoVideo, validateCctvLocationInput, validateImage } = vi.hoisted(() => ({
+const { createCctvLocation, getCctvDemoAssociation, listCctvAgencies, replaceCctvSnapshot, saveCctvDemoVideo, updateCctvLocation, validateCctvLocationInput, validateImage } = vi.hoisted(() => ({
   createCctvLocation: vi.fn().mockResolvedValue('camera-new'),
   getCctvDemoAssociation: vi.fn().mockResolvedValue({ video: null, editable: true }),
   listCctvAgencies: vi.fn().mockResolvedValue([{ id: 'agency-1', name: 'Testing Agency' }]),
   replaceCctvSnapshot: vi.fn().mockResolvedValue({ path: 'camera-new/image.jpg', url: 'signed-image' }),
   validateCctvLocationInput: vi.fn().mockReturnValue(null),
   saveCctvDemoVideo: vi.fn().mockResolvedValue(undefined),
+  updateCctvLocation: vi.fn().mockResolvedValue(true),
   validateImage: vi.fn().mockResolvedValue('jpg'),
 }))
 
@@ -23,7 +24,7 @@ vi.mock('../data/cctvManagement', () => ({
   getCctvSnapshotUrl: vi.fn().mockResolvedValue(null),
   listCctvAgencies,
   replaceCctvSnapshot,
-  updateCctvLocation: vi.fn(),
+  updateCctvLocation,
   validateCctvLocationInput,
 }))
 vi.mock('../data/cctvDemoVideo', () => ({ getCctvDemoAssociation, saveCctvDemoVideo }))
@@ -70,6 +71,8 @@ afterEach(() => {
   host = undefined
   createCctvLocation.mockClear()
   createCctvLocation.mockResolvedValue('camera-new')
+  updateCctvLocation.mockClear()
+  updateCctvLocation.mockResolvedValue(true)
   replaceCctvSnapshot.mockClear()
   validateImage.mockClear()
   validateImage.mockResolvedValue('jpg')
@@ -77,6 +80,8 @@ afterEach(() => {
   listCctvAgencies.mockResolvedValue([{ id: 'agency-1', name: 'Testing Agency' }])
   validateCctvLocationInput.mockClear()
   validateCctvLocationInput.mockReturnValue(null)
+  saveCctvDemoVideo.mockReset()
+  saveCctvDemoVideo.mockResolvedValue(undefined)
 })
 
 describe('CCTV form v1 field parity', () => {
@@ -160,5 +165,37 @@ describe('CCTV form v1 field parity', () => {
     await flush()
     expect(root.textContent).toContain('clearly identified as QA or demo')
     expect(createCctvLocation).not.toHaveBeenCalled()
+  })
+
+  it('keeps form values and the selected demo when association saving fails, then retries without duplicating the camera', async () => {
+    saveCctvDemoVideo.mockRejectedValueOnce(new Error('The demo video association could not be saved.'))
+    const root = await mountForm()
+    root.querySelector<HTMLButtonElement>('[data-map-picker]')!.click()
+    await nextTick()
+    const set = (selector: string, value: string) => {
+      const field = root.querySelector<HTMLInputElement | HTMLSelectElement>(selector)!
+      field.value = value
+      field.dispatchEvent(new Event('input', { bubbles: true }))
+      field.dispatchEvent(new Event('change', { bubbles: true }))
+    }
+    set('#cctv-name', 'Demo Camera')
+    set('#cctv-address', 'Licensed demo footage, not a live camera location')
+    set('#cctv-category', 'analytic')
+    set('#cctv-agency', 'agency-1')
+    await nextTick()
+    set('#cctv-demo-video', 'traffic-sample-01')
+    const form = root.querySelector<HTMLFormElement>('form')!
+    form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }))
+    await flush()
+    expect(root.querySelector('form')).not.toBeNull()
+    expect(root.querySelector<HTMLInputElement>('#cctv-name')?.value).toBe('Demo Camera')
+    expect(root.querySelector<HTMLSelectElement>('#cctv-demo-video')?.value).toBe('traffic-sample-01')
+    expect(root.textContent).toContain('CCTV details were saved, but the video association could not be saved')
+    expect(saveCctvDemoVideo).toHaveBeenCalledTimes(1)
+
+    root.querySelector<HTMLFormElement>('form')!.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }))
+    await flush()
+    expect(createCctvLocation).toHaveBeenCalledTimes(1)
+    expect(saveCctvDemoVideo).toHaveBeenCalledTimes(2)
   })
 })

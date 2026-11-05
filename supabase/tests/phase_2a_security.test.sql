@@ -3,7 +3,7 @@ begin;
 create extension if not exists pgtap with schema extensions;
 set search_path = public, extensions;
 
-select plan(119);
+select plan(129);
 
 select has_table('public', 'profiles', 'profiles table exists');
 select has_table('public', 'user_roles', 'user roles table exists');
@@ -298,6 +298,16 @@ values
     'Banda Aceh private camera publication test location',
     95.360000,
     5.590000,
+    false,
+    true
+  ),
+  (
+    'c0000000-0000-0000-0000-000000000006',
+    '10000000-0000-0000-0000-000000000001',
+    'Editor Config Test Camera',
+    'Disposable authorized config test location',
+    95.370000,
+    5.600000,
     false,
     true
   );
@@ -953,6 +963,81 @@ select is(
   2,
   'administrators retain the audited correction path for completed observations'
 );
+
+select ok(
+  has_column_privilege('authenticated', 'public.cctv_private_config', 'source_uri', 'INSERT')
+    and not has_column_privilege('authenticated', 'public.cctv_private_config', 'created_by', 'INSERT'),
+  'authenticated writes are limited to config fields and actor identity is trigger-managed'
+);
+
+select set_config(
+  'request.jwt.claims',
+  '{"sub":"aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa1","role":"authenticated"}',
+  true
+);
+set local role authenticated;
+select lives_ok(
+  $$insert into public.cctv_private_config (cctv_id, source_kind, source_uri, notes)
+    values ('c0000000-0000-0000-0000-000000000002', 'stored_clip', '/test/admin.mp4', 'admin test')$$,
+  'administrator can insert an authorized private video association without supplying actor identity'
+);
+select lives_ok(
+  $$update public.cctv_private_config set source_uri = '/test/admin-updated.mp4'
+    where cctv_id = 'c0000000-0000-0000-0000-000000000002'$$,
+  'administrator can update an existing video association'
+);
+reset role;
+select is(
+  (select created_by from public.cctv_private_config where cctv_id = 'c0000000-0000-0000-0000-000000000002'),
+  'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa1'::uuid,
+  'database trigger records the authenticated administrator on config insert'
+);
+
+select set_config(
+  'request.jwt.claims',
+  '{"sub":"aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa2","role":"authenticated"}',
+  true
+);
+set local role authenticated;
+select lives_ok(
+  $$insert into public.cctv_private_config (cctv_id, source_kind, source_uri, notes)
+    values ('c0000000-0000-0000-0000-000000000006', 'stored_clip', '/test/editor.mp4', 'editor test')$$,
+  'agency editor can insert a video association for an assigned camera'
+);
+select lives_ok(
+  $$update public.cctv_private_config set source_uri = '/test/editor-updated.mp4'
+    where cctv_id = 'c0000000-0000-0000-0000-000000000006'$$,
+  'agency editor can update an association for an assigned camera'
+);
+update public.cctv_private_config
+set source_uri = '/test/unauthorized.mp4'
+where cctv_id = 'c0000000-0000-0000-0000-000000000003';
+reset role;
+select is(
+  (select created_by from public.cctv_private_config where cctv_id = 'c0000000-0000-0000-0000-000000000006'),
+  'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa2'::uuid,
+  'database trigger records the authenticated agency editor on config insert'
+);
+select is(
+  (select source_uri from public.cctv_private_config where cctv_id = 'c0000000-0000-0000-0000-000000000006'),
+  '/test/editor-updated.mp4',
+  'authorized agency editor update persists'
+);
+select is(
+  (select source_uri from public.cctv_private_config where cctv_id = 'c0000000-0000-0000-0000-000000000003'),
+  'rtsp://private-camera.example.test/stream',
+  'agency editor cannot change another agency video association'
+);
+
+select set_config('request.jwt.claims', '{"role":"anon"}', true);
+set local role anon;
+select throws_matching(
+  $$insert into public.cctv_private_config (cctv_id, source_kind, source_uri)
+    values ('c0000000-0000-0000-0000-000000000002', 'stored_clip', '/test/anonymous.mp4')$$,
+  'permission denied',
+  'anonymous users cannot insert private video associations'
+);
+reset role;
 
 select set_config('request.jwt.claims', '{"role":"anon"}', true);
 set local role anon;

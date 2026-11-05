@@ -63,7 +63,7 @@ export async function saveCctvDemoVideo(
   }
   const result = current
     ? await client.from('cctv_private_config').update(values).eq('cctv_id', cameraId).select('cctv_id').maybeSingle()
-    : await client.from('cctv_private_config').insert({ ...values, cctv_id: cameraId, created_by: userId })
+    : await client.from('cctv_private_config').insert({ ...values, cctv_id: cameraId })
   if (result.error) throw new Error('The demo video association could not be saved. Check your agency permissions.')
   if (current && result.data?.cctv_id !== cameraId) throw new Error('The demo video association changed before it could be saved. Reload the CCTV form.')
 }
