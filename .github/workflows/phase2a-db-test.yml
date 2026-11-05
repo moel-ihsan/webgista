@@ -53,6 +53,9 @@ jobs:
       - name: Lint database functions
         run: supabase db lint --schema public,private --level error --fail-on error
 
+      - name: Test private-config Data API least privilege
+        run: node scripts/test-local-cctv-private-config-api.mjs
+
       - name: Run Phase 2A security tests
         run: supabase test db supabase/tests/phase_2a_security.test.sql
 

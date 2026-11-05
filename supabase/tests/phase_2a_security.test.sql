@@ -3,7 +3,7 @@ begin;
 create extension if not exists pgtap with schema extensions;
 set search_path = public, extensions;
 
-select plan(129);
+select plan(131);
 
 select has_table('public', 'profiles', 'profiles table exists');
 select has_table('public', 'user_roles', 'user roles table exists');
@@ -965,9 +965,20 @@ select is(
 );
 
 select ok(
-  has_column_privilege('authenticated', 'public.cctv_private_config', 'source_uri', 'INSERT')
-    and not has_column_privilege('authenticated', 'public.cctv_private_config', 'created_by', 'INSERT'),
-  'authenticated writes are limited to config fields and actor identity is trigger-managed'
+  not has_table_privilege('authenticated', 'public.cctv_private_config', 'INSERT')
+    and has_table_privilege('authenticated', 'public.cctv_private_config', 'SELECT')
+    and has_column_privilege('authenticated', 'public.cctv_private_config', 'cctv_id', 'INSERT')
+    and has_column_privilege('authenticated', 'public.cctv_private_config', 'source_kind', 'INSERT')
+    and has_column_privilege('authenticated', 'public.cctv_private_config', 'source_uri', 'INSERT')
+    and has_column_privilege('authenticated', 'public.cctv_private_config', 'credential_reference', 'INSERT')
+    and has_column_privilege('authenticated', 'public.cctv_private_config', 'notes', 'INSERT')
+    and not has_column_privilege('authenticated', 'public.cctv_private_config', 'created_by', 'INSERT')
+    and not has_column_privilege('authenticated', 'public.cctv_private_config', 'updated_by', 'INSERT')
+    and not has_column_privilege('authenticated', 'public.cctv_private_config', 'created_at', 'INSERT')
+    and not has_column_privilege('authenticated', 'public.cctv_private_config', 'updated_at', 'INSERT')
+    and not has_table_privilege('anon', 'public.cctv_private_config', 'INSERT')
+    and not has_table_privilege('anon', 'public.cctv_private_config', 'SELECT'),
+  'authenticated retains only allowed config-column INSERT and scoped SELECT privileges'
 );
 
 select set_config(
@@ -979,7 +990,13 @@ set local role authenticated;
 select lives_ok(
   $$insert into public.cctv_private_config (cctv_id, source_kind, source_uri, notes)
     values ('c0000000-0000-0000-0000-000000000002', 'stored_clip', '/test/admin.mp4', 'admin test')$$,
-  'administrator can insert an authorized private video association without supplying actor identity'
+  'administrator can insert an authorized private video association'
+);
+select throws_matching(
+  $$insert into public.cctv_private_config (cctv_id, source_kind, source_uri, created_by)
+    values ('c0000000-0000-0000-0000-000000000002', 'stored_clip', '/test/forged.mp4', 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa3')$$,
+  'permission denied',
+  'authenticated actors cannot supply a forged creator column'
 );
 select lives_ok(
   $$update public.cctv_private_config set source_uri = '/test/admin-updated.mp4'
@@ -1003,6 +1020,12 @@ select lives_ok(
   $$insert into public.cctv_private_config (cctv_id, source_kind, source_uri, notes)
     values ('c0000000-0000-0000-0000-000000000006', 'stored_clip', '/test/editor.mp4', 'editor test')$$,
   'agency editor can insert a video association for an assigned camera'
+);
+select throws_matching(
+  $$insert into public.cctv_private_config (cctv_id, source_kind, source_uri)
+    values ('c0000000-0000-0000-0000-000000000004', 'stored_clip', '/test/cross-agency.mp4')$$,
+  'new row violates row-level security policy',
+  'agency editor cannot insert a video association for another agency'
 );
 select lives_ok(
   $$update public.cctv_private_config set source_uri = '/test/editor-updated.mp4'

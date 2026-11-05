@@ -11,6 +11,8 @@ declare
   camera_write_policies_ok boolean;
   publication_functions_ok boolean;
   observation_policies_ok boolean;
+  private_config_insert_policy_ok boolean;
+  private_config_select_policy_ok boolean;
   expected_storage_policies text[] := array[
     'cctv_images_delete_managed', 'cctv_images_insert_managed',
     'cctv_images_read_managed', 'cctv_images_read_public',
@@ -32,6 +34,47 @@ begin
   end if;
   if traffic_observation_acl_fix_applied and not traffic_observations_applied then
     raise exception 'Migration history is inconsistent: 006 is applied before 005';
+  end if;
+
+  select count(*) = 1 and bool_and(
+    polcmd = 'a'
+      and 'authenticated'::regrole::oid = any(polroles)
+      and pg_get_expr(polwithcheck, polrelid) like '%can_manage_agency%'
+      and pg_get_expr(polwithcheck, polrelid) like '%created_by%'
+  ) into private_config_insert_policy_ok
+  from pg_policy
+  where polrelid = 'public.cctv_private_config'::regclass and polcmd = 'a';
+
+  select count(*) = 1 and bool_and(
+    polcmd = 'r'
+      and 'authenticated'::regrole::oid = any(polroles)
+      and pg_get_expr(polqual, polrelid) like '%can_manage_agency%'
+  ) into private_config_select_policy_ok
+  from pg_policy
+  where polrelid = 'public.cctv_private_config'::regclass and polcmd = 'r';
+
+  if not (select relrowsecurity from pg_class where oid = 'public.cctv_private_config'::regclass)
+    or has_table_privilege('authenticated', 'public.cctv_private_config', 'INSERT')
+    or not has_table_privilege('authenticated', 'public.cctv_private_config', 'SELECT')
+    or has_column_privilege('anon', 'public.cctv_private_config', 'source_uri', 'SELECT')
+    or has_table_privilege('anon', 'public.cctv_private_config', 'INSERT')
+    or has_table_privilege('anon', 'public.cctv_private_config', 'SELECT')
+    or exists (
+      select 1 from unnest(array['cctv_id', 'source_kind', 'source_uri', 'credential_reference', 'notes']) as fields(column_name)
+      where not has_column_privilege('authenticated', 'public.cctv_private_config', fields.column_name, 'INSERT')
+    )
+    or exists (
+      select 1 from unnest(array['created_by', 'updated_by', 'created_at', 'updated_at']) as fields(column_name)
+      where has_column_privilege('authenticated', 'public.cctv_private_config', fields.column_name, 'INSERT')
+    )
+    or not coalesce(private_config_insert_policy_ok, false)
+    or not coalesce(private_config_select_policy_ok, false)
+    or not exists (
+      select 1 from pg_trigger
+      where tgrelid = 'public.cctv_private_config'::regclass and not tgisinternal
+        and tgfoid = 'private.set_actor_columns()'::regprocedure
+    ) then
+    raise exception 'CCTV private-config privileges, RLS policies, or actor trigger differ from the column-scoped security contract';
   end if;
 
   if not (select relrowsecurity from pg_class where oid = 'storage.objects'::regclass) then
