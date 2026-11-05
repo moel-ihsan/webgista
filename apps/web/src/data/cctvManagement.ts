@@ -100,9 +100,12 @@ export function validateCctvLocationInput(
   return null
 }
 
-function readableError(error: { code?: string } | null, action: string): Error {
+function readableError(error: { code?: string; constraint?: string; details?: string } | null, action: string): Error {
   if (error?.code === '42501' || error?.code === 'PGRST301') return new Error('Your account is not authorized to perform this action.')
-  if (error?.code === '23503') return new Error('This camera has related records and cannot be deleted.')
+  if (error?.code === '23503' && (error.constraint === 'traffic_observations_cctv_id_fkey' || error.details?.includes('traffic_observations'))) {
+    return new Error('This camera has traffic observation history and cannot be permanently deleted. Deactivate it to preserve those records.')
+  }
+  if (error?.code === '23503') return new Error('This camera has protected related records and cannot be deleted.')
   return new Error(`CCTV ${action} failed. Please try again.`)
 }
 

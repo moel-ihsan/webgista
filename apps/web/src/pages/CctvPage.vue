@@ -4,6 +4,7 @@ import { RouterLink, useRoute, useRouter } from 'vue-router'
 
 import { authSession } from '../auth/session'
 import { deleteCctvLocation, listCctvAgencies, listCctvLocations, canManageCctvLocation, pageCctvLocations, searchCctvLocations, setCctvLocationActive, sortCctvLocations, type CctvManagementLocation, type CctvSortField } from '../data/cctvManagement'
+import { removePrivateImage } from '../data/privateMedia'
 import { supabaseClient } from '../lib/supabase'
 
 const route = useRoute()
@@ -108,6 +109,13 @@ async function removeLocation(location: CctvManagementLocation): Promise<void> {
     if (!deleted) throw new Error('The record was not deleted or is no longer accessible.')
     mutationMessage.value = `“${location.name}” deleted.`
     await refresh()
+    if (location.snapshotPath) {
+      try {
+        await removePrivateImage(supabaseClient, 'cctv-images', location.snapshotPath)
+      } catch {
+        mutationMessage.value = `“${location.name}” was deleted, but its image could not be cleaned up from private storage.`
+      }
+    }
   } catch (error) {
     if (revision === accessRevision) mutationMessage.value = error instanceof Error ? error.message : 'CCTV record could not be deleted.'
   } finally {

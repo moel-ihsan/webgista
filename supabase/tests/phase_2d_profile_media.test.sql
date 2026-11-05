@@ -3,7 +3,7 @@ begin;
 create extension if not exists pgtap with schema extensions;
 set search_path = public, extensions;
 
-select plan(36);
+select plan(44);
 
 select has_column('public', 'profiles', 'address', 'profiles stores address');
 select has_column('public', 'profiles', 'latitude', 'profiles stores latitude');
@@ -192,6 +192,45 @@ select results_eq($$select name from storage.objects where bucket_id = 'cctv-ima
   'administrator can read a private CCTV image');
 select lives_ok($$insert into storage.objects (bucket_id, name) values ('cctv-images', 'c1000000-0000-0000-0000-000000000001/admin-upload.webp')$$,
   'administrator can upload under a managed camera folder');
+reset role;
+
+select ok(
+  (select polcmd = 'r' and 'authenticated'::regrole::oid = any(polroles)
+      and pg_get_expr(polqual, polrelid) like '%is_administrator%'
+      and pg_get_expr(polqual, polrelid) like '%snapshot_path%'
+   from pg_policy where polrelid = 'storage.objects'::regclass and polname = 'cctv_images_admin_orphan_read'),
+  'orphan CCTV image read is administrator-only and excludes images still referenced by cameras'
+);
+select ok(
+  (select polcmd = 'd' and 'authenticated'::regrole::oid = any(polroles)
+      and pg_get_expr(polqual, polrelid) like '%is_administrator%'
+      and pg_get_expr(polqual, polrelid) like '%snapshot_path%'
+   from pg_policy where polrelid = 'storage.objects'::regclass and polname = 'cctv_images_admin_orphan_delete'),
+  'orphan CCTV image cleanup is administrator-only and excludes images still referenced by cameras'
+);
+
+insert into storage.objects (bucket_id, name)
+values ('cctv-images', 'phase3d-orphan-cleanup-fixture.webp');
+select set_config('request.jwt.claims', '{"role":"anon"}', true);
+set local role anon;
+select results_eq($$select name from storage.objects where name = 'phase3d-orphan-cleanup-fixture.webp'$$,
+  $$select null::text where false$$, 'anonymous callers cannot read orphaned CCTV image objects');
+reset role;
+
+select set_config('request.jwt.claims', '{"sub":"bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbb2","role":"authenticated"}', true);
+set local role authenticated;
+select results_eq($$select name from storage.objects where name = 'phase3d-orphan-cleanup-fixture.webp'$$,
+  $$select null::text where false$$, 'agency editors cannot read an orphaned CCTV image');
+select results_eq($$delete from storage.objects where name = 'phase3d-orphan-cleanup-fixture.webp' returning name$$,
+  $$select null::text where false$$, 'agency editors cannot delete an orphaned CCTV image');
+reset role;
+
+select set_config('request.jwt.claims', '{"sub":"bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbb1","role":"authenticated"}', true);
+set local role authenticated;
+select results_eq($$select name from storage.objects where name = 'phase3d-orphan-cleanup-fixture.webp'$$,
+  $$values ('phase3d-orphan-cleanup-fixture.webp'::text)$$, 'administrator can locate an orphaned CCTV image for cleanup');
+select results_eq($$delete from storage.objects where name = 'phase3d-orphan-cleanup-fixture.webp' returning name$$,
+  $$values ('phase3d-orphan-cleanup-fixture.webp'::text)$$, 'administrator can remove only the selected orphan object through Storage RLS');
 reset role;
 
 select * from finish();

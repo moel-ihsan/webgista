@@ -4,6 +4,7 @@ declare
   map_settings_applied boolean;
   traffic_observations_applied boolean;
   traffic_observation_acl_fix_applied boolean;
+  cctv_image_cleanup_applied boolean;
   bucket_ok boolean;
   policy_names text[];
   agency_write_policies_ok boolean;
@@ -28,6 +29,20 @@ begin
     into traffic_observations_applied;
   select exists (select 1 from supabase_migrations.schema_migrations where version = '20261105000200')
     into traffic_observation_acl_fix_applied;
+  select exists (select 1 from supabase_migrations.schema_migrations where version = '20261105000400')
+    into cctv_image_cleanup_applied;
+
+  if cctv_image_cleanup_applied and not traffic_observation_acl_fix_applied then
+    raise exception 'Migration history is inconsistent: CCTV image cleanup is applied before migration 006';
+  end if;
+  if cctv_image_cleanup_applied then
+    expected_storage_policies := array[
+      'cctv_images_admin_orphan_delete', 'cctv_images_admin_orphan_read',
+      'cctv_images_delete_managed', 'cctv_images_insert_managed',
+      'cctv_images_read_managed', 'cctv_images_read_public',
+      'profile_photos_delete_own', 'profile_photos_insert_own', 'profile_photos_read_own'
+    ];
+  end if;
 
   if map_settings_applied and not profile_media_applied then
     raise exception 'Migration history is inconsistent: 004 is applied before 003';
@@ -124,6 +139,30 @@ begin
     if policy_names <> array[]::text[] then
       raise exception 'Existing Storage policies reference WebGISTA media buckets before migration 003';
     end if;
+  end if;
+
+  if cctv_image_cleanup_applied then
+    if (select count(*) from pg_policy where polrelid = 'storage.objects'::regclass
+        and polname in ('cctv_images_admin_orphan_read', 'cctv_images_admin_orphan_delete')) <> 2
+      or not exists (
+        select 1 from pg_policy where polrelid = 'storage.objects'::regclass
+          and polname = 'cctv_images_admin_orphan_read' and polcmd = 'r'
+          and 'authenticated'::regrole::oid = any(polroles)
+          and pg_get_expr(polqual, polrelid) like '%is_administrator%'
+          and pg_get_expr(polqual, polrelid) like '%snapshot_path%'
+      )
+      or not exists (
+        select 1 from pg_policy where polrelid = 'storage.objects'::regclass
+          and polname = 'cctv_images_admin_orphan_delete' and polcmd = 'd'
+          and 'authenticated'::regrole::oid = any(polroles)
+          and pg_get_expr(polqual, polrelid) like '%is_administrator%'
+          and pg_get_expr(polqual, polrelid) like '%snapshot_path%'
+      ) then
+      raise exception 'Installed orphan-image cleanup policies differ from migration 20261105000400';
+    end if;
+  elsif exists (select 1 from pg_policy where polrelid = 'storage.objects'::regclass
+      and polname in ('cctv_images_admin_orphan_read', 'cctv_images_admin_orphan_delete')) then
+    raise exception 'Untracked CCTV orphan cleanup policies exist before migration 20261105000400';
   end if;
 
   select count(*) = 2 and bool_and(

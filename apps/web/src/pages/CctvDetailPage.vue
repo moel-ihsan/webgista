@@ -24,7 +24,9 @@ const demoVideo = ref<TrafficDemoVideo | null>(null)
 const videoAssociationReady = ref(false)
 const videoLoading = ref(false)
 const videoFailed = ref(false)
+const videoAutoplayBlocked = ref(false)
 const videoTime = ref(0)
+const demoVideoElement = ref<HTMLVideoElement | null>(null)
 let loadRevision = 0
 let imageRefreshTimer: ReturnType<typeof setInterval> | null = null
 
@@ -52,7 +54,25 @@ function updateDemoTime(event: Event): void {
   videoTime.value = (event.currentTarget as HTMLVideoElement).currentTime
 }
 
+function attemptDemoAutoplay(): void {
+  if (!demoVideoElement.value) return
+  void demoVideoElement.value.play().then(() => {
+    videoAutoplayBlocked.value = false
+  }).catch(() => {
+    videoAutoplayBlocked.value = true
+  })
+}
+
+function releaseDemoVideo(): void {
+  const video = demoVideoElement.value
+  if (!video) return
+  video.pause()
+  video.removeAttribute('src')
+  video.load()
+}
+
 function onDemoVideoError(): void {
+  releaseDemoVideo()
   videoFailed.value = true
   videoLoading.value = false
   demoVideo.value = null
@@ -60,6 +80,7 @@ function onDemoVideoError(): void {
 
 watch([() => String(route.params.id ?? ''), () => authSession.state.status], ([id, authStatus]) => {
   const revision = ++loadRevision
+  releaseDemoVideo()
   if (imageRefreshTimer) clearInterval(imageRefreshTimer)
   imageRefreshTimer = null
   camera.value = null
@@ -70,6 +91,7 @@ watch([() => String(route.params.id ?? ''), () => authSession.state.status], ([i
   videoAssociationReady.value = authStatus !== 'authenticated'
   videoLoading.value = false
   videoFailed.value = false
+  videoAutoplayBlocked.value = false
   videoTime.value = 0
   observationStatus.value = authStatus === 'authenticated' ? 'loading' : 'unavailable'
   if (authStatus === 'loading') {
@@ -142,6 +164,7 @@ watch([() => String(route.params.id ?? ''), () => authSession.state.status], ([i
 onBeforeUnmount(() => {
   loadRevision += 1
   if (imageRefreshTimer) clearInterval(imageRefreshTimer)
+  releaseDemoVideo()
 })
 </script>
 
@@ -169,20 +192,25 @@ onBeforeUnmount(() => {
         <section class="cctv-detail-media" :aria-label="`${camera.name} camera media`">
           <template v-if="demoVideo && !videoFailed">
             <video
+              ref="demoVideoElement"
               :key="demoVideo.id"
               class="cctv-detail-video"
               :src="demoVideo.videoUrl"
               :poster="imageUrl || undefined"
+              autoplay
+              muted
               controls
               playsinline
               preload="metadata"
               :aria-label="`Demo video, not live CCTV: ${demoVideo.title}`"
               @loadeddata="videoLoading = false"
+              @canplay="attemptDemoAutoplay"
               @timeupdate="updateDemoTime"
               @error="onDemoVideoError"
             >Your browser does not support H.264 playback.</video>
             <p class="cctv-detail-demo-label">DEMO VIDEO — NOT LIVE CCTV</p>
             <p v-if="videoLoading" class="cctv-detail-media-note" role="status">Loading demo video…</p>
+            <button v-if="videoAutoplayBlocked" class="legacy-button legacy-button--outline" type="button" @click="attemptDemoAutoplay">Play demo video</button>
           </template>
           <template v-else-if="videoAssociationReady && imageUrl && !imageFailed">
             <img :src="imageUrl" :alt="`${camera.name} CCTV`" @error="imageFailed = true">
@@ -217,6 +245,8 @@ onBeforeUnmount(() => {
             <span>{{ demoDetections }} detection instances across {{ demoVideo.analysis.frames.length }} sampled frames; not unique vehicles.</span>
             <span v-if="demoVideo.analysis.line_crossing_total != null">Experimental heuristic line crossings: {{ demoVideo.analysis.line_crossing_total }}; not validated unique vehicles.</span>
             <span v-else>Tracking {{ demoVideo.analysis.tracking.enabled ? 'IDs only; no validated line count.' : 'unavailable.' }} Traffic condition not calculated.</span>
+            <span>Model: {{ demoVideo.analysis.model.name }} {{ demoVideo.analysis.model.version }} · sampled at {{ demoVideo.analysis.sampled_fps }} FPS · processed {{ dateLabel(demoVideo.analysis.created_at) }}.</span>
+            <span v-if="demoVideo.analysis.tracking.algorithm">Tracker: {{ demoVideo.analysis.tracking.algorithm }}; {{ demoVideo.analysis.tracking.quality }}.</span>
             <span v-if="demoFrame">Frame at {{ demoFrame.offset_seconds.toFixed(1) }}s: {{ demoFrame.detections.length }} vehicle detections.</span>
             <span>Experimental demo footage; it does not depict current traffic at this camera location.</span>
           </section>

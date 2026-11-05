@@ -1,4 +1,5 @@
 import type { CctvLocation } from '../domain/cctv'
+import type { TrafficDemoVideo } from '../data/trafficDemo'
 
 export interface CctvFeatureProperties {
   cctvId: string
@@ -53,7 +54,7 @@ export function cctvPopupDetails(location: CctvLocation): readonly { label: stri
     { label: 'Agency', value: location.agency.name || 'Not recorded' },
     { label: 'Category', value: location.category === 'analytic' ? 'Analytic' : 'Regular' },
     { label: 'Traffic condition', value: location.trafficCondition ? conditionLabel(location.trafficCondition) : 'No Data' },
-    { label: 'Video', value: 'Secure video access is not configured' },
+    { label: 'Video', value: 'No authorized video is attached' },
   ]
 }
 
@@ -68,19 +69,22 @@ export function createCctvPopupContent(location: CctvLocation): HTMLElement {
   title.textContent = location.name
   content.append(title)
 
+  const media = document.createElement('div')
+  media.className = 'cctv-map-popup__media'
   if (location.snapshotUrl) {
     const image = document.createElement('img')
     image.className = 'cctv-map-popup__image'
     image.src = location.snapshotUrl
     image.alt = `${location.name} camera image`
     image.loading = 'lazy'
-    content.append(image)
+    media.append(image)
   } else {
     const unavailable = document.createElement('p')
     unavailable.className = 'cctv-map-popup__media-note'
     unavailable.textContent = location.category === 'analytic' ? 'Video unavailable in this release.' : 'Camera image unavailable.'
-    content.append(unavailable)
+    media.append(unavailable)
   }
+  content.append(media)
 
   for (const detail of cctvPopupDetails(location)) {
     const row = document.createElement('p')
@@ -97,6 +101,97 @@ export function createCctvPopupContent(location: CctvLocation): HTMLElement {
   view.textContent = 'View CCTV'
   content.append(view)
   return content
+}
+
+function setPopupVideoStatus(content: HTMLElement, value: string): void {
+  const row = [...content.querySelectorAll('p')].find((item) => item.querySelector('strong')?.textContent === 'Video: ')
+  const detail = row?.querySelector('span')
+  if (detail) detail.textContent = value
+}
+
+export function mountPopupDemoVideo(content: HTMLElement, location: CctvLocation, demo: TrafficDemoVideo): () => void {
+  const media = content.querySelector('.cctv-map-popup__media')
+  if (!media) return () => undefined
+
+  const video = document.createElement('video')
+  video.className = 'cctv-map-popup__video'
+  video.src = demo.previewVideoUrl
+  video.poster = location.snapshotUrl ?? ''
+  video.autoplay = true
+  video.muted = true
+  video.loop = true
+  video.playsInline = true
+  video.preload = 'none'
+  video.setAttribute('aria-label', `DEMO VIDEO — NOT LIVE CCTV: ${demo.title}`)
+  media.replaceChildren(video)
+  setPopupVideoStatus(content, `Demo video: ${demo.title}`)
+
+  const label = document.createElement('p')
+  label.className = 'cctv-map-popup__demo-label'
+  label.append(document.createTextNode('DEMO VIDEO — NOT LIVE CCTV · '))
+  const source = document.createElement('a')
+  source.href = demo.sourceUrl
+  source.target = '_blank'
+  source.rel = 'noreferrer'
+  source.textContent = `${demo.creator} / Pexels`
+  label.append(source)
+  media.append(label)
+
+  const showFallback = () => {
+    setPopupVideoStatus(content, 'Demo video unavailable')
+    video.pause()
+    video.removeAttribute('src')
+    video.load()
+    if (location.snapshotUrl) {
+      const image = document.createElement('img')
+      image.className = 'cctv-map-popup__image'
+      image.src = location.snapshotUrl
+      image.alt = `${location.name} camera image`
+      media.replaceChildren(image)
+    } else {
+      const message = document.createElement('p')
+      message.className = 'cctv-map-popup__media-note'
+      message.textContent = 'Demo video unavailable. Camera image unavailable.'
+      media.replaceChildren(message)
+    }
+  }
+  video.addEventListener('error', showFallback, { once: true })
+
+  const saveData = (navigator as Navigator & { connection?: { saveData?: boolean } }).connection?.saveData
+  const reducedMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false
+  if (saveData || reducedMotion) {
+    video.autoplay = false
+    video.preload = 'none'
+    video.removeAttribute('src')
+    const play = document.createElement('button')
+    play.type = 'button'
+    play.className = 'cctv-map-popup__play'
+    play.textContent = 'Play demo video'
+    play.addEventListener('click', () => {
+      video.src = demo.previewVideoUrl
+      video.load()
+      void video.play().then(() => play.remove()).catch(() => { play.textContent = 'Video playback unavailable' })
+    }, { once: true })
+    media.append(play)
+  } else {
+    void video.play().catch(() => {
+      const play = document.createElement('button')
+      play.type = 'button'
+      play.className = 'cctv-map-popup__play'
+      play.textContent = 'Play demo video'
+      play.addEventListener('click', () => {
+        void video.play().then(() => play.remove()).catch(() => { play.textContent = 'Video playback unavailable' })
+      }, { once: true })
+      media.append(play)
+    })
+  }
+
+  return () => {
+    video.removeEventListener('error', showFallback)
+    video.pause()
+    video.removeAttribute('src')
+    video.load()
+  }
 }
 
 export interface CctvCameraNavigator {

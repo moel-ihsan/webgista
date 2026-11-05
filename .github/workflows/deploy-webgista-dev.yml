@@ -205,9 +205,9 @@ jobs:
         if: ${{ inputs.apply_migrations != 'apply' }}
         run: echo "Preview complete. No migrations were applied. Re-run manually and select apply after reviewing the dry-run."
 
-      - name: Require migration 006 as the sole pending migration
+      - name: Require CCTV image cleanup migration as the sole pending migration
         if: ${{ inputs.apply_migrations == 'apply' }}
-        run: node scripts/phase2d-migration-guard.mjs phase2e-acl-fix "$RUNNER_TEMP/phase2d-migrations.txt"
+        run: node scripts/phase2d-migration-guard.mjs phase3d-cctv-cleanup "$RUNNER_TEMP/phase2d-migrations.txt"
 
       - name: Validate and record the explicit development-only backup waiver
         if: ${{ inputs.apply_migrations == 'apply' && inputs.development_data_loss_waiver != 'none' }}
@@ -234,7 +234,7 @@ jobs:
           node scripts/phase2d-migration-guard.mjs snapshot
           supabase migration list --remote="$SUPABASE_DB_URL" > "$RUNNER_TEMP/phase2d-migrations-before-apply.txt" 2>&1
           node scripts/phase2d-migration-guard.mjs history "$RUNNER_TEMP/phase2d-migrations-before-apply.txt"
-          node scripts/phase2d-migration-guard.mjs phase2e-acl-fix "$RUNNER_TEMP/phase2d-migrations-before-apply.txt"
+          node scripts/phase2d-migration-guard.mjs phase3d-cctv-cleanup "$RUNNER_TEMP/phase2d-migrations-before-apply.txt"
           docker run --rm -i --network host postgres:17-alpine \
             psql "$SUPABASE_DB_URL" --set=ON_ERROR_STOP=1 --single-transaction \
             --command='SET TRANSACTION READ ONLY' --file=/dev/stdin \

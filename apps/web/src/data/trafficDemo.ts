@@ -49,6 +49,7 @@ export interface TrafficDemoVideo {
   title: string
   creator: string
   sourceUrl: string
+  previewVideoUrl: string
   videoUrl: string
   analysis: DemoAnalysis
 }
@@ -59,6 +60,7 @@ export const trafficDemoVideos: readonly TrafficDemoVideo[] = [
     title: 'City Intersection with Traffic and Signals',
     creator: 'SHOX ART',
     sourceUrl: 'https://www.pexels.com/video/city-intersection-with-traffic-and-signals-36330668/',
+    previewVideoUrl: '/traffic-demo/traffic_sample_01.mp4',
     videoUrl: '/traffic-demo/traffic_sample_01_annotated.mp4',
     analysis: sample01,
   },
@@ -67,6 +69,7 @@ export const trafficDemoVideos: readonly TrafficDemoVideo[] = [
     title: 'Bustling Night Traffic at Ben Thanh Market',
     creator: 'Media Dung',
     sourceUrl: 'https://www.pexels.com/video/bustling-night-traffic-at-ben-thanh-market-29185480/',
+    previewVideoUrl: '/traffic-demo/traffic_sample_02.mp4',
     videoUrl: '/traffic-demo/traffic_sample_02_annotated.mp4',
     analysis: sample02,
   },

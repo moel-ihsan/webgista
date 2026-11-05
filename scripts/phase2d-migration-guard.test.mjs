@@ -7,6 +7,7 @@ import {
   approvedHashes,
   assessMigrationHistory,
   assertPhase2eAclFixOnlyPending,
+  assertPhase3dCctvCleanupOnlyPending,
   assertPhase2eOnlyPending,
   assertDryRunMatches,
   assertRecoveryAvailable,
@@ -90,10 +91,11 @@ test('parses complete migration-list output and fails closed for inspection erro
 });
 
 test('accepts only a chronological suffix of the reviewed migrations', () => {
-  assert.deepEqual(assessMigrationHistory({ localVersions: versions, remoteVersions: versions.slice(0, 4) }), ['20261104000300', '20261104000400', '20261105000100', '20261105000200']);
-  assert.deepEqual(assessMigrationHistory({ localVersions: versions, remoteVersions: versions.slice(0, 5) }), ['20261104000400', '20261105000100', '20261105000200']);
-  assert.deepEqual(assessMigrationHistory({ localVersions: versions, remoteVersions: versions.slice(0, 6) }), ['20261105000100', '20261105000200']);
-  assert.deepEqual(assessMigrationHistory({ localVersions: versions, remoteVersions: versions.slice(0, 7) }), ['20261105000200']);
+  assert.deepEqual(assessMigrationHistory({ localVersions: versions, remoteVersions: versions.slice(0, 4) }), ['20261104000300', '20261104000400', '20261105000100', '20261105000200', '20261105000400']);
+  assert.deepEqual(assessMigrationHistory({ localVersions: versions, remoteVersions: versions.slice(0, 5) }), ['20261104000400', '20261105000100', '20261105000200', '20261105000400']);
+  assert.deepEqual(assessMigrationHistory({ localVersions: versions, remoteVersions: versions.slice(0, 6) }), ['20261105000100', '20261105000200', '20261105000400']);
+  assert.deepEqual(assessMigrationHistory({ localVersions: versions, remoteVersions: versions.slice(0, 7) }), ['20261105000200', '20261105000400']);
+  assert.deepEqual(assessMigrationHistory({ localVersions: versions, remoteVersions: versions.slice(0, 8) }), ['20261105000400']);
   assert.deepEqual(assessMigrationHistory({ localVersions: versions, remoteVersions: versions }), []);
   assert.throws(() => assessMigrationHistory({ localVersions: [...versions, '20261106000100'], remoteVersions: versions.slice(0, 4) }), /Unapproved pending/);
   assert.throws(() => assessMigrationHistory({ localVersions: versions, remoteVersions: [...versions, '20261106000100'] }), /absent locally/);
@@ -104,6 +106,7 @@ test('accepts only a chronological suffix of the reviewed migrations', () => {
 test('requires the dry-run migration set to exactly match the reviewed pending set', () => {
   assert.doesNotThrow(() => assertDryRunMatches('Would push these migrations:\n • 20261104000300_profile_fields_and_private_media.sql\n • 20261104000400_application_map_settings.sql\nFinished supabase db push.', [...approvedHashes.keys()].slice(0, 2)));
   assert.doesNotThrow(() => assertDryRunMatches('Would push these migrations:\n • 20261105000100_traffic_observation_conditions.sql\nFinished supabase db push.', ['20261105000100']));
+  assert.doesNotThrow(() => assertDryRunMatches('Would push these migrations:\n • 20261105000400_cctv_image_orphan_cleanup.sql\nFinished supabase db push.', ['20261105000400']));
   assert.throws(() => assertDryRunMatches('Would push these migrations:\n • 20261105000100_traffic_observation_conditions.sql\n • 20261106000100_unapproved.sql\nFinished supabase db push.', ['20261105000100']), /differs/);
   assert.throws(() => assertDryRunMatches('Would push these migrations:\n • 20261104000300_profile_fields_and_private_media.sql\n • unexpected.sql\nFinished supabase db push.', approvedHashes.keys()), /Unexpected migration entry/);
   assert.doesNotThrow(() => assertDryRunMatches('Remote database is up to date.', []));
@@ -123,6 +126,13 @@ test('allows the observation ACL fix only when migration 006 is the sole pending
   assert.throws(() => assertPhase2eAclFixOnlyPending([]), /only for migration 20261105000200/);
   assert.throws(() => assertPhase2eAclFixOnlyPending(['20261105000100', '20261105000200']), /only for migration 20261105000200/);
   assert.throws(() => assertPhase2eAclFixOnlyPending(['20261105000200', '20261106000100']), /only for migration 20261105000200/);
+});
+
+test('allows CCTV image cleanup migration only when it is the sole pending migration', () => {
+  assert.doesNotThrow(() => assertPhase3dCctvCleanupOnlyPending(['20261105000400']));
+  assert.throws(() => assertPhase3dCctvCleanupOnlyPending([]), /only for CCTV image cleanup migration/);
+  assert.throws(() => assertPhase3dCctvCleanupOnlyPending(['20261105000200', '20261105000400']), /only for CCTV image cleanup migration/);
+  assert.throws(() => assertPhase3dCctvCleanupOnlyPending(['20261105000400', '20261106000100']), /only for CCTV image cleanup migration/);
 });
 
 test('requires at least one completed backup with a valid, nonfuture timestamp', () => {

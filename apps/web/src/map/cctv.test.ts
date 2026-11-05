@@ -8,6 +8,7 @@ import {
   cctvPopupDetails,
   createCctvPopupContent,
   focusCctvLocation,
+  mountPopupDemoVideo,
   searchCctvLocations,
   toCctvFeatureCollection,
 } from './cctv'
@@ -20,6 +21,7 @@ import {
   setCctvVisibility,
   updateCctvSource,
 } from './cctvLayers'
+import { trafficDemoVideos } from '../data/trafficDemo'
 
 const camera: CctvLocation = {
   id: 'camera-1',
@@ -101,7 +103,7 @@ describe('CCTV map data and interactions', () => {
   it('keeps popup values plain and reports unavailable video and traffic honestly', () => {
     expect(cctvPopupDetails(camera)).toEqual(expect.arrayContaining([
       { label: 'Traffic condition', value: 'No Data' },
-      { label: 'Video', value: 'Secure video access is not configured' },
+      { label: 'Video', value: 'No authorized video is attached' },
     ]))
   })
 
@@ -118,6 +120,45 @@ describe('CCTV map data and interactions', () => {
     const noImage = createCctvPopupContent(camera)
     expect(noImage.querySelector('.cctv-map-popup__media-note')?.textContent).toBe('Video unavailable in this release.')
     expect(noImage.querySelector('img')).toBeNull()
+  })
+
+  it('mounts a muted looping preview only in the active popup and releases its media source on close', () => {
+    const play = vi.spyOn(HTMLMediaElement.prototype, 'play').mockResolvedValue(undefined)
+    const popup = createCctvPopupContent({ ...camera, snapshotUrl: 'https://signed.example/image.jpg' })
+    const cleanup = mountPopupDemoVideo(popup, { ...camera, snapshotUrl: 'https://signed.example/image.jpg' }, trafficDemoVideos[0]!)
+    const video = popup.querySelector('video')
+    expect(video?.getAttribute('src')).toBe('/traffic-demo/traffic_sample_01.mp4')
+    expect(video).toMatchObject({ autoplay: true, muted: true, loop: true, playsInline: true, preload: 'none' })
+    expect(video?.poster).toBe('https://signed.example/image.jpg')
+    expect(popup.textContent).toContain('DEMO VIDEO — NOT LIVE CCTV')
+    expect(popup.textContent).toContain(`Video: Demo video: ${trafficDemoVideos[0]!.title}`)
+    expect(play).toHaveBeenCalledOnce()
+    cleanup()
+    expect(video?.getAttribute('src')).toBeNull()
+    expect(video?.paused).toBe(true)
+    play.mockRestore()
+  })
+
+  it('falls back to the authorized thumbnail when the preview video errors', () => {
+    vi.spyOn(HTMLMediaElement.prototype, 'play').mockResolvedValue(undefined)
+    const popup = createCctvPopupContent({ ...camera, snapshotUrl: 'https://signed.example/image.jpg' })
+    mountPopupDemoVideo(popup, { ...camera, snapshotUrl: 'https://signed.example/image.jpg' }, trafficDemoVideos[1]!)
+    popup.querySelector('video')?.dispatchEvent(new Event('error'))
+    expect(popup.querySelector('video')).toBeNull()
+    expect(popup.querySelector('img')?.src).toBe('https://signed.example/image.jpg')
+    expect(popup.textContent).toContain('Video: Demo video unavailable')
+    vi.restoreAllMocks()
+  })
+
+  it('offers an accessible play control when browser autoplay is rejected', async () => {
+    vi.spyOn(HTMLMediaElement.prototype, 'play').mockRejectedValue(new Error('autoplay blocked'))
+    const popup = createCctvPopupContent(camera)
+    const cleanup = mountPopupDemoVideo(popup, camera, trafficDemoVideos[0]!)
+    await Promise.resolve()
+    const button = popup.querySelector<HTMLButtonElement>('.cctv-map-popup__play')
+    expect(button?.textContent).toBe('Play demo video')
+    cleanup()
+    vi.restoreAllMocks()
   })
 
   it('focuses a selected camera using its coordinates and leaves room beside the open drawer', () => {

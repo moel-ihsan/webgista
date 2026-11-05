@@ -25,7 +25,7 @@ const input: CctvLocationInput = {
   name: 'Simpang Lima', address: 'Banda Aceh', category: 'regular', agencyId: 'agency-1', longitude: 95.3238, latitude: 5.5483,
 }
 
-function clientMock(response: { data: unknown; error: { code?: string } | null }) {
+function clientMock(response: { data: unknown; error: { code?: string; constraint?: string; details?: string } | null }) {
   const query: Record<string, ReturnType<typeof vi.fn> | ((resolve: (value: unknown) => unknown, reject: (reason: unknown) => unknown) => unknown)> = {}
   for (const method of ['select', 'order', 'eq', 'in', 'abortSignal', 'insert', 'update', 'delete']) {
     query[method] = vi.fn().mockReturnValue(query)
@@ -120,8 +120,10 @@ describe('CCTV management data access', () => {
   })
 
   it('does not expose database details in permission or foreign-key errors', async () => {
-    await expect(deleteCctvLocation(clientMock({ data: null, error: { code: '23503' } }).client, 'camera-1'))
-      .rejects.toThrow('related records')
+    await expect(deleteCctvLocation(clientMock({ data: null, error: { code: '23503', constraint: 'traffic_observations_cctv_id_fkey' } }).client, 'camera-1'))
+      .rejects.toThrow('traffic observation history')
+    await expect(deleteCctvLocation(clientMock({ data: null, error: { code: '23503', details: 'Key is still referenced from table traffic_observations' } }).client, 'camera-1'))
+      .rejects.toThrow('Deactivate it to preserve those records.')
     await expect(deleteCctvLocation(clientMock({ data: null, error: { code: '42501' } }).client, 'camera-1'))
       .rejects.toThrow('not authorized')
   })

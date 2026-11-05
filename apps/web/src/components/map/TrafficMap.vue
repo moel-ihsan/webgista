@@ -13,7 +13,8 @@ import type { CctvLocation } from '../../domain/cctv'
 import { supabaseClient } from '../../lib/supabase'
 import { attachBoundaryLayers, setBoundaryVisibility } from '../../map/boundaryLayers'
 import { attachCctvLayers, setCctvVisibility, updateCctvSource } from '../../map/cctvLayers'
-import { createCctvPopupContent, focusCctvLocation, searchCctvLocations, toCctvFeatureCollection } from '../../map/cctv'
+import { createCctvPopupContent, focusCctvLocation, mountPopupDemoVideo, searchCctvLocations, toCctvFeatureCollection } from '../../map/cctv'
+import { getCctvDemoAssociation } from '../../data/cctvDemoVideo'
 import { districtDetails, loadBoundary } from '../../map/boundary'
 import { applyMapStyle, cleanupMap, listenForMapReadiness, mapFailure, mapLoadTimeout, type MapFailure } from '../../map/maplibre'
 import AppIcon from '../ui/AppIcon.vue'
@@ -75,6 +76,7 @@ let boundaryController: AbortController | null = null
 let cctvController: AbortController | null = null
 let cctvPopup: maplibregl.Popup | null = null
 let cctvPopupLocationId: string | null = null
+let disposePopupVideo: (() => void) | null = null
 let locationMarker: maplibregl.Marker | null = null
 let locationClickHandler: ((event: maplibregl.MapMouseEvent) => void) | null = null
 let viewportChangeHandler: (() => void) | null = null
@@ -239,14 +241,25 @@ function showCctvPopup(location: CctvLocation): void {
   cctvPopupLocationId = location.id
   popup.on('close', () => {
     if (cctvPopup === popup) {
+      disposePopupVideo?.()
+      disposePopupVideo = null
       cctvPopup = null
       cctvPopupLocationId = null
     }
   })
+  if (authSession.state.status === 'authenticated' && supabaseClient) {
+    void getCctvDemoAssociation(supabaseClient, location.id).then(({ video }) => {
+      if (video && cctvPopup === popup && cctvPopupLocationId === location.id) {
+        disposePopupVideo = mountPopupDemoVideo(content, location, video)
+      }
+    }).catch(() => { /* RLS-hidden video falls back to the authorized image. */ })
+  }
 }
 
 function closeCctvPopup(): void {
   cctvPopup?.remove()
+  disposePopupVideo?.()
+  disposePopupVideo = null
   cctvPopup = null
   cctvPopupLocationId = null
 }
