@@ -176,6 +176,7 @@ onBeforeUnmount(() => {
             <td>{{ location.agencyName ?? 'Agency unavailable' }}</td>
             <td><span class="cctv-category-tag" :class="`cctv-category-tag--${location.category}`">{{ location.category === 'regular' ? 'Regular' : 'Analytic' }}</span><small class="cctv-table__meta">{{ location.isActive ? 'Active' : 'Inactive' }}</small></td>
             <td class="cctv-row-actions" @click.stop>
+              <RouterLink class="cctv-row-action" :to="`/cctv/${location.id}`" :aria-label="`View ${location.name}`" title="View CCTV">◉</RouterLink>
               <RouterLink v-if="canManage(location)" class="cctv-row-action" :to="`/cctv/${location.id}/edit`" :aria-label="`Edit ${location.name}`" title="Edit">✎</RouterLink>
               <button v-if="canManage(location)" class="cctv-row-action" type="button" :disabled="busyId === location.id" :aria-label="`${location.isActive ? 'Deactivate' : 'Activate'} ${location.name}`" @click="changeActive(location)">{{ location.isActive ? '◉' : '○' }}</button>
               <button v-if="authSession.state.role === 'administrator'" class="cctv-row-action cctv-row-action--delete" type="button" :disabled="busyId === location.id" :aria-label="`Delete ${location.name}`" @click="removeLocation(location)">×</button>

@@ -99,7 +99,7 @@ onBeforeUnmount(() => recentController?.abort())
               v-for="camera in recentCctv"
               :key="camera.id"
               class="legacy-recent__item"
-              :to="authSession.state.role === 'administrator' || authSession.state.role === 'agency_editor' ? { name: 'cctv-edit', params: { id: camera.id } } : { name: 'map', query: { cctv: camera.id } }"
+              :to="{ name: 'cctv-detail', params: { id: camera.id } }"
             >
               <img v-if="camera.imageUrl" :src="camera.imageUrl" :alt="`${camera.name} camera`" loading="lazy">
               <span v-else class="legacy-recent__image-fallback" aria-hidden="true">CCTV</span>

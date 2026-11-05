@@ -91,6 +91,11 @@ export function createCctvPopupContent(location: CctvLocation): HTMLElement {
     row.append(label, value)
     content.append(row)
   }
+  const view = document.createElement('a')
+  view.className = 'cctv-map-popup__view'
+  view.href = `/cctv/${encodeURIComponent(location.id)}`
+  view.textContent = 'View CCTV'
+  content.append(view)
   return content
 }
 

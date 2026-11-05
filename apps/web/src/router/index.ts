@@ -42,6 +42,12 @@ export const router = createRouter({
       },
     },
     {
+      path: '/cctv/:id',
+      name: 'cctv-detail',
+      component: () => import('../pages/CctvDetailPage.vue'),
+      meta: { title: 'View CCTV', eyebrow: 'CCTV detail' },
+    },
+    {
       path: '/cctv/:id/edit',
       name: 'cctv-edit',
       component: () => import('../pages/CctvFormPage.vue'),

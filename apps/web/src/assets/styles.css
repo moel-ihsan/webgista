@@ -1256,6 +1256,14 @@ strong {
   background: var(--color-primary);
 }
 
+.cctv-map-popup__view {
+  display: inline-flex;
+  margin-top: 8px;
+  color: var(--green-theme);
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
 .maplibregl-popup-content {
   padding: 10px;
   border-radius: 10px;

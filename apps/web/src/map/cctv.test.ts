@@ -112,6 +112,8 @@ describe('CCTV map data and interactions', () => {
     expect(popup.querySelectorAll('img')).toHaveLength(1)
     expect(popup.querySelector('img')?.src).toBe('https://signed.example/photo')
     expect(popup.textContent).toContain('Traffic condition: No Data')
+    expect(popup.querySelector('.cctv-map-popup__view')?.getAttribute('href')).toBe('/cctv/camera-1')
+    expect(popup.querySelector('.cctv-map-popup__view')?.textContent).toBe('View CCTV')
 
     const noImage = createCctvPopupContent(camera)
     expect(noImage.querySelector('.cctv-map-popup__media-note')?.textContent).toBe('Video unavailable in this release.')

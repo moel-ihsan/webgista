@@ -37,11 +37,11 @@ afterEach(() => {
 })
 
 describe('Dashboard profile and recent camera presentation', () => {
-  it('uses the signed profile photo and saved profile values, then links recent CCTV to authorized editing', async () => {
+  it('uses the signed profile photo and saved profile values, then links recent CCTV to its detail page', async () => {
     listRecentlyAddedCctv.mockResolvedValue([{
       id: 'camera-1', name: 'Simpang Lima', address: 'Banda Aceh', date: '2026-11-03T00:00:00Z', isActive: true, imageUrl: 'signed-camera-photo',
     }])
-    const router = createRouter({ history: createMemoryHistory(), routes: [{ path: '/', component: DashboardPage, name: 'dashboard' }, { path: '/cctv/:id/edit', name: 'cctv-edit', component: { template: '<div />' } }, { path: '/map', name: 'map', component: { template: '<div />' } }] })
+    const router = createRouter({ history: createMemoryHistory(), routes: [{ path: '/', component: DashboardPage, name: 'dashboard' }, { path: '/cctv/:id', name: 'cctv-detail', component: { template: '<div />' } }, { path: '/map', name: 'map', component: { template: '<div />' } }] })
     await router.push('/')
     await router.isReady()
     host = document.createElement('div')
@@ -55,7 +55,7 @@ describe('Dashboard profile and recent camera presentation', () => {
     expect(host.textContent).toContain('5.5 N, 95.3 E')
     expect(host.textContent).toContain('WebGISTA profile')
     expect(host.querySelector('.legacy-recent__item img')?.getAttribute('src')).toBe('signed-camera-photo')
-    expect(host.querySelector('.legacy-recent__item')?.getAttribute('href')).toBe('/cctv/camera-1/edit')
+    expect(host.querySelector('.legacy-recent__item')?.getAttribute('href')).toBe('/cctv/camera-1')
     expect(host.textContent).not.toContain('Agency profile is not connected')
     expect(host.textContent).not.toContain('CCTV update history is not connected')
   })
