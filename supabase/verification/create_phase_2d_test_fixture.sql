@@ -6,7 +6,7 @@ with expected as (
     95.330911::numeric as longitude,
     5.559729::numeric as latitude
 ), supported_migrations(version) as (
-  -- Exact schema contract for this disposable fixture; update deliberately with approved migrations.
+  -- Exact schema contract for this disposable fixture; update deliberately with migrations.
   values
     ('20261103000100'),
     ('20261103000200'),
@@ -14,7 +14,8 @@ with expected as (
     ('20261104000200'),
     ('20261104000300'),
     ('20261104000400'),
-    ('20261105000100')
+    ('20261105000100'),
+    ('20261105000200')
 ), migration_state as (
   select
     not exists (
