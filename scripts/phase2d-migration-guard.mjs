@@ -7,11 +7,13 @@ export const approvedHashes = new Map([
   ['20261104000300', '8e96c132b87491d8d9f503289779487ab5096222bf99da4705f5caaaa54c09df'],
   ['20261104000400', '2b7d2fd75db77009fcb6625b013fb7078c679740ac34a29629afa8577405f594'],
   ['20261105000100', 'cc3ee6456022f67c9169469bc5a15bab4505fb816b81d3766e52c22547d2381c'],
+  ['20261105000200', 'e3ea8d7c5fc9f72ee45566bb4aadbddeab4a74133af29daf09fb4f5bfa101d99'],
 ]);
 
 const approvedVersions = [...approvedHashes.keys()];
 export const developmentWaiver003004 = 'accept-dev-data-loss-for-003-004';
 export const developmentWaiver005 = 'accept-dev-data-loss-for-005';
+export const developmentWaiver006 = 'accept-dev-data-loss-for-006';
 
 export function verifyContext({ githubRef, projectRef, expectedProjectRef }) {
   if (githubRef !== 'refs/heads/feat/webgista-v2') throw new Error('Deployment is restricted to feat/webgista-v2.');
@@ -99,7 +101,7 @@ export function assessMigrationHistory({ localVersions, remoteVersions }) {
 
 export function validateDevelopmentBackupWaiver({ applyMigrations, waiver, githubRef, projectRef, expectedProjectRef, pendingVersions }) {
   verifyContext({ githubRef, projectRef, expectedProjectRef });
-  if (applyMigrations !== 'apply' || ![developmentWaiver003004, developmentWaiver005].includes(waiver)) {
+  if (applyMigrations !== 'apply' || ![developmentWaiver003004, developmentWaiver005, developmentWaiver006].includes(waiver)) {
     throw new Error('The one-time data-loss waiver is valid only for an explicit apply run.');
   }
   if (!Array.isArray(pendingVersions) || !pendingVersions.length) {
@@ -108,8 +110,10 @@ export function validateDevelopmentBackupWaiver({ applyMigrations, waiver, githu
   const legacyVersions = approvedVersions.slice(0, 2);
   const allowed = waiver === developmentWaiver005
     ? pendingVersions.length === 1 && pendingVersions[0] === '20261105000100'
-    : pendingVersions.every((version) => legacyVersions.includes(version))
-      && pendingVersions.join(',') === legacyVersions.slice(legacyVersions.indexOf(pendingVersions[0])).join(',');
+    : waiver === developmentWaiver006
+      ? pendingVersions.length === 1 && pendingVersions[0] === '20261105000200'
+      : pendingVersions.every((version) => legacyVersions.includes(version))
+        && pendingVersions.join(',') === legacyVersions.slice(legacyVersions.indexOf(pendingVersions[0])).join(',');
   if (!allowed) {
     throw new Error('The selected one-time waiver does not match the exact approved pending migration set.');
   }
@@ -139,6 +143,12 @@ export function assertDryRunMatches(output, pendingVersions) {
 export function assertPhase2eOnlyPending(pendingVersions) {
   if (pendingVersions.length !== 1 || pendingVersions[0] !== '20261105000100') {
     throw new Error('This deployment is authorized only for migration 20261105000100; refusing any other pending set.');
+  }
+}
+
+export function assertPhase2eAclFixOnlyPending(pendingVersions) {
+  if (pendingVersions.length !== 1 || pendingVersions[0] !== '20261105000200') {
+    throw new Error('This deployment is authorized only for migration 20261105000200; refusing any other pending set.');
   }
 }
 
@@ -184,6 +194,10 @@ if (process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.ar
       const pending = await inspectHistory(first);
       assertPhase2eOnlyPending(pending);
       console.log('The only pending migration is the approved Phase 2E migration 20261105000100.');
+    } else if (command === 'phase2e-acl-fix' && first) {
+      const pending = await inspectHistory(first);
+      assertPhase2eAclFixOnlyPending(pending);
+      console.log('The only pending migration is the approved Phase 2E ACL fix 20261105000200.');
     } else if (command === 'dry-run' && first && second) {
       const pending = await inspectHistory(first);
       const dryRun = await readFile(second, 'utf8');
@@ -204,7 +218,7 @@ if (process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.ar
       });
       console.log(`Explicit development data-loss waiver accepted for approved pending migrations: ${waivedVersions.join(', ')}.`);
     } else {
-      throw new Error('Usage: snapshot | history <migration-list-output> | applied <migration-list-output> | phase2e <migration-list-output> | dry-run <migration-list-output> <dry-run-output> | backup <backup-api-json> | waiver <migration-list-output>');
+      throw new Error('Usage: snapshot | history <migration-list-output> | applied <migration-list-output> | phase2e <migration-list-output> | phase2e-acl-fix <migration-list-output> | dry-run <migration-list-output> <dry-run-output> | backup <backup-api-json> | waiver <migration-list-output>');
     }
   } catch (error) {
     console.error(error.message);

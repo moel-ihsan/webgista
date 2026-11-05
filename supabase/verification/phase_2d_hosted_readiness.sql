@@ -3,6 +3,9 @@ select jsonb_pretty(jsonb_build_object(
     'migration_005_applied', exists (
       select 1 from supabase_migrations.schema_migrations where version = '20261105000100'
     ),
+    'migration_006_applied', exists (
+      select 1 from supabase_migrations.schema_migrations where version = '20261105000200'
+    ),
     'condition_column_present', exists (
       select 1 from information_schema.columns
       where table_schema = 'public' and table_name = 'traffic_observations'
@@ -15,6 +18,13 @@ select jsonb_pretty(jsonb_build_object(
     ),
     'authenticated_latest_view_select', coalesce((
       select has_table_privilege('authenticated', oid, 'SELECT')
+      from pg_class where oid = to_regclass('public.latest_traffic_observations')
+    ), false),
+    'public_latest_view_select', coalesce((
+      select exists (
+        select 1 from aclexplode(coalesce(relacl, acldefault('r', relowner))) as privilege
+        where privilege.grantee = 0 and privilege.privilege_type = 'SELECT'
+      )
       from pg_class where oid = to_regclass('public.latest_traffic_observations')
     ), false),
     'anonymous_latest_view_select', coalesce((

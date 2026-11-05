@@ -3,6 +3,7 @@ declare
   profile_media_applied boolean;
   map_settings_applied boolean;
   traffic_observations_applied boolean;
+  traffic_observation_acl_fix_applied boolean;
   bucket_ok boolean;
   policy_names text[];
   agency_write_policies_ok boolean;
@@ -23,9 +24,14 @@ begin
     into map_settings_applied;
   select exists (select 1 from supabase_migrations.schema_migrations where version = '20261105000100')
     into traffic_observations_applied;
+  select exists (select 1 from supabase_migrations.schema_migrations where version = '20261105000200')
+    into traffic_observation_acl_fix_applied;
 
   if map_settings_applied and not profile_media_applied then
     raise exception 'Migration history is inconsistent: 004 is applied before 003';
+  end if;
+  if traffic_observation_acl_fix_applied and not traffic_observations_applied then
+    raise exception 'Migration history is inconsistent: 006 is applied before 005';
   end if;
 
   if not (select relrowsecurity from pg_class where oid = 'storage.objects'::regclass) then
@@ -258,15 +264,16 @@ begin
       or not (select 'security_invoker=true' = any(coalesce(reloptions, '{}'::text[]))
           from pg_class where oid = 'public.latest_traffic_observations'::regclass)
       or not has_table_privilege('authenticated', 'public.latest_traffic_observations', 'SELECT')
-      or has_table_privilege('anon', 'public.latest_traffic_observations', 'SELECT')
-      or exists (
+      or not has_table_privilege('authenticated', 'public.traffic_observations', 'SELECT')
+      or (traffic_observation_acl_fix_applied and has_table_privilege('anon', 'public.latest_traffic_observations', 'SELECT'))
+      or (traffic_observation_acl_fix_applied and exists (
         select 1
         from pg_class as relation
         cross join lateral aclexplode(coalesce(relation.relacl, acldefault('r', relation.relowner))) as privilege
         where relation.oid = 'public.latest_traffic_observations'::regclass
           and privilege.grantee = 0
           and privilege.privilege_type = 'SELECT'
-      )
+      ))
       or has_table_privilege('anon', 'public.traffic_observations', 'SELECT')
       or not has_column_privilege('authenticated', 'public.traffic_observations', 'condition', 'INSERT')
       or not has_column_privilege('authenticated', 'public.traffic_observations', 'condition', 'UPDATE')

@@ -6,11 +6,13 @@ import path from 'node:path';
 import {
   approvedHashes,
   assessMigrationHistory,
+  assertPhase2eAclFixOnlyPending,
   assertPhase2eOnlyPending,
   assertDryRunMatches,
   assertRecoveryAvailable,
   developmentWaiver003004,
   developmentWaiver005,
+  developmentWaiver006,
   parseMigrationList,
   validateDevelopmentBackupWaiver,
   verifyContext,
@@ -66,6 +68,17 @@ test('rejects a migration 005 hash mismatch', async () => {
   }
 });
 
+test('rejects a migration 006 hash mismatch', async () => {
+  const temp = await mkdtemp(path.join(os.tmpdir(), 'webgista-migration-guard-'));
+  try {
+    const expected = new Map([['20261105000200', '0'.repeat(64)]]);
+    await writeFile(path.join(temp, '20261105000200_revoke_anon_view.sql'), 'revoke select;');
+    await assert.rejects(verifyMigrationHashes(temp, expected), /SHA-256/);
+  } finally {
+    await rm(temp, { recursive: true, force: true });
+  }
+});
+
 test('parses complete migration-list output and fails closed for inspection errors or unknown formats', () => {
   const parsed = parseMigrationList(listing(versions, versions.slice(0, 4)));
   assert.deepEqual(parsed.local, versions);
@@ -77,9 +90,10 @@ test('parses complete migration-list output and fails closed for inspection erro
 });
 
 test('accepts only a chronological suffix of the reviewed migrations', () => {
-  assert.deepEqual(assessMigrationHistory({ localVersions: versions, remoteVersions: versions.slice(0, 4) }), ['20261104000300', '20261104000400', '20261105000100']);
-  assert.deepEqual(assessMigrationHistory({ localVersions: versions, remoteVersions: versions.slice(0, 5) }), ['20261104000400', '20261105000100']);
-  assert.deepEqual(assessMigrationHistory({ localVersions: versions, remoteVersions: versions.slice(0, 6) }), ['20261105000100']);
+  assert.deepEqual(assessMigrationHistory({ localVersions: versions, remoteVersions: versions.slice(0, 4) }), ['20261104000300', '20261104000400', '20261105000100', '20261105000200']);
+  assert.deepEqual(assessMigrationHistory({ localVersions: versions, remoteVersions: versions.slice(0, 5) }), ['20261104000400', '20261105000100', '20261105000200']);
+  assert.deepEqual(assessMigrationHistory({ localVersions: versions, remoteVersions: versions.slice(0, 6) }), ['20261105000100', '20261105000200']);
+  assert.deepEqual(assessMigrationHistory({ localVersions: versions, remoteVersions: versions.slice(0, 7) }), ['20261105000200']);
   assert.deepEqual(assessMigrationHistory({ localVersions: versions, remoteVersions: versions }), []);
   assert.throws(() => assessMigrationHistory({ localVersions: [...versions, '20261106000100'], remoteVersions: versions.slice(0, 4) }), /Unapproved pending/);
   assert.throws(() => assessMigrationHistory({ localVersions: versions, remoteVersions: [...versions, '20261106000100'] }), /absent locally/);
@@ -104,6 +118,13 @@ test('allows Phase 2E apply only when migration 005 is the sole pending migratio
   assert.throws(() => assertPhase2eOnlyPending(['20261105000100', '20261106000100']), /only for migration/);
 });
 
+test('allows the observation ACL fix only when migration 006 is the sole pending migration', () => {
+  assert.doesNotThrow(() => assertPhase2eAclFixOnlyPending(['20261105000200']));
+  assert.throws(() => assertPhase2eAclFixOnlyPending([]), /only for migration 20261105000200/);
+  assert.throws(() => assertPhase2eAclFixOnlyPending(['20261105000100', '20261105000200']), /only for migration 20261105000200/);
+  assert.throws(() => assertPhase2eAclFixOnlyPending(['20261105000200', '20261106000100']), /only for migration 20261105000200/);
+});
+
 test('requires at least one completed backup with a valid, nonfuture timestamp', () => {
   const now = Date.parse('2026-11-05T00:00:00Z');
   assert.equal(assertRecoveryAvailable({ backups: [{ status: 'COMPLETED', inserted_at: '2026-11-04T20:00:00Z' }] }, now), 1);
@@ -114,7 +135,7 @@ test('requires at least one completed backup with a valid, nonfuture timestamp',
   assert.throws(() => assertRecoveryAvailable({}, now), /invalid response/);
 });
 
-test('accepts the legacy one-time waiver only for its 003/004 subset and migration 005 only by itself', () => {
+test('accepts each one-time waiver only for its exact development migration set', () => {
   const context = {
     applyMigrations: 'apply', waiver: developmentWaiver003004,
     githubRef: 'refs/heads/feat/webgista-v2',
@@ -123,6 +144,7 @@ test('accepts the legacy one-time waiver only for its 003/004 subset and migrati
   assert.deepEqual(validateDevelopmentBackupWaiver({ ...context, pendingVersions: ['20261104000300', '20261104000400'] }), ['20261104000300', '20261104000400']);
   assert.deepEqual(validateDevelopmentBackupWaiver({ ...context, pendingVersions: ['20261104000400'] }), ['20261104000400']);
   assert.deepEqual(validateDevelopmentBackupWaiver({ ...context, waiver: developmentWaiver005, pendingVersions: ['20261105000100'] }), ['20261105000100']);
+  assert.deepEqual(validateDevelopmentBackupWaiver({ ...context, waiver: developmentWaiver006, pendingVersions: ['20261105000200'] }), ['20261105000200']);
   assert.throws(() => validateDevelopmentBackupWaiver({ ...context, applyMigrations: 'preview', pendingVersions: ['20261104000300'] }), /explicit apply/);
   assert.throws(() => validateDevelopmentBackupWaiver({ ...context, waiver: 'none', pendingVersions: ['20261104000300'] }), /explicit apply/);
   assert.throws(() => validateDevelopmentBackupWaiver({ ...context, projectRef: 'ponmlkjihgfedcbaqrst', pendingVersions: ['20261104000300'] }), /target/);
@@ -130,5 +152,10 @@ test('accepts the legacy one-time waiver only for its 003/004 subset and migrati
   assert.throws(() => validateDevelopmentBackupWaiver({ ...context, pendingVersions: ['20261105000100'] }), /exact approved/);
   assert.throws(() => validateDevelopmentBackupWaiver({ ...context, waiver: developmentWaiver005, pendingVersions: ['20261104000400', '20261105000100'] }), /exact approved/);
   assert.throws(() => validateDevelopmentBackupWaiver({ ...context, waiver: developmentWaiver005, pendingVersions: ['20261104000300', '20261104000400'] }), /exact approved/);
+  assert.throws(() => validateDevelopmentBackupWaiver({ ...context, waiver: developmentWaiver006, pendingVersions: ['20261105000100'] }), /exact approved/);
+  assert.throws(() => validateDevelopmentBackupWaiver({ ...context, waiver: developmentWaiver006, pendingVersions: ['20261105000100', '20261105000200'] }), /exact approved/);
+  assert.throws(() => validateDevelopmentBackupWaiver({ ...context, waiver: developmentWaiver006, projectRef: 'ponmlkjihgfedcbaqrst', pendingVersions: ['20261105000200'] }), /target/);
+  assert.throws(() => validateDevelopmentBackupWaiver({ ...context, waiver: developmentWaiver006, githubRef: 'refs/heads/main', pendingVersions: ['20261105000200'] }), /restricted/);
+  assert.throws(() => validateDevelopmentBackupWaiver({ ...context, waiver: developmentWaiver006, applyMigrations: 'verify', pendingVersions: ['20261105000200'] }), /explicit apply/);
   assert.throws(() => validateDevelopmentBackupWaiver({ ...context, pendingVersions: [] }), /exact approved/);
 });
