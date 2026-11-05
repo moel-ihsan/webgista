@@ -52,7 +52,7 @@ async function createUser(apiUrl, serviceKey, anonKey, marker) {
     method: 'POST',
   }), `${marker} QA auth user creation`);
   const userId = created.id ?? created.user?.id;
-  assert.ok(userId, `${marker} QA auth user response omitted its id.`);
+  assert.match(userId ?? '', /^[0-9a-f-]{36}$/i, `${marker} QA auth response has no UUID id.`);
   const session = requireSuccess(await request(apiUrl, '/auth/v1/token?grant_type=password', {
     apiKey: anonKey,
     body: { email, password },
@@ -62,15 +62,12 @@ async function createUser(apiUrl, serviceKey, anonKey, marker) {
   return { email, userId, accessToken: session.access_token };
 }
 
-async function insertRow(apiUrl, serviceKey, table, body) {
-  const data = requireSuccess(await request(apiUrl, `/rest/v1/${table}`, {
-    apiKey: serviceKey,
-    body,
-    method: 'POST',
-    prefer: 'return=representation',
-  }), `disposable ${table} fixture creation`);
-  assert.ok(Array.isArray(data) && data[0], `disposable ${table} fixture response was empty.`);
-  return data[0];
+function runLocalSql(sql) {
+  execFileSync('supabase', ['db', 'query', sql, '--yes', '--local'], { stdio: ['ignore', 'ignore', 'pipe'] });
+}
+
+function sqlText(value) {
+  return `'${value.replaceAll("'", "''")}'`;
 }
 
 function cleanupFixtures(cameras, agencies, users) {
@@ -101,53 +98,31 @@ try {
   const editor = await createUser(apiUrl, serviceKey, anonKey, 'editor');
   users.push(editor);
 
-  await insertRow(apiUrl, serviceKey, 'user_roles', [
-    { user_id: administrator.userId, role: 'administrator' },
-    { user_id: editor.userId, role: 'agency_editor' },
-  ]);
+  runLocalSql(`insert into public.user_roles (user_id, role) values
+    ('${administrator.userId}'::uuid, 'administrator'),
+    ('${editor.userId}'::uuid, 'agency_editor')`);
 
-  const agencyA = await insertRow(apiUrl, serviceKey, 'agencies', {
-    name: `CI Private Config A ${marker}`,
-    is_public: false,
-  });
-  agencies.push(agencyA.id);
-  const agencyB = await insertRow(apiUrl, serviceKey, 'agencies', {
-    name: `CI Private Config B ${marker}`,
-    is_public: false,
-  });
-  agencies.push(agencyB.id);
+  const agencyA = randomUUID();
+  agencies.push(agencyA);
+  const agencyB = randomUUID();
+  agencies.push(agencyB);
+  runLocalSql(`insert into public.agencies (id, name, is_public) values
+    ('${agencyA}'::uuid, ${sqlText(`CI Private Config A ${marker}`)}, false),
+    ('${agencyB}'::uuid, ${sqlText(`CI Private Config B ${marker}`)}, false)`);
+  runLocalSql(`insert into public.agency_memberships (agency_id, user_id) values ('${agencyA}'::uuid, '${editor.userId}'::uuid)`);
 
-  requireSuccess(await request(apiUrl, '/rest/v1/agency_memberships', {
-    apiKey: serviceKey,
-    body: { agency_id: agencyA.id, user_id: editor.userId },
-    method: 'POST',
-  }), 'disposable editor membership creation');
-
-  const createCamera = async (agencyId, name) => {
-    const row = await insertRow(apiUrl, serviceKey, 'cctv_locations', {
-      agency_id: agencyId,
-      name: `${name} ${marker}`,
-      address: `Disposable CI fixture ${marker}`,
-      category: 'regular',
-      longitude: 95.33,
-      latitude: 5.55,
-      is_active: false,
-      is_public: false,
-    });
-    cameras.push(row.id);
-    return row.id;
-  };
-
-  const adminCamera = await createCamera(agencyA.id, 'Admin camera');
-  const editorCamera = await createCamera(agencyA.id, 'Editor camera');
-  const foreignCamera = await createCamera(agencyB.id, 'Foreign camera');
-
-  const foreignConfig = requireSuccess(await request(apiUrl, '/rest/v1/cctv_private_config', {
-    apiKey: serviceKey,
-    body: { cctv_id: foreignCamera, source_kind: 'stored_clip', source_uri: '/ci/foreign.mp4', notes: 'disposable CI fixture' },
-    method: 'POST',
-  }), 'disposable foreign config fixture creation');
-  assert.equal(foreignConfig, null);
+  const adminCamera = randomUUID();
+  cameras.push(adminCamera);
+  const editorCamera = randomUUID();
+  cameras.push(editorCamera);
+  const foreignCamera = randomUUID();
+  cameras.push(foreignCamera);
+  runLocalSql(`insert into public.cctv_locations (id, agency_id, name, address, category, longitude, latitude, is_active, is_public) values
+    ('${adminCamera}'::uuid, '${agencyA}'::uuid, ${sqlText(`Admin camera ${marker}`)}, ${sqlText(`Disposable CI fixture ${marker}`)}, 'regular', 95.33, 5.55, false, false),
+    ('${editorCamera}'::uuid, '${agencyA}'::uuid, ${sqlText(`Editor camera ${marker}`)}, ${sqlText(`Disposable CI fixture ${marker}`)}, 'regular', 95.33, 5.55, false, false),
+    ('${foreignCamera}'::uuid, '${agencyB}'::uuid, ${sqlText(`Foreign camera ${marker}`)}, ${sqlText(`Disposable CI fixture ${marker}`)}, 'regular', 95.33, 5.55, false, false)`);
+  runLocalSql(`insert into public.cctv_private_config (cctv_id, source_kind, source_uri, notes)
+    values ('${foreignCamera}'::uuid, 'stored_clip', '/ci/foreign.mp4', 'disposable CI fixture')`);
 
   const adminInsert = requireSuccess(await request(apiUrl, '/rest/v1/cctv_private_config', {
     apiKey: anonKey,
