@@ -29,8 +29,8 @@ select ok(to_regtype('public.traffic_condition') is not null, 'traffic condition
 select has_column('public', 'traffic_observations', 'condition', 'condition is persisted per observation');
 select col_type_is('public', 'traffic_observations', 'condition', 'traffic_condition', 'condition uses the constrained enum');
 select results_eq(
-  $$select enumlabel::text from pg_enum where enumtypid = 'public.traffic_condition'::regtype order by enumsortorder$$,
-  $$values ('terrible'::text), ('bad'), ('poor'), ('average'), ('good'), ('great')$$,
+  $$select enumlabel::text collate "C" from pg_enum where enumtypid = 'public.traffic_condition'::regtype order by enumsortorder$$,
+  $$select label collate "C" from (values ('terrible'::text), ('bad'), ('poor'), ('average'), ('good'), ('great')) as expected(label)$$,
   'condition vocabulary matches the six supported categories'
 );
 select ok((select is_nullable = 'YES' from information_schema.columns where table_schema = 'public' and table_name = 'traffic_observations' and column_name = 'condition'), 'existing observation rows remain compatible');
