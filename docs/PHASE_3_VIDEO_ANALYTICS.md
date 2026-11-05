@@ -2,7 +2,9 @@
 
 ## V1 behavior and limits
 
-V1 initializes TensorFlow.js COCO-SSD in `resources/js/app.js:115-118` and detects objects from browser video frames in `resources/js/components/C_Videodetail.vue:308-410`. It draws boxes and calculates a per-frame condition, then overwrites a camera's `keterangan`. It has no multi-object tracker, no unique passage counting, and no durable analysis history. Its class mapping and per-frame traffic-condition formula are not reliable enough to reuse as operational output.
+V1 initializes TensorFlow.js COCO-SSD in `resources/js/app.js:115-118` and detects objects from browser video frames in `resources/js/components/C_Videodetail.vue:308-410`. Its `timeupdate` handler captures the current video frame, runs `model.detect`, and draws detection boxes. The class mapping counts `truck`/`bus` and groups `person`/`motorcycle`/`bicycle` as motorcycles. Its `else if (cars)` branch uses the non-empty string `"car"`, so every unmatched class is counted as a car. It calculates a weighted score from one frame and posts the resulting label to `/update/keterangan/{id}`, replacing the camera's current `keterangan` rather than storing a timestamped observation. Camera creation also assigns `Great` when a URL exists, while edit assigns `Low`, without analysis evidence.
+
+The legacy implementation has no multi-object tracker, unique passage counting, or durable analysis history. The `totalvehs` table has only `totalcar` and `totalmotor`; its related vehicle-update controller path is commented out and is not called by the active video component. The per-frame thresholds are not calibrated or validated in the source. V2 therefore preserves the useful concept of visual detections but does not reuse this class mapping, infer unique counts, or publish its traffic-condition formula as operational output.
 
 ## Local batch pipeline
 
