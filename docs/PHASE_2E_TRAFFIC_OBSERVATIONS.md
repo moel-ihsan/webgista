@@ -23,8 +23,8 @@ The v2 implementation does not carry over the buggy per-frame condition threshol
 ## Verification state
 
 - Frontend `npm run verify`: passed (135 tests across 27 files, TypeScript, ESLint, production build).
-- Database security suite `phase_2e_observations.test.sql`: 25 assertions planned; not executed locally because Supabase CLI, Docker and PostgreSQL test tools are unavailable.
-- Combined planned CI total: 200 assertions (existing 175 plus 25). This is a plan, not a passing result. The CI workflow now invokes the new suite.
+- Database security suite `phase_2e_observations.test.sql`: 26 assertions. The CI runner is the database execution environment because Supabase CLI, Docker and PostgreSQL test tools are unavailable locally.
+- Combined CI target: 201 assertions (existing 175 plus 26). The first CI attempt exposed a collation ambiguity in the enum comparison; the second confirmed the 26 assertions execute, and exposed a stale plan count. The plan now reflects 26; final CI confirmation is pending.
 - No hosted migration was applied. Migration 005 needs isolated CI and then the existing protected development deployment/authorization process. The currently observed remote deployment workflow must be reviewed before any hosted apply.
 - No manual observations have been inserted into hosted Supabase.
 
