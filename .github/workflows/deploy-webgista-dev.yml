@@ -23,6 +23,7 @@ on:
           - accept-dev-data-loss-for-003-004
           - accept-dev-data-loss-for-005
           - accept-dev-data-loss-for-006
+          - accept-dev-data-loss-for-008
 
 permissions:
   contents: read

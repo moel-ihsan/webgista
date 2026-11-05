@@ -15,6 +15,7 @@ const approvedVersions = [...approvedHashes.keys()];
 export const developmentWaiver003004 = 'accept-dev-data-loss-for-003-004';
 export const developmentWaiver005 = 'accept-dev-data-loss-for-005';
 export const developmentWaiver006 = 'accept-dev-data-loss-for-006';
+export const developmentWaiver008 = 'accept-dev-data-loss-for-008';
 
 export function verifyContext({ githubRef, projectRef, expectedProjectRef }) {
   if (githubRef !== 'refs/heads/feat/webgista-v2') throw new Error('Deployment is restricted to feat/webgista-v2.');
@@ -102,7 +103,7 @@ export function assessMigrationHistory({ localVersions, remoteVersions }) {
 
 export function validateDevelopmentBackupWaiver({ applyMigrations, waiver, githubRef, projectRef, expectedProjectRef, pendingVersions }) {
   verifyContext({ githubRef, projectRef, expectedProjectRef });
-  if (applyMigrations !== 'apply' || ![developmentWaiver003004, developmentWaiver005, developmentWaiver006].includes(waiver)) {
+  if (applyMigrations !== 'apply' || ![developmentWaiver003004, developmentWaiver005, developmentWaiver006, developmentWaiver008].includes(waiver)) {
     throw new Error('The one-time data-loss waiver is valid only for an explicit apply run.');
   }
   if (!Array.isArray(pendingVersions) || !pendingVersions.length) {
@@ -113,8 +114,10 @@ export function validateDevelopmentBackupWaiver({ applyMigrations, waiver, githu
     ? pendingVersions.length === 1 && pendingVersions[0] === '20261105000100'
     : waiver === developmentWaiver006
       ? pendingVersions.length === 1 && pendingVersions[0] === '20261105000200'
-      : pendingVersions.every((version) => legacyVersions.includes(version))
-        && pendingVersions.join(',') === legacyVersions.slice(legacyVersions.indexOf(pendingVersions[0])).join(',');
+      : waiver === developmentWaiver008
+        ? pendingVersions.length === 1 && pendingVersions[0] === '20261105000400'
+        : pendingVersions.every((version) => legacyVersions.includes(version))
+          && pendingVersions.join(',') === legacyVersions.slice(legacyVersions.indexOf(pendingVersions[0])).join(',');
   if (!allowed) {
     throw new Error('The selected one-time waiver does not match the exact approved pending migration set.');
   }
