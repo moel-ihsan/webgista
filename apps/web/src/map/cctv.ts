@@ -4,7 +4,7 @@ export interface CctvFeatureProperties {
   cctvId: string
   name: string
   category: 'Regular' | 'Analytic'
-  condition: 'No Data'
+  condition: 'great' | 'good' | 'average' | 'poor' | 'bad' | 'terrible' | 'No Data'
 }
 
 export interface CctvPointFeature {
@@ -29,7 +29,7 @@ export function toCctvFeatureCollection(locations: readonly CctvLocation[]): Cct
         cctvId: location.id,
         name: location.name,
         category: location.category === 'analytic' ? 'Analytic' : 'Regular',
-        condition: 'No Data',
+        condition: location.trafficCondition ?? 'No Data',
       },
       geometry: { type: 'Point', coordinates: [location.longitude, location.latitude] },
     })),
@@ -52,9 +52,13 @@ export function cctvPopupDetails(location: CctvLocation): readonly { label: stri
     { label: 'Address', value: location.address || 'Not recorded' },
     { label: 'Agency', value: location.agency.name || 'Not recorded' },
     { label: 'Category', value: location.category === 'analytic' ? 'Analytic' : 'Regular' },
-    { label: 'Traffic condition', value: 'No Data' },
+    { label: 'Traffic condition', value: location.trafficCondition ? conditionLabel(location.trafficCondition) : 'No Data' },
     { label: 'Video', value: 'Secure video access is not configured' },
   ]
+}
+
+function conditionLabel(condition: NonNullable<CctvLocation['trafficCondition']>): string {
+  return condition.charAt(0).toUpperCase() + condition.slice(1)
 }
 
 export function createCctvPopupContent(location: CctvLocation): HTMLElement {

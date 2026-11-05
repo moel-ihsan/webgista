@@ -4,6 +4,7 @@ import type { CctvDataSource } from './contracts'
 import type { AgencySummary, CctvCategory, CctvLocation } from '../domain/cctv'
 import { privateImageUrl } from './privateMedia'
 import { appConfig } from '../config/app'
+import { latestTrafficConditions, listLatestTrafficObservations } from './trafficObservations'
 
 const PUBLIC_FIELDS = 'id,name,address,category,agency_id,agency_name,longitude,latitude,snapshot_path'
 const AUTHENTICATED_FIELDS = 'id,name,address,category,agency_id,longitude,latitude,snapshot_path,is_active,agency:agencies(id,name)'
@@ -83,7 +84,15 @@ export function createSupabaseCctvDataSource(client: SupabaseClient): CctvDataSo
       if (result.error) throw new Error('CCTV locations could not be loaded.')
       if (!Array.isArray(result.data)) throw new Error('CCTV locations could not be loaded.')
 
-      const locations = result.data.map(mapCctvLocation).filter((location): location is CctvLocation => location !== null)
+      let locations = result.data.map(mapCctvLocation).filter((location): location is CctvLocation => location !== null)
+      if (sessionResult.session) {
+        try {
+          const conditions = latestTrafficConditions(await listLatestTrafficObservations(client))
+          locations = locations.map((location) => ({ ...location, trafficCondition: conditions.get(location.id) ?? null }))
+        } catch {
+          locations = locations.map((location) => ({ ...location, trafficCondition: null }))
+        }
+      }
       const withImages = appConfig.privateMediaEnabled
         ? await Promise.all(locations.map(async (location) => ({
           ...location,

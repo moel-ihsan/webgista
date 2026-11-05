@@ -666,7 +666,7 @@ watch([status, cctvLocations], ([mapStatus, locations]) => {
         <div><span style="--legend-color: #0b6623"></span>Good</div>
         <div><span style="--legend-color: #98fb98"></span>Great</div>
         <div><span style="--legend-color: #0000ff"></span>No Data</div>
-        <p>Categories shown; no observations loaded.</p>
+        <p>Marker colors use the latest authorized observation; cameras without one show No Data.</p>
       </div>
 
       <div v-if="status === 'loading'" class="map-state" role="status">

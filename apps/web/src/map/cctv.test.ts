@@ -85,6 +85,11 @@ describe('CCTV map data and interactions', () => {
     })
   })
 
+  it('shows only the persisted latest condition when one is available', () => {
+    expect(toCctvFeatureCollection([{ ...camera, trafficCondition: 'poor' }]).features[0]?.properties.condition).toBe('poor')
+    expect(cctvPopupDetails({ ...camera, trafficCondition: 'poor' })).toContainEqual({ label: 'Traffic condition', value: 'Poor' })
+  })
+
   it('searches names, addresses, and agencies case-insensitively with partial matches', () => {
     expect(searchCctvLocations([camera], 'KUTA')).toEqual([camera])
     expect(searchCctvLocations([camera], 'banda')).toEqual([camera])
@@ -139,7 +144,7 @@ describe('CCTV MapLibre layers', () => {
       CCTV_POINT_LAYER_ID,
     ])
     expect(map.addLayer.mock.calls[2]?.[0]).toMatchObject({
-      paint: { 'circle-color': ['match', ['get', 'condition'], 'No Data', '#0000ff', '#0000ff'] },
+      paint: { 'circle-color': ['match', ['get', 'condition'], 'great', '#98fb98', 'good', '#0b6623', 'average', '#ffff00', 'poor', '#d4a328', 'bad', '#ff5f00', 'terrible', '#ff0000', '#0000ff'] },
     })
     detach()
   })
