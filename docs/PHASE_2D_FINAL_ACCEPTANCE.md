@@ -71,3 +71,22 @@ Current aggregate state has an administrator but no agency editor and no agency 
 - Backup permission check: [41901652317](https://github.com/moel-ihsan/webgista/actions/runs/41901652317) — blocked by HTTP 403; no database write occurred.
 - Sanitized project/backup diagnosis: [41904551690](https://github.com/moel-ihsan/webgista/actions/runs/41904551690) — correct project access verified; backup-list and organization-plan queries denied; migrations skipped.
 - Local frontend verification: `npm run verify` passed; `git diff --check` passed in the main worktree.
+
+## Phase 2D.6 dashboard/map parity follow-up
+
+This section records the later targeted Dashboard and map work; it does not replace the historical acceptance findings above. The user reports that migrations 003 and 004 have since been applied successfully to `webgista-dev` and that the main authenticated Phase 2D workflows passed manual Chrome checks.
+
+- V1 Dashboard source confirms “Office Profile” is populated from the signed-in user's profile endpoint, not an agency table. V2 now displays that user's saved address, coordinates, description, and private signed photo in both Dashboard and the header.
+- Dashboard recent cards query RLS-visible CCTV rows ordered by `created_at DESC` (requested behavior), use signed private image previews, and link managers to edit or other visitors to the selected camera on Map View.
+- Map popup and search-card visuals now follow the source v1 image size, compact horizontal cards, metadata hierarchy, and theme colors. Video remains unavailable until secure media access is designed; traffic remains No Data without observations.
+- Agency removal stays disabled. Its stale “migration pending” message was corrected. Existing pgTAP covers RESTRICT behavior, and the baseline policy is administrator-only; this follow-up did not perform live role-scoped delete acceptance, so `VITE_AGENCY_REMOVAL_ENABLED` must remain false.
+- Local result: `npm run verify` passed TypeScript, ESLint, 130 Vitest tests across 26 files, and production build; `git diff --check` passed. No hosted records or policies were changed.
+- Authenticated browser acceptance of the new Dashboard, map popup/search visuals, and agency removal was not executed in this follow-up. See [Phase 2D.6 Dashboard and Map parity](PHASE_2D6_DASHBOARD_MAP_PARITY.md).
+
+### Phase 2D.6 production deployment check — 2026-11-05
+
+- Vercel project `webgista-v2` (`apps/web`, Vite) deployed the isolated Phase 2D.6 snapshot as production deployment `dpl_Dj4dtm8gbfQk3PQTN8AgR5Dni9AV`; Vercel returned `READY` and aliased `https://webgista-v2.vercel.app`.
+- Vercel deployment verification returned HTTP 200. Direct requests to `/map`, `/settings`, `/profile`, and `/cctv/a60eb814-12dc-42df-b1f8-14234631dbeb/edit` also returned HTTP 200. Public deployed JS contains the expected Dashboard and popup/search strings.
+- Fresh `npm run verify`: TypeScript and ESLint passed, 130 tests in 26 files passed, and Vite production build succeeded. `git diff --check` and staged diff checks passed.
+- Unauthenticated headless Chrome showed the Map View shell, MapLibre controls, attribution, and traffic legend. The software-rendered screenshot did not show map tiles, so map imagery is pending normal Chrome confirmation. No authenticated session was available for current Dashboard/profile data, CCTV popup/search, or agency action acceptance.
+- Agency deletion remains disabled and analytic video remains deferred. No migrations, hosted records, Storage settings, or feature flags were changed. The deployment was direct from the isolated worktree; no Git commit/push was made, and automatic GitHub-to-Vercel branch behavior remains unverified.

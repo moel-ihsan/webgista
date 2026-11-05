@@ -1,0 +1,38 @@
+# Phase 2D.6 — Dashboard and Map Parity
+
+## V1 source audit
+
+| Area | V1 source evidence | V1 behavior | V2 behavior |
+|---|---|---|---|
+| Dashboard layout | `resources/js/components/C_Main.vue:1-10` | Map card occupies the wider column; profile card occupies the right column. | Existing two-column layout retained. |
+| Dashboard profile | `C_Main.vue:14-35`; `CardProfilOffice.vue:3-22` | `/profileUser` returns the authenticated user's model. The card displays that user's `profile_photo_path`, name, address, longitude/latitude, and description under the historical “Office Profile” heading. These fields are user-profile data, not an agency record. | Shared authenticated profile presentation now feeds both Dashboard and header. Private photo previews use short-lived signed URLs and refresh every four minutes; logout clears the shared state. Existing v1 heading is retained and the name clarifies the profile source. |
+| Recent CCTV cards | `CardProfilOffice.vue:17-21`; `CardRecent.vue:1-68` | A horizontal Flickity list fetches `/api/table`; each 150×80 image card links to `/detail/:id` and shows camera name and a relative timestamp from `updated_at`. | Authenticated sessions query RLS-visible `cctv_locations` rows ordered by `created_at DESC`. Anonymous sessions use only `public_cctv_locations`, ordered by `updated_at`, because the existing anon table grant deliberately omits `created_at`; the heading remains “Recently Updated” for this honest fallback. No grant or schema change was made. Compact horizontal cards retain the v1 dimensions/gradient and show name, date, and status. Managers go to the existing edit route; other visitors go to the map with a camera-selection query. |
+| Map search | `resources/js/components/C_Map.vue:68-104`; card styles in `resources/js/components/SearchCard.vue:145-221` | Search card shows camera name, six-decimal coordinates, address truncated around 25 characters, Regular/Analytic badge, and image thumbnail. No traffic observation is shown in the card. | The same content hierarchy now includes the signed CCTV image (or a WebGIS fallback) and an explicit No Data indicator. Search still filters authorized map data and invokes the existing focus/popup behavior. |
+| Search selection | `C_Map.vue:234-248` | Clicking a result flies to its coordinates at zoom 16 and opens its popup. | Existing selection behavior is retained; non-managers can open `/map?cctv=<id>` from a recent card and the map focuses that camera when its authorized data is ready. |
+| Popup | `C_Map.vue:209-232`; `C_Map.vue:943-995` | Popup uses a 10px offset, 10px radius/padding, theme background, max width 400px, and a 200×100 cover image; it displays a video when the legacy URL exists. The legacy template injects the URL into HTML and hides its close control. | MapLibre popup preserves the compact image treatment and theme colors. CCTV fields use DOM `textContent`; private images use signed URLs. No video URL is rendered; an honest secure-video-unavailable message is used. MapLibre's accessible close control remains available. |
+| Traffic colors | `C_Map.vue:407-420, 480-510` | `keterangan` drives marker colors; unknown values use the blue No Data color. | v2 continues to label observations No Data unless supported observations exist. Search and popup do not fabricate conditions. |
+| Settings agencies | `resources/js/components/C_Settings.vue:51-76, 212-220`; `app/Http/Controllers/AgencyListController.php` | Settings lists agencies as closable tags; “+ New Tag” posts the agency text. The old GET destroy path removes a tag without a confirmation flow. | Supabase agency listing/creation remains integrated with the CCTV dropdown. Removal is still deployment-flagged, is administrator-only in RLS, requires confirmation in the UI, and is restricted by camera/membership foreign keys. |
+
+## Analytic URL finding
+
+V1 conditionally displays the URL field for Analytic category (`C_Edit.vue:236-251`; Add uses the category-driven `showUrl` state), submits it as `url` (`C_Add.vue:314-328`, `C_Edit.vue:325-345`), and stores it in `cctv_points.url` (`app/Models/CctvPoint.php`). `CctvPointModelController::showCCTV` returns that value and `C_Map.vue:216-223, 407-419` embeds it as an MP4 source. The field therefore functions as a browser-consumed video URL; the source does not establish that it is public or credential-free. V2 keeps the field visibly disabled for Analytic cameras and explains that secure server-mediated video access is not configured. No private URL or credential is moved into public metadata.
+
+## Agency deletion safety
+
+The deployed baseline defines `agencies_admin_delete` with `private.is_administrator()` (`supabase/migrations/20261103000200_phase_2a_security.sql`) and agency-membership deletion is protected by `ON DELETE RESTRICT` from migration 004. The existing pgTAP suite verifies that an agency referenced by a membership cannot be deleted; migration 001 already gives `cctv_locations.agency_id` `ON DELETE RESTRICT`. The frontend maps SQLSTATE `23503` to a dependency explanation and `42501` to an administrator-only message. The Settings removal flag remains disabled because this task did not run a current hosted role-scoped deletion check or attempt deletion of a disposable hosted QA agency. The stale text about a not-yet-deployed migration has been replaced with the actual disabled state and protection behavior.
+
+## Verification and outstanding acceptance
+
+- Automated: `npm run verify` passed TypeScript, ESLint, 130 Vitest tests across 26 files, and production build; `git diff --check` passed. Coverage includes Dashboard, private-photo presentation, authenticated/anonymous query boundaries, created-at ordering, safe popup text, search focus, and confirmed agency removal behavior.
+- Hosted/browser: no authenticated QA browser session was available for this change. The authenticated Dashboard photo and profile fields, real recent-camera cards, dark-mode popup, search thumbnail and navigation, and Settings removal remain browser acceptance checks.
+- Hosted deletion: do not enable `VITE_AGENCY_REMOVAL_ENABLED` until administrator/editor authorization and dependency rejection are verified against current hosted definitions with a disposable agency. Existing agencies were not changed.
+- Video analytics remains deferred pending a server-mediated private-media contract.
+
+## Deployment verification — 2026-11-05
+
+- Production deployment `dpl_Dj4dtm8gbfQk3PQTN8AgR5Dni9AV` completed from the isolated `feat/phase2d6-parity` snapshot; Vercel reported `READY`, aliased `https://webgista-v2.vercel.app`, and its verification returned HTTP 200.
+- Direct requests to `/map`, `/settings`, `/profile`, and `/cctv/a60eb814-12dc-42df-b1f8-14234631dbeb/edit` each returned HTTP 200, confirming SPA deep-link rewrites.
+- Final isolated verification passed TypeScript, ESLint, 130 Vitest tests across 26 files, production build, and staged diff checks. The build retains the existing large MapLibre chunk warning.
+- An unauthenticated headless Chrome render showed the Map View shell, controls, attribution, and traffic legend. SwiftShader enabled MapLibre, but map tiles were not visible in the screenshot; basemap visuals remain pending a normal Chrome session. No authenticated QA session was used, so Dashboard profile/recent-camera data, popup/search cards, and agency actions were not browser-verified in this run.
+- Deployment used Vercel CLI directly; no Git commit or push was made. Vercel's GitHub integration and production-branch setting were not independently verified during this deployment.
+- No database, hosted CCTV/agency data, migrations, or feature flags were changed during Phase 2D.6.

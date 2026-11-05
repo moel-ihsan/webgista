@@ -8,6 +8,7 @@ vi.mock('../../auth/session', () => ({
 }))
 
 import TopNavigation from './TopNavigation.vue'
+import { accountPresentation, clearAccountPresentation } from '../../data/accountPresentation'
 
 let app: ReturnType<typeof createApp> | undefined
 let host: HTMLDivElement | undefined
@@ -18,6 +19,7 @@ afterEach(() => {
   app = undefined
   host = undefined
   vi.unstubAllGlobals()
+  clearAccountPresentation()
 })
 
 describe('account navigation', () => {
@@ -40,5 +42,18 @@ describe('account navigation', () => {
 
     expect([...host.querySelectorAll('.account-menu__items a')].map((link) => [link.textContent?.trim(), link.getAttribute('href')]))
       .toEqual([['Edit Profile', '/profile'], ['Change Password', '/password']])
+  })
+
+  it('renders the shared signed profile image in the account avatar', async () => {
+    accountPresentation.photoUrl = 'signed-profile-photo'
+    const router = createRouter({ history: createMemoryHistory(), routes: [{ path: '/', component: defineComponent({ template: '<div />' }) }] })
+    await router.push('/')
+    vi.stubGlobal('localStorage', { getItem: () => null, setItem: vi.fn() })
+    host = document.createElement('div')
+    app = createApp(TopNavigation, { navigationOpen: false })
+    app.use(router)
+    app.mount(host)
+    await nextTick()
+    expect(host.querySelector<HTMLImageElement>('.topbar__avatar')?.src).toContain('signed-profile-photo')
   })
 })

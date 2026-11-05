@@ -4,6 +4,7 @@ import { RouterLink } from 'vue-router'
 
 import { authSession } from '../auth/session'
 import { getOwnProfile, getOwnProfilePhotoUrl, profileCoordinates, updateOwnProfile, updateOwnProfilePhoto } from '../data/account'
+import { refreshAccountPresentation } from '../data/accountPresentation'
 import { appConfig } from '../config/app'
 import { validateImage } from '../data/privateMedia'
 import { supabaseClient } from '../lib/supabase'
@@ -63,6 +64,7 @@ async function save(): Promise<void> {
         error.value = 'Profile details were saved, but the photo could not be uploaded. Your current photo is unchanged; try again.'
       }
     }
+    await refreshAccountPresentation(supabaseClient, userId, appConfig.profileFieldsEnabled, appConfig.privateMediaEnabled)
   } catch (cause) {
     error.value = cause instanceof Error ? cause.message : 'Profile could not be updated.'
   } finally {

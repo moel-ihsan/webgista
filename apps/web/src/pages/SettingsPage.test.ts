@@ -4,18 +4,19 @@ import { createMemoryHistory, createRouter, RouterView } from 'vue-router'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 const {
-  createAgency, deleteAgency, listAgencies, loadMapViewport, saveMapViewport,
+  createAgency, deleteAgency, listAgencies, loadMapViewport, saveMapViewport, flags,
 } = vi.hoisted(() => ({
   createAgency: vi.fn().mockResolvedValue({ id: 'agency-new', name: 'New Agency', isPublic: false }),
   deleteAgency: vi.fn().mockResolvedValue(true),
   listAgencies: vi.fn().mockResolvedValue([{ id: 'agency-1', name: 'Dishub', isPublic: false }]),
   loadMapViewport: vi.fn().mockResolvedValue({ latitude: 5.5, longitude: 95.3, zoom: 12 }),
   saveMapViewport: vi.fn().mockImplementation(async (_client, viewport) => viewport),
+  flags: { agencyRemovalEnabled: false },
 }))
 
 vi.mock('../auth/session', () => ({ authSession: { state: { role: 'administrator', agencyIds: [] } } }))
 vi.mock('../lib/supabase', () => ({ supabaseClient: {} }))
-vi.mock('../config/app', () => ({ appConfig: { agencyRemovalEnabled: false } }))
+vi.mock('../config/app', () => ({ appConfig: { get agencyRemovalEnabled() { return flags.agencyRemovalEnabled } } }))
 vi.mock('../data/agencies', () => ({ createAgency, deleteAgency, listAgencies }))
 vi.mock('../data/mapSettings', () => ({
   DEFAULT_MAP_VIEWPORT: { latitude: 5.5483, longitude: 95.3238, zoom: 11.2 },
@@ -60,6 +61,8 @@ afterEach(() => {
   host?.remove()
   app = undefined
   host = undefined
+  flags.agencyRemovalEnabled = false
+  vi.unstubAllGlobals()
   createAgency.mockReset().mockResolvedValue({ id: 'agency-new', name: 'New Agency', isPublic: false })
   deleteAgency.mockReset().mockResolvedValue(true)
   listAgencies.mockReset().mockResolvedValue([{ id: 'agency-1', name: 'Dishub', isPublic: false }])
@@ -122,7 +125,28 @@ describe('Settings map defaults and agency tags', () => {
     expect(root.textContent).toContain('added as a private agency')
 
     expect(root.querySelector('[aria-label="Remove Dishub"]')).toBeNull()
-    expect(root.textContent).toContain('membership-protection migration')
+    expect(root.textContent).toContain('disabled for this deployment')
+    expect(root.textContent).toContain('linked to cameras or editor memberships are protected')
     expect(root.textContent).toContain('Dishub')
+  })
+
+  it('requires confirmation before agency removal and updates the list only after success', async () => {
+    flags.agencyRemovalEnabled = true
+    const confirm = vi.fn().mockReturnValue(false)
+    vi.stubGlobal('confirm', confirm)
+    const root = await mountSettings()
+
+    root.querySelector<HTMLButtonElement>('[aria-label="Remove Dishub"]')!.click()
+    await flush()
+    expect(confirm).toHaveBeenCalledWith(expect.stringContaining('Remove Dishub'))
+    expect(deleteAgency).not.toHaveBeenCalled()
+    expect(root.textContent).toContain('Dishub')
+
+    confirm.mockReturnValue(true)
+    root.querySelector<HTMLButtonElement>('[aria-label="Remove Dishub"]')!.click()
+    await flush()
+    expect(deleteAgency).toHaveBeenCalledWith({}, 'agency-1')
+    expect([...root.querySelectorAll('.legacy-agency-tag')].some((tag) => tag.textContent?.includes('Dishub'))).toBe(false)
+    expect(root.textContent).toContain('Dishub removed')
   })
 })

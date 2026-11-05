@@ -136,6 +136,7 @@ function confirmAgencyInput(): void {
 
 async function removeAgency(agency: Agency): Promise<void> {
   if (removingAgencyId.value || authSession.state.role !== 'administrator' || !supabaseClient) return
+  if (!window.confirm(`Remove ${agency.name}? Agencies with CCTV cameras or editor memberships cannot be removed.`)) return
   agencyError.value = ''
   agencySuccess.value = ''
   removingAgencyId.value = agency.id
@@ -190,7 +191,7 @@ async function removeAgency(agency: Agency): Promise<void> {
           </form>
           <button v-else class="legacy-button legacy-button--outline" type="button" @click="inputVisible = true">＋ New Tag</button>
         </div>
-        <p v-if="agencies.length && !appConfig.agencyRemovalEnabled" class="legacy-unavailable">Agency removal is disabled until the membership-protection migration is deployed.</p>
+        <p v-if="agencies.length && !appConfig.agencyRemovalEnabled" class="legacy-unavailable">Agency removal is disabled for this deployment. Database access is administrator-only, and agencies linked to cameras or editor memberships are protected.</p>
         <p v-if="agencyError" class="legacy-settings__feedback legacy-settings__feedback--error" role="alert">{{ agencyError }}</p>
         <p v-if="agencySuccess" class="legacy-settings__feedback legacy-settings__feedback--success" role="status">{{ agencySuccess }}</p>
       </div>

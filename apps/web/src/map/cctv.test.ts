@@ -1,3 +1,4 @@
+// @vitest-environment happy-dom
 import { describe, expect, it, vi } from 'vitest'
 
 import type { CctvLocation } from '../domain/cctv'
@@ -5,6 +6,7 @@ import type { BoundaryFeatureCollection } from './boundary'
 import { attachBoundaryLayers } from './boundaryLayers'
 import {
   cctvPopupDetails,
+  createCctvPopupContent,
   focusCctvLocation,
   searchCctvLocations,
   toCctvFeatureCollection,
@@ -94,8 +96,21 @@ describe('CCTV map data and interactions', () => {
   it('keeps popup values plain and reports unavailable video and traffic honestly', () => {
     expect(cctvPopupDetails(camera)).toEqual(expect.arrayContaining([
       { label: 'Traffic condition', value: 'No Data' },
-      { label: 'Video', value: 'Unavailable in Phase 2C' },
+      { label: 'Video', value: 'Secure video access is not configured' },
     ]))
+  })
+
+  it('builds a v1-sized popup with signed image preview and safe text-only metadata', () => {
+    const unsafeName = '<img src=x onerror=alert(1)>'
+    const popup = createCctvPopupContent({ ...camera, name: unsafeName, snapshotUrl: 'https://signed.example/photo' })
+    expect(popup.querySelector('h2')?.textContent).toBe(unsafeName)
+    expect(popup.querySelectorAll('img')).toHaveLength(1)
+    expect(popup.querySelector('img')?.src).toBe('https://signed.example/photo')
+    expect(popup.textContent).toContain('Traffic condition: No Data')
+
+    const noImage = createCctvPopupContent(camera)
+    expect(noImage.querySelector('.cctv-map-popup__media-note')?.textContent).toBe('Video unavailable in this release.')
+    expect(noImage.querySelector('img')).toBeNull()
   })
 
   it('focuses a selected camera using its coordinates and leaves room beside the open drawer', () => {

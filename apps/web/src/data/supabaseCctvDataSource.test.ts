@@ -74,6 +74,12 @@ describe('Supabase CCTV data source', () => {
       .rejects.toThrow('CCTV locations could not be loaded.')
   })
 
+  it('never treats a private Storage object path as a browser image URL when media is disabled', async () => {
+    const mock = clientMock(null, { data: [{ ...camera, snapshot_path: 'camera-1/private.webp' }], error: null })
+    const locations = await createSupabaseCctvDataSource(mock.client).listLocations()
+    expect(locations[0]?.snapshotUrl).toBeNull()
+  })
+
   it('excludes invalid coordinates and malformed required data', async () => {
     const mock = clientMock(null, {
       data: [

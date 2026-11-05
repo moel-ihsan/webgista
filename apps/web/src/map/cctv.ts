@@ -53,8 +53,41 @@ export function cctvPopupDetails(location: CctvLocation): readonly { label: stri
     { label: 'Agency', value: location.agency.name || 'Not recorded' },
     { label: 'Category', value: location.category === 'analytic' ? 'Analytic' : 'Regular' },
     { label: 'Traffic condition', value: 'No Data' },
-    { label: 'Video', value: 'Unavailable in Phase 2C' },
+    { label: 'Video', value: 'Secure video access is not configured' },
   ]
+}
+
+export function createCctvPopupContent(location: CctvLocation): HTMLElement {
+  const content = document.createElement('section')
+  content.className = 'cctv-map-popup'
+  const title = document.createElement('h2')
+  title.textContent = location.name
+  content.append(title)
+
+  if (location.snapshotUrl) {
+    const image = document.createElement('img')
+    image.className = 'cctv-map-popup__image'
+    image.src = location.snapshotUrl
+    image.alt = `${location.name} camera image`
+    image.loading = 'lazy'
+    content.append(image)
+  } else {
+    const unavailable = document.createElement('p')
+    unavailable.className = 'cctv-map-popup__media-note'
+    unavailable.textContent = location.category === 'analytic' ? 'Video unavailable in this release.' : 'Camera image unavailable.'
+    content.append(unavailable)
+  }
+
+  for (const detail of cctvPopupDetails(location)) {
+    const row = document.createElement('p')
+    const label = document.createElement('strong')
+    label.textContent = `${detail.label}: `
+    const value = document.createElement('span')
+    value.textContent = detail.value
+    row.append(label, value)
+    content.append(row)
+  }
+  return content
 }
 
 export interface CctvCameraNavigator {

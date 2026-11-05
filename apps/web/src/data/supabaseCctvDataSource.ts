@@ -84,10 +84,12 @@ export function createSupabaseCctvDataSource(client: SupabaseClient): CctvDataSo
       if (!Array.isArray(result.data)) throw new Error('CCTV locations could not be loaded.')
 
       const locations = result.data.map(mapCctvLocation).filter((location): location is CctvLocation => location !== null)
-      const withImages = appConfig.privateMediaEnabled ? await Promise.all(locations.map(async (location) => ({
-        ...location,
-        snapshotUrl: await privateImageUrl(client, 'cctv-images', location.snapshotUrl).catch(() => null),
-      }))) : locations
+      const withImages = appConfig.privateMediaEnabled
+        ? await Promise.all(locations.map(async (location) => ({
+          ...location,
+          snapshotUrl: await privateImageUrl(client, 'cctv-images', location.snapshotUrl).catch(() => null),
+        })))
+        : locations.map((location) => ({ ...location, snapshotUrl: null }))
       return signal?.aborted ? [] : withImages
     },
   }

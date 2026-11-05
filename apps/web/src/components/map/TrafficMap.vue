@@ -13,7 +13,7 @@ import type { CctvLocation } from '../../domain/cctv'
 import { supabaseClient } from '../../lib/supabase'
 import { attachBoundaryLayers, setBoundaryVisibility } from '../../map/boundaryLayers'
 import { attachCctvLayers, setCctvVisibility, updateCctvSource } from '../../map/cctvLayers'
-import { cctvPopupDetails, focusCctvLocation, searchCctvLocations, toCctvFeatureCollection } from '../../map/cctv'
+import { createCctvPopupContent, focusCctvLocation, searchCctvLocations, toCctvFeatureCollection } from '../../map/cctv'
 import { districtDetails, loadBoundary } from '../../map/boundary'
 import { applyMapStyle, cleanupMap, listenForMapReadiness, mapFailure, mapLoadTimeout, type MapFailure } from '../../map/maplibre'
 import AppIcon from '../ui/AppIcon.vue'
@@ -61,6 +61,7 @@ const selectedStyleId = ref<MapStyleId>(defaultMapStyleId)
 const boundaryStatus = ref<'loading' | 'ready' | 'error'>('loading')
 const mapInstanceId = ++nextMapInstanceId
 const mapDiagnosticsEnabled = import.meta.env.DEV && new URLSearchParams(window.location.search).has('map-debug')
+const requestedCctvId = new URLSearchParams(window.location.search).get('cctv')
 
 let map: MapLibreMap | null = null
 let detachBoundary: (() => void) | null = null
@@ -82,6 +83,7 @@ let diagnosticHandlers: Array<{ event: DiagnosticMapEvent; handler: () => void }
 let mapSettingsController: AbortController | null = null
 let componentUnmounted = false
 let homeViewport: MapViewport = { ...DEFAULT_MAP_VIEWPORT }
+let requestedCameraFocused = false
 
 function recordMapLifecycle(event: string, details: Record<string, unknown> = {}): void {
   if (!mapDiagnosticsEnabled) return
@@ -227,30 +229,7 @@ function goHome(): void {
 function showCctvPopup(location: CctvLocation): void {
   if (!map) return
   closeCctvPopup()
-
-  const content = document.createElement('section')
-  content.className = 'cctv-map-popup'
-  const title = document.createElement('h2')
-  title.textContent = location.name
-  content.append(title)
-
-  if (location.snapshotUrl) {
-    const image = document.createElement('img')
-    image.src = location.snapshotUrl
-    image.alt = `${location.name} camera image`
-    image.loading = 'lazy'
-    content.append(image)
-  }
-
-  for (const detail of cctvPopupDetails(location)) {
-    const row = document.createElement('p')
-    const label = document.createElement('strong')
-    label.textContent = `${detail.label}: `
-    const value = document.createElement('span')
-    value.textContent = detail.value
-    row.append(label, value)
-    content.append(row)
-  }
+  const content = createCctvPopupContent(location)
 
   const popup = new maplibregl.Popup({ closeOnClick: true, offset: 10 })
     .setLngLat([location.longitude, location.latitude])
@@ -574,6 +553,13 @@ onBeforeUnmount(() => {
 
 watch(status, (next, previous) => recordMapLifecycle('status-change', { from: previous, to: next }))
 watch(failure, (value) => recordMapLifecycle('error-state-change', { type: value?.type ?? null }))
+watch([status, cctvLocations], ([mapStatus, locations]) => {
+  if (props.compact || mapStatus !== 'ready' || requestedCameraFocused || !requestedCctvId) return
+  if (locations.some(({ id }) => id === requestedCctvId)) {
+    requestedCameraFocused = true
+    selectCctvLocation(requestedCctvId)
+  }
+})
 </script>
 
 <template>
@@ -660,6 +646,11 @@ watch(failure, (value) => recordMapLifecycle('error-state-change', { type: value
               </span>
               <span class="map-search-result__address">{{ location.address || 'Address not recorded' }}</span>
               <span class="map-search-result__category">{{ location.category === 'regular' ? 'Regular' : 'Analytic' }}</span>
+              <span class="map-search-result__condition"><i aria-hidden="true"></i>No Data</span>
+            </span>
+            <span class="map-search-result__thumbnail" aria-hidden="true">
+              <img v-if="location.snapshotUrl" :src="location.snapshotUrl" alt="" loading="lazy">
+              <span v-else>WebGIS</span>
             </span>
           </button>
           <p v-if="filteredCctvLocations.length === 0" class="map-search-results__empty">No Data</p>

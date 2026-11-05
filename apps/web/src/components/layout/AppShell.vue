@@ -1,8 +1,11 @@
 <script setup lang="ts">
-import { ref, watch } from 'vue'
+import { onBeforeUnmount, ref, watch } from 'vue'
 import { RouterView, useRoute, useRouter } from 'vue-router'
 
 import { authSession } from '../../auth/session'
+import { appConfig } from '../../config/app'
+import { clearAccountPresentation, refreshAccountPresentation } from '../../data/accountPresentation'
+import { supabaseClient } from '../../lib/supabase'
 import SidebarNavigation from './SidebarNavigation.vue'
 import TopNavigation from './TopNavigation.vue'
 
@@ -10,6 +13,7 @@ const route = useRoute()
 const router = useRouter()
 const sidebarCollapsed = ref(true)
 const mobileNavigationOpen = ref(false)
+let profileRefreshTimer: ReturnType<typeof setInterval> | null = null
 
 watch(
   () => route.fullPath,
@@ -30,6 +34,27 @@ watch(
     }
   },
 )
+
+watch(
+  () => [authSession.state.status, authSession.state.user?.id] as const,
+  ([status, userId]) => {
+    if (profileRefreshTimer) clearInterval(profileRefreshTimer)
+    profileRefreshTimer = null
+    const client = supabaseClient
+    if (status !== 'authenticated' || !userId || !client) {
+      clearAccountPresentation()
+      return
+    }
+    const refresh = () => void refreshAccountPresentation(client, userId, appConfig.profileFieldsEnabled, appConfig.privateMediaEnabled)
+    refresh()
+    profileRefreshTimer = setInterval(refresh, 240_000)
+  },
+  { immediate: true },
+)
+
+onBeforeUnmount(() => {
+  if (profileRefreshTimer) clearInterval(profileRefreshTimer)
+})
 
 async function logout(): Promise<void> {
   if (await authSession.logout()) await router.replace('/')

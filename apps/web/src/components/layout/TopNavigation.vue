@@ -3,6 +3,7 @@ import { computed, onMounted, ref } from 'vue'
 import { RouterLink, useRoute } from 'vue-router'
 
 import { authSession } from '../../auth/session'
+import { accountPresentation } from '../../data/accountPresentation'
 import AppIcon from '../ui/AppIcon.vue'
 
 defineEmits<{ openNavigation: [] }>()
@@ -64,7 +65,8 @@ onMounted(() => setTheme(localStorage.getItem('theme') === 'theme-dark'))
       <template v-if="authSession.state.status === 'authenticated'">
         <details class="account-menu">
           <summary class="topbar__user" :title="identityLabel" aria-label="Account menu">
-            <span class="topbar__avatar" aria-hidden="true">{{ initials }}</span>
+            <img v-if="accountPresentation.photoUrl" class="topbar__avatar" :src="accountPresentation.photoUrl" alt="">
+            <span v-else class="topbar__avatar" aria-hidden="true">{{ initials }}</span>
             <span class="topbar__identity">{{ identityLabel }}</span>
           </summary>
           <nav class="account-menu__items" aria-label="Account navigation">
