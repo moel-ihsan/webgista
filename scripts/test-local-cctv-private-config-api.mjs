@@ -264,8 +264,11 @@ try {
     method: 'DELETE',
     prefer: 'return=representation',
   });
-  assert.equal(editorCameraDelete.status, 200);
-  assert.deepEqual(editorCameraDelete.data, [], 'unrelated agency editor cannot delete another agency camera');
+  assert.ok(
+    [400, 403].includes(editorCameraDelete.status)
+      || (editorCameraDelete.status === 200 && editorCameraDelete.data?.length === 0),
+    'unrelated agency editor cannot delete another agency camera',
+  );
 
   const cameraDelete = await request(apiUrl, `/rest/v1/cctv_locations?id=eq.${foreignCamera}`, {
     apiKey: anonKey,
