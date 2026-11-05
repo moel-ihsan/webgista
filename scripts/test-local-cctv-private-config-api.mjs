@@ -80,12 +80,13 @@ function cleanupFixtures(cameras, agencies, users) {
       return `'${value}'::uuid`;
     }).join(', ')
     : 'NULL::uuid';
-  const sql = `begin;
-delete from public.cctv_locations where id in (${ids(cameras)});
-delete from public.agencies where id in (${ids(agencies)});
-delete from auth.users where id in (${ids(users.map(({ userId }) => userId))});
-commit;`;
-  execFileSync('supabase', ['db', 'query', sql, '--yes', '--local'], { stdio: ['ignore', 'ignore', 'pipe'] });
+  for (const sql of [
+    `delete from public.cctv_locations where id in (${ids(cameras)})`,
+    `delete from public.agencies where id in (${ids(agencies)})`,
+    `delete from auth.users where id in (${ids(users.map(({ userId }) => userId))})`,
+  ]) {
+    execFileSync('supabase', ['db', 'query', sql, '--yes', '--local'], { stdio: ['ignore', 'ignore', 'pipe'] });
+  }
 }
 
 const { apiUrl, anonKey, serviceKey } = localEnvironment();
