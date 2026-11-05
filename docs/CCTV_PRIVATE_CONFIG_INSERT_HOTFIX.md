@@ -16,4 +16,6 @@ The existing `cctv_private_config_manager_insert` RLS policy remains the row-lev
 
 ## Verification status
 
-The migration has not been applied to hosted Supabase. Hosted preflight/deployment requires the protected development workflow and its existing recovery and GitHub Environment gates. No remote data was changed for this hotfix.
+The isolated CI run [41987487812](https://github.com/moel-ihsan/webgista/actions/runs/41987487812) passed on commit `694c90b15ffd2fd17362f9dc23c8d93c7d4df3c7`: nine migrations applied to the disposable stack, database lint and ACL/RLS preflight passed, pgTAP passed 130 + 36 + 20 + 27 = 213 assertions, fixture validation passed, and cleanup succeeded. The first CI attempt exposed the fixture's stale migration allowlist; the allowlist now includes 007 while still rejecting unknown versions.
+
+The migration has not been applied to hosted Supabase. Hosted preflight/deployment requires the protected development workflow and its existing recovery and GitHub Environment gates. No remote database data was changed for this hotfix.
