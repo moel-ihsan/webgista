@@ -102,10 +102,10 @@ select is((select count(*) from public.cctv_locations where id = 'b3000000-0000-
 select is((select count(*) from public.traffic_observations where cctv_id = 'b3000000-0000-0000-0000-000000000002'), 2::bigint, 'stale confirmation preserves all history');
 
 reset role;
-create temporary table phase3d1_restricting_dependency (
+create table public.phase3d1_restricting_dependency (
   cctv_id uuid references public.cctv_locations (id) on delete restrict
 );
-insert into pg_temp.phase3d1_restricting_dependency values ('b3000000-0000-0000-0000-000000000004');
+insert into public.phase3d1_restricting_dependency values ('b3000000-0000-0000-0000-000000000004');
 set local role authenticated;
 select throws_matching(
   $$select * from public.delete_cctv_permanently('b3000000-0000-0000-0000-000000000004', 1)$$,
