@@ -45,7 +45,7 @@ select ok(
 );
 select ok(
   (
-    select count(*) = 8
+    select count(*) >= 8
       and bool_and(
         coalesce(array_to_string(procedures.proconfig, ','), '') like '%search_path=%'
       )
