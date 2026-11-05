@@ -73,9 +73,16 @@ async function insertRow(apiUrl, serviceKey, table, body) {
   return data[0];
 }
 
-async function deleteRows(apiUrl, serviceKey, table, filter) {
-  const result = await request(apiUrl, `/rest/v1/${table}?${filter}`, { apiKey: serviceKey, method: 'DELETE' });
-  requireSuccess(result, `disposable ${table} fixture cleanup`);
+function cleanupFixtures(cameras, agencies, users) {
+  const ids = (values) => values.length
+    ? values.map((value) => `'${assert.match(value, /^[0-9a-f-]{36}$/i)[0]}'::uuid`).join(', ')
+    : 'NULL::uuid';
+  const sql = `begin;
+delete from public.cctv_locations where id in (${ids(cameras)});
+delete from public.agencies where id in (${ids(agencies)});
+delete from auth.users where id in (${ids(users.map(({ userId }) => userId))});
+commit;`;
+  execFileSync('supabase', ['db', 'query', sql, '--yes', '--local'], { stdio: ['ignore', 'ignore', 'pipe'] });
 }
 
 const { apiUrl, anonKey, serviceKey } = localEnvironment();
@@ -228,17 +235,5 @@ try {
 
   console.log('PostgREST private-config API checks passed: column-scoped admin/editor writes, actor trigger, cross-agency and anonymous denials.');
 } finally {
-  if (cameras.length) await deleteRows(apiUrl, serviceKey, 'cctv_locations', `id=in.(${cameras.join(',')})`);
-  if (users.length) {
-    const userIds = users.map(({ userId }) => userId).join(',');
-    await deleteRows(apiUrl, serviceKey, 'agency_memberships', `user_id=in.(${userIds})`);
-    await deleteRows(apiUrl, serviceKey, 'user_roles', `user_id=in.(${userIds})`);
-  }
-  if (agencies.length) await deleteRows(apiUrl, serviceKey, 'agencies', `id=in.(${agencies.join(',')})`);
-  for (const user of users) {
-    requireSuccess(await request(apiUrl, `/auth/v1/admin/users/${user.userId}`, {
-      apiKey: serviceKey,
-      method: 'DELETE',
-    }), 'disposable QA auth user cleanup');
-  }
+  cleanupFixtures(cameras, agencies, users);
 }
