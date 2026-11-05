@@ -276,8 +276,13 @@ try {
     method: 'DELETE',
     prefer: 'return=representation',
   });
-  requireSuccess(cameraDelete, 'administrator deletion of dependency-free CCTV QA fixture');
+  requireSuccess(cameraDelete, 'administrator deletion of CCTV QA fixture with private video config');
   assert.equal(cameraDelete.data?.[0]?.id, foreignCamera, 'administrator removes the requested QA camera');
+  const deletedCameraConfig = requireSuccess(await request(apiUrl, `/rest/v1/cctv_private_config?select=cctv_id&cctv_id=eq.${foreignCamera}`, {
+    apiKey: anonKey,
+    token: administrator.accessToken,
+  }), 'read after camera deletion');
+  assert.deepEqual(deletedCameraConfig, [], 'camera deletion cascades only its dependent private video config');
 
   const editorOrphanDelete = await storageRequest(apiUrl, '/storage/v1/object/cctv-images', {
     apiKey: anonKey,
