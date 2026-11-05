@@ -289,6 +289,15 @@ try {
     [200, 400, 403, 404].includes(editorOrphanDelete.status),
     `agency editor orphan deletion returned an unexpected HTTP ${editorOrphanDelete.status}`,
   );
+  const anonymousOrphanDelete = await storageRequest(apiUrl, '/storage/v1/object/cctv-images', {
+    apiKey: anonKey,
+    method: 'DELETE',
+    body: { prefixes: [imagePath] },
+  });
+  assert.ok(
+    [200, 400, 403, 404].includes(anonymousOrphanDelete.status),
+    `anonymous orphan deletion returned an unexpected HTTP ${anonymousOrphanDelete.status}`,
+  );
   const anonymousOrphanRead = await storageRequest(apiUrl, `/storage/v1/object/authenticated/cctv-images/${imagePath}`, { apiKey: anonKey });
   assert.ok(anonymousOrphanRead.status >= 400, 'anonymous user cannot read an orphaned private camera image');
   const adminOrphanRead = await storageRequest(apiUrl, `/storage/v1/object/authenticated/cctv-images/${imagePath}`, {

@@ -229,11 +229,11 @@ select results_eq($$select name from storage.objects where name = 'phase3d-orpha
   $$values ('phase3d-orphan-cleanup-fixture.webp'::text)$$, 'administrator can locate an orphaned CCTV image for cleanup');
 reset role;
 
-select set_config('request.jwt.claims', '{"role":"anon"}', true);
-set local role anon;
-select results_eq($$delete from storage.objects where bucket_id = 'cctv-images' and name = 'phase3d-orphan-cleanup-fixture.webp' returning name$$,
-  $$select null::text where false$$, 'anonymous callers cannot delete orphaned CCTV image objects');
-reset role;
+select ok(not exists (
+  select 1 from pg_policy
+  where polrelid = 'storage.objects'::regclass and polcmd = 'd'
+    and (polroles @> array['anon'::regrole::oid] or polroles @> array[0::oid])
+), 'anonymous and PUBLIC roles have no Storage object delete policy');
 
 select * from finish();
 rollback;
