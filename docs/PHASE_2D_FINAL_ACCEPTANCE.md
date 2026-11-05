@@ -90,3 +90,16 @@ This section records the later targeted Dashboard and map work; it does not repl
 - Fresh `npm run verify`: TypeScript and ESLint passed, 130 tests in 26 files passed, and Vite production build succeeded. `git diff --check` and staged diff checks passed.
 - Unauthenticated headless Chrome showed the Map View shell, MapLibre controls, attribution, and traffic legend. The software-rendered screenshot did not show map tiles, so map imagery is pending normal Chrome confirmation. No authenticated session was available for current Dashboard/profile data, CCTV popup/search, or agency action acceptance.
 - Agency deletion remains disabled and analytic video remains deferred. No migrations, hosted records, Storage settings, or feature flags were changed. Commit `59a06190f27b2862a0859aea7e79a74c220a750e` was pushed to the verified Vercel production branch; the automatic Git deployment `dpl_2Usvg9gAGyyUYyCAbzPkU3cxJFht` is `READY`.
+
+## Phase 2E and Phase 3 progress — 2026-11-05
+
+| Area | Status | Evidence |
+|---|---|---|
+| Phase 2E observation schema and RLS | VERIFIED — isolated CI | Disposable run [41964786459](https://github.com/moel-ihsan/webgista/actions/runs/41964786459), commit `7b5bec52e08ac95902f2d26fe992a12eb5b686a5`: 201/201 pgTAP assertions, migration preflight, lint, fixture validation, and cleanup passed. Migration 005 has not been applied to hosted Supabase. |
+| Phase 2E frontend | IMPLEMENTED — hosted acceptance pending | Manual observations are separate from demo detections. Existing authorization is enforced by RLS; only disposable role-scoped pgTAP contexts have been executed. |
+| Migration 005 deployment authorization | IMPLEMENTED LOCALLY — verification pending | Guard now hashes 005, permits only a chronological reviewed migration suffix, requires 005 as the sole pending migration for this apply, and limits the explicit development waiver to that exact version. The original 003/004 waiver remains separate. |
+| Video Analytics demo UI | IMPLEMENTED — browser acceptance pending | `/analysis` includes two licensed annotated samples and their generated frame-level JSON. No live-source access, tracking, traffic-condition inference, or observation writes are claimed. |
+| Local CV pipeline | VERIFIED — offline only | YOLOX-S processed both sample videos; Python pipeline tests passed 2/2. Results: 110 and 186 per-frame detection instances, not unique vehicles. |
+| Hosted Phase 2E and online/browser acceptance | BLOCKED — not yet executed | Requires final feature-branch CI, the protected `webgista-dev` workflow with explicit 005 waiver, then deployment/browser checks. No hosted observation records were created. |
+
+Latest local frontend verification for this worktree passed TypeScript, ESLint, 138 Vitest tests across 29 files, and production build. The latest isolated verification branch and its CI result are documented in the Phase 2E report; no hosted database or production deployment is represented as complete here.

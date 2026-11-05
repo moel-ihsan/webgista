@@ -14,13 +14,14 @@ on:
           - verify
           - create-test-fixture
       development_data_loss_waiver:
-        description: Explicit one-time acceptance of unrecoverable development data loss for migrations 003 and 004 only
+        description: Explicit one-time development data-loss acceptance; guard restricts the selected migration set
         type: choice
         required: true
         default: none
         options:
           - none
           - accept-dev-data-loss-for-003-004
+          - accept-dev-data-loss-for-005
 
 permissions:
   contents: read
@@ -118,7 +119,7 @@ jobs:
         run: node scripts/phase2d-migration-guard.mjs snapshot
 
       - name: Verify a completed development database recovery point (read-only)
-        if: ${{ (inputs.apply_migrations == 'apply' && inputs.development_data_loss_waiver != 'accept-dev-data-loss-for-003-004') || inputs.apply_migrations == 'create-test-fixture' }}
+        if: ${{ (inputs.apply_migrations == 'apply' && inputs.development_data_loss_waiver == 'none') || inputs.apply_migrations == 'create-test-fixture' }}
         shell: bash
         run: |
           set -euo pipefail
@@ -203,8 +204,12 @@ jobs:
         if: ${{ inputs.apply_migrations != 'apply' }}
         run: echo "Preview complete. No migrations were applied. Re-run manually and select apply after reviewing the dry-run."
 
+      - name: Require migration 005 as the sole pending migration
+        if: ${{ inputs.apply_migrations == 'apply' }}
+        run: node scripts/phase2d-migration-guard.mjs phase2e "$RUNNER_TEMP/phase2d-migrations.txt"
+
       - name: Validate and record the explicit development-only backup waiver
-        if: ${{ inputs.apply_migrations == 'apply' && inputs.development_data_loss_waiver == 'accept-dev-data-loss-for-003-004' }}
+        if: ${{ inputs.apply_migrations == 'apply' && inputs.development_data_loss_waiver != 'none' }}
         shell: bash
         run: |
           set -euo pipefail
@@ -215,8 +220,8 @@ jobs:
             echo
             echo '- Explicit workflow input accepted for this apply run.'
             echo '- Target is restricted to the verified `webgista-dev` project and `feat/webgista-v2` branch.'
-            echo '- The operator accepts loss of development data if this migration fails; no recovery backup is available.'
-            echo '- Scope is restricted by the migration hash and pending-set guards to migrations 003 and 004 only.'
+            echo "- Selected waiver: $DEVELOPMENT_DATA_LOSS_WAIVER. The operator explicitly accepts development data loss; this path does not verify a backup."
+            echo '- The migration hash, project, branch, and exact pending-set guards still apply.'
             echo "- Guard result: $waiver_result"
           } >> "$GITHUB_STEP_SUMMARY"
 
@@ -228,6 +233,7 @@ jobs:
           node scripts/phase2d-migration-guard.mjs snapshot
           supabase migration list --remote="$SUPABASE_DB_URL" > "$RUNNER_TEMP/phase2d-migrations-before-apply.txt" 2>&1
           node scripts/phase2d-migration-guard.mjs history "$RUNNER_TEMP/phase2d-migrations-before-apply.txt"
+          node scripts/phase2d-migration-guard.mjs phase2e "$RUNNER_TEMP/phase2d-migrations-before-apply.txt"
           docker run --rm -i --network host postgres:17-alpine \
             psql "$SUPABASE_DB_URL" --set=ON_ERROR_STOP=1 --single-transaction \
             --command='SET TRANSACTION READ ONLY' --file=/dev/stdin \

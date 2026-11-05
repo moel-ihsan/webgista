@@ -1,4 +1,29 @@
 select jsonb_pretty(jsonb_build_object(
+  'phase_2e_observation_security', jsonb_build_object(
+    'migration_005_applied', exists (
+      select 1 from supabase_migrations.schema_migrations where version = '20261105000100'
+    ),
+    'condition_column_present', exists (
+      select 1 from information_schema.columns
+      where table_schema = 'public' and table_name = 'traffic_observations'
+        and column_name = 'condition' and udt_name = 'traffic_condition'
+    ),
+    'latest_view_security_invoker', exists (
+      select 1 from pg_class
+      where oid = to_regclass('public.latest_traffic_observations')
+        and 'security_invoker=true' = any(coalesce(reloptions, '{}'::text[]))
+    ),
+    'authenticated_latest_view_select', coalesce((
+      select has_table_privilege('authenticated', oid, 'SELECT')
+      from pg_class where oid = to_regclass('public.latest_traffic_observations')
+    ), false),
+    'anonymous_latest_view_select', coalesce((
+      select has_table_privilege('anon', oid, 'SELECT')
+      from pg_class where oid = to_regclass('public.latest_traffic_observations')
+    ), false),
+    'anonymous_base_table_select', has_table_privilege('anon', 'public.traffic_observations', 'SELECT'),
+    'observation_rls_enabled', (select relrowsecurity from pg_class where oid = 'public.traffic_observations'::regclass)
+  ),
   'migration_security', jsonb_build_object(
     'rls_enabled', jsonb_build_object(
       'agencies', (select relrowsecurity from pg_class where oid = 'public.agencies'::regclass),

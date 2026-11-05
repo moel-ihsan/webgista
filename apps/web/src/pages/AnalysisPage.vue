@@ -2,6 +2,7 @@
 import { computed, onMounted, ref } from 'vue'
 
 import { authSession } from '../auth/session'
+import TrafficDemoPanel from '../components/TrafficDemoPanel.vue'
 import { listCctvLocations, type CctvManagementLocation } from '../data/cctvManagement'
 import { createManualTrafficObservation, listTrafficObservations, type ManualObservationInput } from '../data/trafficObservations'
 import type { TrafficCondition, TrafficObservation } from '../domain/traffic'
@@ -89,13 +90,7 @@ onMounted(() => { void load() })
 <template>
   <div class="legacy-analysis">
     <section class="legacy-video-column" aria-label="CCTV video workspace">
-      <div class="legacy-video-stage" role="img" aria-label="Video analysis is unavailable">
-        <div class="legacy-video-stage__message">
-          <span class="legacy-video-stage__icon" aria-hidden="true">▶</span>
-          <strong>{{ selectedCamera?.name ?? 'No CCTV selected' }}</strong>
-          <span>Video source access and computer-vision processing are not connected.</span>
-        </div>
-      </div>
+      <TrafficDemoPanel />
       <div class="legacy-video-actions">
         <label for="observation-camera">CCTV</label>
         <select id="observation-camera" v-model="selectedCameraId" :disabled="status !== 'ready'" @change="refreshHistory">

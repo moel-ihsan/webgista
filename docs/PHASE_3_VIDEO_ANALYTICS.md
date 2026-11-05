@@ -32,11 +32,18 @@ Instead, two clips marked Free under the [Pexels Free Stock Photo & Video Licens
 
 Counts are model outputs, not ground truth or unique vehicle totals. The 1 FPS sample misses between-frame movement. The clips are public stock footage and are demo material, never live CCTV.
 
-The generated `traffic_sample_01.analysis.json` and `traffic_sample_02.analysis.json` include timestamps, boxes, confidence, model identifier, source license reference, and explicit no-tracking/no-condition metadata. Annotated H.264 files are beside them in the same temporary directory. These files were kept outside the repository and Vercel deployment.
+The generated JSON includes timestamps, boxes, confidence, model identifier, source license reference, and explicit no-tracking/no-condition metadata. Full-resolution source clips and complete analysis outputs remain in `/private/tmp/webgista-traffic-samples`; only the two compact annotated previews and corresponding JSON are included in the web app.
+
+## WebGISTA demo UI
+
+The `/analysis` page now has a separate Video Analytics demo panel. It offers the two already-processed Pexels samples, plays the H.264 annotated frame-sampled preview, and reads the actual JSON outputs for sample metadata, total detection instances, peak detections, and the frame currently shown by the preview. Each sample is labeled as demo footage, links to its source and license, and clearly says it is not live CCTV. The current frame list reports classes, confidence, and bounding boxes. The model samples at 1 FPS, so the annotated preview is intentionally frame-sampled rather than a continuous detector overlay.
+
+The Pexels license permits use on websites/apps and modification subject to its restrictions; the video previews and compact JSON files are included as static WebGISTA demo assets. The two annotated videos total about 2.8 MB. Their original YouTube candidates remain unused because their reuse rights were not confirmed. This demo panel does not write to `traffic_observations`; manual observations remain separately labeled and persisted through the authorized Phase 2E flow.
 
 ## Acceptance status
 
-- Local offline detection and annotation: executed on both licensed clips.
+- Local offline detection and annotation: executed on both licensed clips; 110 and 186 frame-level vehicle detection instances respectively.
+- `/analysis` sample selector, annotated playback, and actual per-frame JSON results: implemented with component regression coverage; browser verification pending.
 - Data contract and provenance output: generated and inspected.
 - Tracking: not implemented or claimed.
 - Traffic condition derivation: not implemented; no calibration supports it.

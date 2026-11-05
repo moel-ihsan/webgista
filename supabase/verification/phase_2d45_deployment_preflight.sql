@@ -2,12 +2,14 @@ do $preflight$
 declare
   profile_media_applied boolean;
   map_settings_applied boolean;
+  traffic_observations_applied boolean;
   bucket_ok boolean;
   policy_names text[];
   agency_write_policies_ok boolean;
   membership_write_policies_ok boolean;
   camera_write_policies_ok boolean;
   publication_functions_ok boolean;
+  observation_policies_ok boolean;
   expected_storage_policies text[] := array[
     'cctv_images_delete_managed', 'cctv_images_insert_managed',
     'cctv_images_read_managed', 'cctv_images_read_public',
@@ -19,6 +21,8 @@ begin
     into profile_media_applied;
   select exists (select 1 from supabase_migrations.schema_migrations where version = '20261104000400')
     into map_settings_applied;
+  select exists (select 1 from supabase_migrations.schema_migrations where version = '20261105000100')
+    into traffic_observations_applied;
 
   if map_settings_applied and not profile_media_applied then
     raise exception 'Migration history is inconsistent: 004 is applied before 003';
@@ -230,6 +234,45 @@ begin
     end if;
   elsif to_regclass('public.app_map_settings') is not null then
     raise exception 'Untracked app_map_settings table exists before migration 004';
+  end if;
+
+  if traffic_observations_applied then
+    select count(*) = 4 and bool_and(
+      (polname = 'traffic_observations_manager_select' and polcmd = 'r')
+      or (polname = 'traffic_observations_manager_insert' and polcmd = 'a')
+      or (polname = 'traffic_observations_manager_update' and polcmd = 'w')
+      or (polname = 'traffic_observations_admin_delete' and polcmd = 'd')
+    ) into observation_policies_ok
+    from pg_policy
+    where polrelid = 'public.traffic_observations'::regclass and polcmd in ('r', 'a', 'w', 'd', '*');
+
+    if to_regtype('public.traffic_condition') is null
+      or (select array_agg(enumlabel::text collate "C" order by enumsortorder) from pg_enum
+          where enumtypid = 'public.traffic_condition'::regtype)
+        is distinct from (array['terrible', 'bad', 'poor', 'average', 'good', 'great']::text[] collate "C")
+      or (select count(*) from information_schema.columns where table_schema = 'public'
+          and table_name = 'traffic_observations' and column_name = 'condition'
+          and udt_name = 'traffic_condition' and is_nullable = 'YES') <> 1
+      or to_regclass('public.latest_traffic_observations') is null
+      or not (select relrowsecurity from pg_class where oid = 'public.traffic_observations'::regclass)
+      or not (select 'security_invoker=true' = any(coalesce(reloptions, '{}'::text[]))
+          from pg_class where oid = 'public.latest_traffic_observations'::regclass)
+      or not has_table_privilege('authenticated', 'public.latest_traffic_observations', 'SELECT')
+      or has_table_privilege('anon', 'public.latest_traffic_observations', 'SELECT')
+      or has_table_privilege('anon', 'public.traffic_observations', 'SELECT')
+      or not has_column_privilege('authenticated', 'public.traffic_observations', 'condition', 'INSERT')
+      or not has_column_privilege('authenticated', 'public.traffic_observations', 'condition', 'UPDATE')
+      or not coalesce(observation_policies_ok, false)
+      or exists (select 1 from information_schema.columns where table_schema = 'public'
+          and table_name = 'latest_traffic_observations'
+          and column_name in ('source_uri', 'credential_reference')) then
+      raise exception 'Installed traffic observation schema, RLS, grants, or view differs from migration 005';
+    end if;
+  elsif to_regtype('public.traffic_condition') is not null
+    or exists (select 1 from information_schema.columns where table_schema = 'public'
+      and table_name = 'traffic_observations' and column_name = 'condition')
+    or to_regclass('public.latest_traffic_observations') is not null then
+    raise exception 'Untracked traffic observation objects exist before migration 005';
   end if;
 end;
 $preflight$;
