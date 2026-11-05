@@ -75,7 +75,10 @@ async function insertRow(apiUrl, serviceKey, table, body) {
 
 function cleanupFixtures(cameras, agencies, users) {
   const ids = (values) => values.length
-    ? values.map((value) => `'${assert.match(value, /^[0-9a-f-]{36}$/i)[0]}'::uuid`).join(', ')
+    ? values.map((value) => {
+      assert.match(value, /^[0-9a-f-]{36}$/i);
+      return `'${value}'::uuid`;
+    }).join(', ')
     : 'NULL::uuid';
   const sql = `begin;
 delete from public.cctv_locations where id in (${ids(cameras)});
