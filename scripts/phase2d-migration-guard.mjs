@@ -8,6 +8,7 @@ export const approvedHashes = new Map([
   ['20261104000400', '2b7d2fd75db77009fcb6625b013fb7078c679740ac34a29629afa8577405f594'],
   ['20261105000100', 'cc3ee6456022f67c9169469bc5a15bab4505fb816b81d3766e52c22547d2381c'],
   ['20261105000200', 'e3ea8d7c5fc9f72ee45566bb4aadbddeab4a74133af29daf09fb4f5bfa101d99'],
+  ['20261105000300', '606f0c5a0299ffbd84420b91b6b3706cf5b737d259aa271ca6a1e238267fda47'],
 ]);
 
 const approvedVersions = [...approvedHashes.keys()];
@@ -152,6 +153,12 @@ export function assertPhase2eAclFixOnlyPending(pendingVersions) {
   }
 }
 
+export function assertPhase3cPrivateConfigOnlyPending(pendingVersions) {
+  if (pendingVersions.length !== 1 || pendingVersions[0] !== '20261105000300') {
+    throw new Error('This deployment is authorized only for migration 20261105000300; refusing any other pending set.');
+  }
+}
+
 export function assertRecoveryAvailable(payload, now = Date.now()) {
   if (!Array.isArray(payload?.backups)) throw new Error('Supabase backup API returned an invalid response.');
   const available = payload.backups.filter((backup) =>
@@ -198,6 +205,10 @@ if (process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.ar
       const pending = await inspectHistory(first);
       assertPhase2eAclFixOnlyPending(pending);
       console.log('The only pending migration is the approved Phase 2E ACL fix 20261105000200.');
+    } else if (command === 'phase3c-private-config' && first) {
+      const pending = await inspectHistory(first);
+      assertPhase3cPrivateConfigOnlyPending(pending);
+      console.log('The only pending migration is the approved CCTV private-config INSERT grant 20261105000300.');
     } else if (command === 'dry-run' && first && second) {
       const pending = await inspectHistory(first);
       const dryRun = await readFile(second, 'utf8');
@@ -218,7 +229,7 @@ if (process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.ar
       });
       console.log(`Explicit development data-loss waiver accepted for approved pending migrations: ${waivedVersions.join(', ')}.`);
     } else {
-      throw new Error('Usage: snapshot | history <migration-list-output> | applied <migration-list-output> | phase2e <migration-list-output> | phase2e-acl-fix <migration-list-output> | dry-run <migration-list-output> <dry-run-output> | backup <backup-api-json> | waiver <migration-list-output>');
+      throw new Error('Usage: snapshot | history <migration-list-output> | applied <migration-list-output> | phase2e <migration-list-output> | phase2e-acl-fix <migration-list-output> | phase3c-private-config <migration-list-output> | dry-run <migration-list-output> <dry-run-output> | backup <backup-api-json> | waiver <migration-list-output>');
     }
   } catch (error) {
     console.error(error.message);

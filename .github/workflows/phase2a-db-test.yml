@@ -6,6 +6,7 @@ on:
       - feat/webgista-v2
       - ci/phase2d5-settings-verification-20261104
       - ci/phase2d45-final-verification-20261105
+      - ci/phase3c-private-config-insert-20261105
     paths:
       - "supabase/**"
       - "scripts/**"
@@ -52,6 +53,13 @@ jobs:
 
       - name: Lint database functions
         run: supabase db lint --schema public,private --level error --fail-on error
+
+      - name: Verify CCTV private-config ACL and RLS preflight
+        run: |
+          docker exec -i supabase_db_webgista-v2 psql -U postgres -d postgres \
+            --set=ON_ERROR_STOP=1 --single-transaction \
+            --command='SET TRANSACTION READ ONLY' --file=/dev/stdin \
+            < supabase/verification/phase_3c_private_config_preflight.sql
 
       - name: Run Phase 2A security tests
         run: supabase test db supabase/tests/phase_2a_security.test.sql

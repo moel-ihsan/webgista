@@ -168,7 +168,7 @@ describe('CCTV form v1 field parity', () => {
   })
 
   it('keeps form values and the selected demo when association saving fails, then retries without duplicating the camera', async () => {
-    saveCctvDemoVideo.mockRejectedValueOnce(new Error('The demo video association could not be saved.'))
+    saveCctvDemoVideo.mockRejectedValueOnce(new Error('The database denied permission to save the video association (42501).'))
     const root = await mountForm()
     root.querySelector<HTMLButtonElement>('[data-map-picker]')!.click()
     await nextTick()
@@ -191,6 +191,7 @@ describe('CCTV form v1 field parity', () => {
     expect(root.querySelector<HTMLInputElement>('#cctv-name')?.value).toBe('Demo Camera')
     expect(root.querySelector<HTMLSelectElement>('#cctv-demo-video')?.value).toBe('traffic-sample-01')
     expect(root.textContent).toContain('CCTV details were saved, but the video association could not be saved')
+    expect(root.textContent).toContain('The database denied permission to save the video association (42501).')
     expect(saveCctvDemoVideo).toHaveBeenCalledTimes(1)
 
     root.querySelector<HTMLFormElement>('form')!.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }))

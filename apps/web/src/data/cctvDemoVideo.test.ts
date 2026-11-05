@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from 'vitest'
 import { demoVideoForSource, getCctvDemoAssociation, saveCctvDemoVideo } from './cctvDemoVideo'
 import { trafficDemoVideos } from './trafficDemo'
 
-function cameraConfig(config: { cctv_id: string; source_kind: string; source_uri: string } | null) {
+function cameraConfig(config: { cctv_id: string; source_kind: string; source_uri: string } | null, insertError: { code: string } | null = null) {
   const selectCalls: string[] = []
   const writes: unknown[] = []
   const from = vi.fn().mockImplementation(() => {
@@ -12,7 +12,7 @@ function cameraConfig(config: { cctv_id: string; source_kind: string; source_uri
       select(fields: string): Query
       eq(key: string, value: unknown): Query
       maybeSingle(): Promise<{ data: { cctv_id: string } | null; error: null }>
-      insert(value: unknown): Promise<{ error: null }>
+      insert(value: unknown): Promise<{ error: { code: string } | null }>
       update(value: unknown): Query
       delete(): Query
     }
@@ -26,7 +26,7 @@ function cameraConfig(config: { cctv_id: string; source_kind: string; source_uri
         }
         return { data: { cctv_id: config.cctv_id }, error: null }
       },
-      async insert(value) { writes.push(value); return { error: null } },
+      async insert(value) { writes.push(value); return { error: insertError } },
       update(value) { writes.push(value); return this },
       delete() { return this },
     }
@@ -78,5 +78,11 @@ describe('authorized demo-video association', () => {
     await expect(saveCctvDemoVideo(mock.client, 'camera-1', 'user-1', 'traffic-sample-01'))
       .rejects.toThrow('This camera has a separate private video configuration')
     expect(mock.writes).toHaveLength(0)
+  })
+
+  it('reports the confirmed missing database privilege without exposing private configuration', async () => {
+    const mock = cameraConfig(null, { code: '42501' })
+    await expect(saveCctvDemoVideo(mock.client, 'camera-1', 'user-1', 'traffic-sample-01'))
+      .rejects.toThrow('The database denied permission to save the video association (42501).')
   })
 })
