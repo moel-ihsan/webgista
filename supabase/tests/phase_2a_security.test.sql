@@ -967,7 +967,11 @@ select is(
 select ok(
   not has_table_privilege('authenticated', 'public.cctv_private_config', 'INSERT')
     and has_table_privilege('authenticated', 'public.cctv_private_config', 'SELECT')
+    and has_column_privilege('authenticated', 'public.cctv_private_config', 'cctv_id', 'INSERT')
+    and has_column_privilege('authenticated', 'public.cctv_private_config', 'source_kind', 'INSERT')
     and has_column_privilege('authenticated', 'public.cctv_private_config', 'source_uri', 'INSERT')
+    and has_column_privilege('authenticated', 'public.cctv_private_config', 'credential_reference', 'INSERT')
+    and has_column_privilege('authenticated', 'public.cctv_private_config', 'notes', 'INSERT')
     and not has_column_privilege('authenticated', 'public.cctv_private_config', 'created_by', 'INSERT')
     and not has_column_privilege('authenticated', 'public.cctv_private_config', 'updated_by', 'INSERT')
     and not has_column_privilege('authenticated', 'public.cctv_private_config', 'created_at', 'INSERT')
