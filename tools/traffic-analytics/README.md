@@ -1,8 +1,8 @@
 # Offline traffic video analysis
 
-This local batch tool runs OpenCV Zoo YOLOX-S COCO with OpenCV DNN. It records repeated detection instances, experimental tracker IDs, and virtual-line crossing events as separate measurements. It does not run in Vercel, infer live CCTV, or write traffic observations.
+This local batch tool runs OpenCV Zoo YOLOX-S COCO with OpenCV DNN. It reports repeated detection instances, heuristic tracker IDs, and virtual-line crossing candidates separately. It does not run in Vercel, process live CCTV, or write Traffic Observations.
 
-## Setup and processing
+## Setup and reproducible processing
 
 ```sh
 python3 -m venv .venv-traffic
@@ -11,7 +11,7 @@ python -m pip install -r tools/traffic-analytics/requirements.txt
 curl -L 'https://huggingface.co/opencv/object_detection_yolox/resolve/main/object_detection_yolox_2022nov_int8.onnx' -o /tmp/yolox.onnx
 ```
 
-Keep model weights and source clips out of the repository. The following per-video settings reproduce the current site demos (the videos are the checked-in, licensed 1280×720 source assets):
+Keep model weights outside the repository. The following per-video settings reproduce the checked-in site analysis (1280×720 source MP4s):
 
 ```sh
 python tools/traffic-analytics/analyze_video.py apps/web/public/traffic-demo/traffic_sample_01.mp4 --model /tmp/yolox.onnx --json apps/web/src/data/traffic-demo/traffic_sample_01.analysis.json --annotated apps/web/public/traffic-demo/traffic_sample_01_annotated.mp4 --source-reference 'Pexels: City Intersection with Traffic and Signals, SHOX ART; Pexels Free License' --sampled-fps 5 --confidence 0.35 --roi 0.55 0.48 0.44 0.43 --counting-line 0.74 0.55 0.74 0.9 --direction both --max-track-distance 35 --max-missed-frames 2
@@ -19,22 +19,36 @@ python tools/traffic-analytics/analyze_video.py apps/web/public/traffic-demo/tra
 python tools/traffic-analytics/analyze_video.py apps/web/public/traffic-demo/traffic_sample_02.mp4 --model /tmp/yolox.onnx --json apps/web/src/data/traffic-demo/traffic_sample_02.analysis.json --annotated apps/web/public/traffic-demo/traffic_sample_02_annotated.mp4 --source-reference 'Pexels: Bustling Night Traffic at Ben Thanh Market, Media Dung; Pexels Free License' --sampled-fps 5 --confidence 0.35 --roi 0.02 0.4 0.96 0.58 --counting-line 0.52 0.42 0.52 0.96 --direction both --max-track-distance 35 --max-missed-frames 2
 ```
 
-Each output JSON records its frame dimensions, model, source, sampling rate, confidence threshold, ROI, finite counting segment, direction, track summaries, detections, crossing timestamp/frame, and ground-truth status. Car maps to LV, motorcycle to MC, bus/truck to HV, bicycle remains explicit; people and unsupported COCO classes are excluded.
+The JSON includes model/version and model SHA-256, source SHA-256, source dimensions/FPS, sampled FPS/frame interval, configuration, raw detections, track diagnostics, crossing candidates, and ground-truth status. Car→LV, motorcycle→MC, bus/truck→HV, and bicycle remains separate; people and unsupported COCO classes are excluded.
 
-## Manual ground truth
+## Human ground-truth review
 
-The checked-in `ground_truth_template.csv` contains only a header; it deliberately has no fabricated labels. Review the unannotated source video, use the counting segment documented in the analysis JSON, and record each actual crossing once with a unique event ID, category (`LV`, `HV`, `MC`, `bicycle`), direction (`negative_to_positive` or `positive_to_negative` relative to the directed line), time in seconds, and source frame index. Keep this CSV with local evaluation artifacts unless the labels are authorized for publication.
-
-Run one-to-one event matching at a half-second timestamp tolerance:
+The local reviewer displays the unannotated clip and configured ROI/counting line, supports playback, timestamp seeking and source-frame stepping, and lets a human add/edit/remove events by class/direction/status/note. Model crossings are bookmarks only and are never copied into labels. Its 2-second timeline covers the entire clip, including intervals without predictions. It records reviewed playback intervals and requires a reviewer attestation; these are human-review aids, not cryptographic proof that the clip was watched.
 
 ```sh
-python tools/traffic-analytics/evaluate_ground_truth.py apps/web/src/data/traffic-demo/traffic_sample_01.analysis.json /path/to/labels.csv --tolerance-seconds 0.5
+python tools/traffic-analytics/annotation_review/serve.py
+# Open http://127.0.0.1:8765/tools/traffic-analytics/annotation_review/
 ```
 
-The evaluator reports TP/FP/FN, precision, recall, F1, absolute count error, and per-category errors only when labels exist. It matches same category and direction within the configured time tolerance. It does not calculate IDF1; track-identity ground truth would require a separate frame-by-frame identity annotation. With the current header-only template, no accuracy metric is available.
+Export a JSON review package, resolve all unreviewed/uncertain rows, review the full clip, and attest. Then score it against the matching analysis JSON:
 
-## Limits
+```sh
+python tools/traffic-analytics/evaluate_ground_truth.py \
+  apps/web/src/data/traffic-demo/traffic_sample_01.analysis.json \
+  /path/to/traffic_sample_01.ground-truth-review.json --tolerance-seconds 0.5
+```
 
-Tracking is greedy same-class centroid association with linear velocity prediction, a distance gate, and a finite line intersection. It tolerates a configured number of missed samples and counts an allowed crossing at most once per tracker ID. I retained this small dependency-free tracker rather than add SORT/ByteTrack: without labeled tracks, a comparison would not establish that a heavier alternative is more accurate. Dense overlap, class flicker, prolonged occlusion, and perspective can still split or merge tracks. Track diagnostics (such as one-frame track share) describe output, not accuracy.
+Scoring requires matching video ID and source hash, reviewer identity, complete playback coverage and attestation. Confirmed/corrected events are matched one-to-one by vehicle class/category, direction, and timestamp. Rejected candidate rows are excluded; an empty event list after a full review is valid ground truth and makes every unmatched prediction a false positive. Output includes TP/FP/FN, precision, recall, F1, absolute count error, and class/category/direction breakdowns. Event-level labels do not provide tracking identity metrics such as IDF1. CSV export is available for external review, but scoring consumes the validated JSON package.
 
-The clips are about 23 and 26 seconds, below the calculation module's minimum 30-second window. They have no manually validated crossing labels or camera-specific road capacity, so V/C and Traffic Condition remain unavailable. Do not loop the clips, extrapolate their crossings, or record them as Banda Aceh CCTV observations. See `docs/PHASE_3_VIDEO_ANALYTICS.md` for source/license and research-method notes.
+## Current diagnostics and limits
+
+At a requested 5 FPS, every fifth source frame is processed (about 0.209 seconds for clip 01 and 0.200 seconds for clip 02). The current sampled site assets yield:
+
+| Clip | Duration / sampled frames | Detections | Heuristic track IDs | One-sample tracks | Crossing candidates |
+|---|---:|---:|---:|---:|---:|
+| 01 | 23.023 s / 111 | 540 | 35 | 5 (14.3%) | 4 |
+| 02 | 26.000 s / 130 | 901 | 263 | 109 (41.4%) | 25 |
+
+For Video 02, singleton detections have lower median confidence (0.504) than detections in longer tracks (0.588); all its detections are inside the configured ROI, so ROI exclusion does not explain its singleton tracks. At this sampling cadence, a 35 px gate, crowded/night footage, detector misses, occlusion, fast apparent motion, and greedy local matching can each fragment identities. Those are plausible contributors, not a proven per-track cause; a human frame review is needed to distinguish missed detections from association failure. Video 01 also has 187 detections outside its smaller ROI, which are intentionally not tracked. Tracker settings have not been tuned against the clips because no human ground truth is available.
+
+There are no human-reviewed labels checked in, so the figures above are model/tracker outputs, not validated counts, and no P/R/F1 or count-error metric is available. Neither clip reaches the V/C module's 30-second minimum, nor has calibrated camera-specific capacity; the condition remains unavailable. Do not loop the videos, extrapolate crossings, infer congestion from detections, or record stock footage as Banda Aceh traffic.

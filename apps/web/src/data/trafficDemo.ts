@@ -35,14 +35,17 @@ export interface DemoAnalysis {
   record_kind: string
   is_live_cctv: boolean
   source_video_identifier: string
+  source_video_sha256: string
   source_reference: string
   input_duration_seconds: number
+  source_fps: number
   video_dimensions: { width: number; height: number }
   source_frame_count: number
+  sample_frame_interval: number
   processed_frame_count: number
   requested_sampled_fps: number
   sampled_fps: number
-  model: { name: string; version: string; license: string }
+  model: { name: string; version: string; sha256: string; license: string }
   tracking: {
     enabled: boolean
     reason?: string
@@ -65,8 +68,17 @@ export interface DemoAnalysis {
   detection_instances_by_class: Record<DemoVehicleClass, number>
   detection_instances_by_traffic_category: Record<'LV' | 'HV' | 'MC' | 'bicycle', number>
   tracked_objects_count: number
-  tracked_objects: Array<{ track_id: number; class: string; traffic_category: string | null; observations: number; crossed_counting_line: boolean }>
-  tracking_quality: { status: string; single_detection_track_count: number; mean_sampled_observations_per_track: number; note: string }
+  tracked_objects: Array<{
+    track_id: number; class: string; traffic_category: string | null; observations: number
+    crossed_counting_line: boolean; mean_detection_confidence: number; gap_reacquisitions: number
+    max_intervening_missed_samples: number; max_prediction_error_pixels: number; last_prediction_error_pixels: number
+  }>
+  tracking_quality: {
+    status: string; single_detection_track_count: number; mean_sampled_observations_per_track: number
+    tracks_with_gap_reacquisition: number; max_intervening_missed_samples: number
+    max_prediction_error_pixels: number; untracked_detection_instances_outside_roi: number
+    track_count_by_class: Record<DemoVehicleClass, number>; note: string
+  }
   crossing_event_count: number
   crossing_events: DemoCrossingEvent[]
   ground_truth_evaluation: null | Record<string, unknown>

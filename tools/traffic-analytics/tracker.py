@@ -51,6 +51,9 @@ class CentroidLineTracker:
             'last_frame': frame_index, 'first_timestamp_seconds': timestamp_seconds,
             'last_timestamp_seconds': timestamp_seconds, 'side': side,
             'last_nonzero_center': center if side else None, 'counted': False,
+            'confidence_sum': 0, 'gap_reacquisitions': 0,
+            'max_intervening_missed_samples': 0, 'max_prediction_error_pixels': 0,
+            'last_prediction_error_pixels': 0,
         }
         return track_id
 
@@ -71,14 +74,15 @@ class CentroidLineTracker:
                 )
                 distance = hypot(centers[detection_index][0] - predicted[0], centers[detection_index][1] - predicted[1])
                 if distance <= self.max_distance * missed_steps:
-                    candidates.append((distance / missed_steps, detection_index, track_id))
+                    candidates.append((distance / missed_steps, detection_index, track_id, distance))
 
-        used_detections, used_tracks, assigned = set(), set(), {}
-        for _, detection_index, track_id in sorted(candidates):
+        used_detections, used_tracks, assigned, assignment_errors = set(), set(), {}, {}
+        for _, detection_index, track_id, distance in sorted(candidates):
             if detection_index not in used_detections and track_id not in used_tracks:
                 used_detections.add(detection_index)
                 used_tracks.add(track_id)
                 assigned[detection_index] = track_id
+                assignment_errors[detection_index] = distance
 
         events = []
         for index, detection in enumerate(detections):
@@ -94,6 +98,12 @@ class CentroidLineTracker:
                     (center[0] - track['center'][0]) / steps,
                     (center[1] - track['center'][1]) / steps,
                 )
+                intervening_misses = max(0, track['missed'] - 1)
+                if intervening_misses:
+                    track['gap_reacquisitions'] += 1
+                    track['max_intervening_missed_samples'] = max(track['max_intervening_missed_samples'], intervening_misses)
+                track['max_prediction_error_pixels'] = max(track['max_prediction_error_pixels'], assignment_errors.get(index, 0))
+                track['last_prediction_error_pixels'] = assignment_errors.get(index, 0)
             previous_side = track['side']
             crossing_point = None
             if line and not track['counted'] and previous_side and current_side and ((previous_side < 0) != (current_side < 0)):
@@ -116,6 +126,7 @@ class CentroidLineTracker:
                 'last_frame': frame_index, 'last_timestamp_seconds': timestamp_seconds,
                 'side': current_side if current_side else previous_side,
             })
+            track['confidence_sum'] += detection.get('confidence', 0)
             if current_side:
                 track['last_nonzero_center'] = center
             detection['track_id'] = track_id
@@ -136,6 +147,11 @@ class CentroidLineTracker:
                 'first_timestamp_seconds': track['first_timestamp_seconds'],
                 'last_timestamp_seconds': track['last_timestamp_seconds'],
                 'crossed_counting_line': track['counted'],
+                'mean_detection_confidence': round(track['confidence_sum'] / track['observations'], 4) if track['observations'] else 0,
+                'gap_reacquisitions': track['gap_reacquisitions'],
+                'max_intervening_missed_samples': track['max_intervening_missed_samples'],
+                'max_prediction_error_pixels': round(track['max_prediction_error_pixels'], 2),
+                'last_prediction_error_pixels': round(track['last_prediction_error_pixels'], 2),
             }
             for track_id, track in sorted({**self.finished_tracks, **self.tracks}.items())
         ]

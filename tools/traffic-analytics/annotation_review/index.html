@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>WebGISTA Vehicle Crossing Review</title>
+  <style>
+    :root { color-scheme: light dark; font: 15px/1.45 system-ui, sans-serif; }
+    body { max-width: 1200px; margin: 1.5rem auto; padding: 0 1rem 3rem; }
+    h1, h2 { line-height: 1.2; }
+    .toolbar, .controls, .review-row, .event-row { display: flex; flex-wrap: wrap; align-items: center; gap: .6rem; }
+    .toolbar { margin: 1rem 0; }
+    button, select, input, textarea { font: inherit; padding: .45rem .6rem; }
+    button { cursor: pointer; }
+    button:disabled { cursor: not-allowed; opacity: .55; }
+    .player { position: relative; max-width: 960px; background: #111; }
+    video { display: block; width: 100%; height: auto; max-height: 70vh; }
+    canvas { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+    .controls { margin: .7rem 0; }
+    .status { min-height: 1.5rem; }
+    .candidate-list, .coverage-list { display: flex; flex-wrap: wrap; gap: .35rem; margin: .5rem 0 1rem; }
+    .candidate-list button { border-color: #b45309; }
+    .coverage-list button.reviewed { border-color: #15803d; }
+    .event-row { border: 1px solid #8886; border-radius: .35rem; padding: .6rem; margin: .5rem 0; }
+    .event-row textarea { min-width: 12rem; }
+    .notice { border-left: 4px solid #d97706; padding: .6rem .8rem; background: #d9770615; }
+    code { overflow-wrap: anywhere; }
+    label { display: inline-flex; align-items: center; gap: .35rem; }
+    @media (max-width: 650px) { .event-row > * { max-width: 100%; } .event-row textarea { width: 100%; } }
+  </style>
+</head>
+<body>
+  <h1>Vehicle Crossing Ground-Truth Review</h1>
+  <p class="notice">Local review tool. Model crossings below are candidates only. They are never copied into labels automatically. Review the full clip, including time windows with no candidate, before attesting completion.</p>
+  <div class="toolbar">
+    <label>Demo clip <select id="video-select"></select></label>
+    <label>Reviewer <input id="reviewer" autocomplete="off" placeholder="Name or reviewer ID"></label>
+    <button id="import-json" type="button">Import review JSON</button><input id="import-file" type="file" accept="application/json" hidden>
+    <button id="export-json" type="button">Export JSON</button><button id="export-csv" type="button">Export CSV</button>
+  </div>
+  <div class="player"><video id="video" controls playsinline preload="metadata"></video><canvas id="overlay"></canvas></div>
+  <label><input id="model-overlay" type="checkbox"> Show YOLOX detections / heuristic track IDs at sampled frames</label>
+  <p>Model boxes are available only at sampled inference frames and remain predictions, not event labels.</p>
+  <div class="controls">
+    <button id="back-frame" type="button">−1 frame</button><button id="forward-frame" type="button">+1 frame</button>
+    <label>Seek (s) <input id="seek" type="number" min="0" step="0.001" value="0"></label>
+    <span id="time-display">0.000 s · frame 0</span>
+    <button id="add-event" type="button">Add crossing at current frame</button>
+  </div>
+  <p id="config-display"></p>
+  <p id="status" class="status" role="status" aria-live="polite"></p>
+
+  <section aria-labelledby="candidate-heading">
+    <h2 id="candidate-heading">Model crossing candidates — review, do not assume correct</h2>
+    <p>Each button opens a short playback window around the candidate. Use normal playback and frame stepping to accept, correct, reject, or mark uncertain.</p>
+    <div id="candidates" class="candidate-list"></div>
+  </section>
+
+  <section aria-labelledby="coverage-heading">
+    <h2 id="coverage-heading">Whole-clip review coverage</h2>
+    <p>Coverage is collected only while playback advances continuously. Green segments were played; gaps and windows without model candidates must also be reviewed. Click a segment to review that portion.</p>
+    <div id="coverage" class="coverage-list"></div>
+    <p id="coverage-status"></p>
+    <label><input id="attest" type="checkbox" disabled> I reviewed the full clip, including intervals without model candidates, and resolved every uncertain event.</label>
+  </section>
+
+  <section aria-labelledby="events-heading">
+    <h2 id="events-heading">Human event annotations</h2>
+    <p>Only Confirmed/Corrected events in a full-clip-reviewed JSON package are eligible as ground truth. Rejected, Uncertain, and Unreviewed rows are preserved for audit but excluded or block scoring as appropriate. Optional diagnostics describe a likely detector/tracker failure mode; they are not used as labels.</p>
+    <div id="events"></div>
+  </section>
+
+  <script type="module" src="./review.mjs"></script>
+</body>
+</html>

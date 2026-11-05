@@ -1,4 +1,5 @@
 import json
+import hashlib
 import sys
 import tempfile
 import unittest
@@ -9,17 +10,37 @@ import numpy as np
 sys.path.insert(0, str(Path(__file__).parent))
 from analyze_video import letterbox
 from configuration import validate_configuration
-from evaluate_ground_truth import evaluate, read_labels
+from evaluate_ground_truth import evaluate, evaluate_review_package, read_labels
 from taxonomy import map_coco_vehicle
 from tracker import CentroidLineTracker, in_roi
+from annotation_review.serve import parse_byte_range
 
 
 class PipelineTest(unittest.TestCase):
+    @staticmethod
+    def complete_review_package(events=None):
+        return {
+            'schema_version': 'webgista.traffic-ground-truth.v1',
+            'video': {'id': 'sample-01', 'source_sha256': 'sha'},
+            'review_progress': {'full_clip_reviewed': True, 'attested': True, 'reviewed_seconds': list(range(23))},
+            'reviewer': 'reviewer-1', 'events': events or [],
+        }
+
     def test_letterbox_produces_detector_size_and_scale(self):
         image = np.zeros((360, 640, 3), dtype=np.uint8)
         result, scale = letterbox(image)
         self.assertEqual(result.shape, (640, 640, 3))
         self.assertAlmostEqual(scale, 1.0)
+
+    def test_local_video_server_parses_bounded_and_suffix_ranges(self):
+        self.assertEqual(parse_byte_range(None, 100), None)
+        self.assertEqual(parse_byte_range('bytes=0-0', 100), (0, 0))
+        self.assertEqual(parse_byte_range('bytes=-10', 100), (90, 99))
+        self.assertEqual(parse_byte_range('bytes=90-', 100), (90, 99))
+        with self.assertRaises(ValueError):
+            parse_byte_range('bytes=100-110', 100)
+        with self.assertRaises(ValueError):
+            parse_byte_range('bytes=0-1,4-5', 100)
 
     def test_vehicle_mapping_is_explicit_and_excludes_person_unknown(self):
         self.assertEqual(map_coco_vehicle(2), ('car', 'LV'))
@@ -43,6 +64,30 @@ class PipelineTest(unittest.TestCase):
         self.assertEqual(after_gap['track_id'], first['track_id'])
         self.assertEqual(events[0]['direction'], 'positive_to_negative')
         self.assertEqual(events[0]['traffic_category'], 'LV')
+
+    def test_expired_track_cannot_be_reacquired_after_missed_frame_limit(self):
+        tracker = CentroidLineTracker(max_distance=100, max_missed=1)
+        first = {'class': 'car', 'bbox_xyxy': [10, 10, 20, 20]}
+        tracker.update([first], frame_index=0)
+        tracker.update([], frame_index=1)
+        tracker.update([], frame_index=2)
+        later = {'class': 'car', 'bbox_xyxy': [15, 10, 25, 20]}
+        tracker.update([later], frame_index=3)
+        self.assertEqual(first['track_id'], 1)
+        self.assertEqual(later['track_id'], 2)
+
+    def test_track_summary_exposes_gap_and_confidence_diagnostics(self):
+        tracker = CentroidLineTracker(max_distance=20, max_missed=2)
+        for frame, x in ((0, 10), (1, 20)):
+            tracker.update([{'class': 'car', 'confidence': 0.8, 'bbox_xyxy': [x, 10, x + 10, 20]}], frame_index=frame, timestamp_seconds=frame / 5)
+        tracker.update([], frame_index=2, timestamp_seconds=2 / 5)
+        tracker.update([{'class': 'car', 'confidence': 0.8, 'bbox_xyxy': [40, 10, 50, 20]}], frame_index=3, timestamp_seconds=3 / 5)
+        summary = tracker.summaries()[0]
+        self.assertEqual(summary['observations'], 3)
+        self.assertEqual(summary['gap_reacquisitions'], 1)
+        self.assertEqual(summary['max_intervening_missed_samples'], 1)
+        self.assertEqual(summary['mean_detection_confidence'], 0.8)
+        self.assertEqual(summary['last_prediction_error_pixels'], 5)
 
     def test_crossing_event_is_once_per_track_and_has_time_and_direction(self):
         tracker = CentroidLineTracker(max_distance=40)
@@ -96,10 +141,7 @@ class PipelineTest(unittest.TestCase):
                 validate_configuration(*values)
 
     def test_ground_truth_empty_means_no_metrics(self):
-        self.assertEqual(evaluate({'crossing_events': []}, []), {
-            'ground_truth_available': False, 'metrics': None,
-            'note': 'No manual ground-truth events were supplied.',
-        })
+        self.assertFalse(evaluate({'crossing_events': []}, [])['ground_truth_available'])
 
     def test_ground_truth_metrics_are_one_to_one_by_category_direction_and_time(self):
         analysis = {'crossing_events': [
@@ -122,15 +164,80 @@ class PipelineTest(unittest.TestCase):
             with self.assertRaises(ValueError):
                 read_labels(path)
 
+    def test_review_package_requires_matching_video_hash_full_clip_and_resolved_events(self):
+        analysis = {'source_video_identifier': 'sample-01', 'source_video_sha256': 'sha', 'input_duration_seconds': 23, 'source_fps': 24, 'source_frame_count': 552, 'crossing_events': []}
+        base = {
+            'schema_version': 'webgista.traffic-ground-truth.v1',
+            'video': {'id': 'sample-01', 'source_sha256': 'sha'},
+            'review_progress': {'full_clip_reviewed': False, 'attested': False, 'reviewed_seconds': []},
+            'reviewer': 'reviewer-1', 'events': [],
+        }
+        self.assertFalse(evaluate_review_package(analysis, base)['ground_truth_available'])
+        full = self.complete_review_package()
+        self.assertTrue(evaluate_review_package(analysis, full)['ground_truth_available'])
+        uncertain = {**full, 'events': [{'event_id': 'GT-1', 'review_status': 'uncertain'}]}
+        self.assertIn('uncertain', evaluate_review_package(analysis, uncertain)['note'])
+        wrong_source = {**full, 'video': {'id': 'sample-01', 'source_sha256': 'wrong'}}
+        self.assertIn('SHA-256', evaluate_review_package(analysis, wrong_source)['note'])
+
+    def test_fully_reviewed_empty_clip_counts_predictions_as_false_positives(self):
+        analysis = {
+            'source_video_identifier': 'sample-01', 'source_video_sha256': 'sha',
+            'input_duration_seconds': 23, 'source_fps': 24, 'source_frame_count': 552,
+            'crossing_events': [{'class': 'car', 'traffic_category': 'LV', 'direction': 'positive_to_negative', 'timestamp_seconds': 2}],
+        }
+        package = self.complete_review_package()
+        metrics = evaluate_review_package(analysis, package)['metrics']
+        self.assertEqual((metrics['true_positive'], metrics['false_positive'], metrics['false_negative']), (0, 1, 0))
+        self.assertEqual(metrics['by_direction']['positive_to_negative']['false_positive'], 1)
+
+    def test_review_package_rejects_missing_coverage_bad_frame_or_unidentified_reviewer(self):
+        analysis = {'source_video_identifier': 'sample-01', 'source_video_sha256': 'sha', 'input_duration_seconds': 23, 'source_fps': 24, 'source_frame_count': 552, 'crossing_events': []}
+        package = self.complete_review_package()
+        package['review_progress']['reviewed_seconds'].pop()
+        self.assertIn('coverage is incomplete', evaluate_review_package(analysis, package)['note'])
+        package = self.complete_review_package([{
+            'event_id': 'GT-001', 'review_status': 'confirmed', 'vehicle_class': 'car',
+            'direction': 'positive_to_negative', 'timestamp_seconds': 1, 'frame_index': -1,
+            'reviewer': 'reviewer-1', 'annotation_provenance': 'human_video_review',
+        }])
+        self.assertIn('invalid', evaluate_review_package(analysis, package)['note'])
+        package = self.complete_review_package()
+        package['reviewer'] = ''
+        self.assertIn('reviewer ID', evaluate_review_package(analysis, package)['note'])
+
+    def test_completed_review_reports_human_diagnostics_separately_from_event_metrics(self):
+        analysis = {
+            'source_video_identifier': 'sample-01', 'source_video_sha256': 'sha',
+            'input_duration_seconds': 23, 'source_fps': 24, 'source_frame_count': 552,
+            'crossing_events': [{'class': 'car', 'traffic_category': 'LV', 'direction': 'positive_to_negative', 'timestamp_seconds': 2}],
+        }
+        event = {
+            'event_id': 'GT-001', 'review_status': 'confirmed', 'vehicle_class': 'car',
+            'direction': 'positive_to_negative', 'timestamp_seconds': 2, 'frame_index': 48,
+            'reviewer': 'reviewer-1', 'annotation_provenance': 'human_video_review',
+            'diagnostic_category': 'fragmented_track',
+        }
+        result = evaluate_review_package(analysis, self.complete_review_package([event]))
+        self.assertEqual(result['metrics']['true_positive'], 1)
+        self.assertEqual(result['review_diagnostics'], {'fragmented_track': 1})
+
     def test_committed_demo_outputs_have_reproducible_schema_and_no_condition(self):
         repository = Path(__file__).resolve().parents[2]
         for sample in ('traffic_sample_01', 'traffic_sample_02'):
             result = json.loads((repository / 'apps/web/src/data/traffic-demo' / f'{sample}.analysis.json').read_text())
+            source_path = repository / 'apps/web/public/traffic-demo' / f'{sample}.mp4'
             self.assertEqual(result['schema_version'], 'webgista.traffic-analysis.v2')
             self.assertFalse(result['is_live_cctv'])
+            self.assertEqual(result['source_video_sha256'], hashlib.sha256(source_path.read_bytes()).hexdigest())
+            self.assertEqual(len(result['model']['sha256']), 64)
+            self.assertGreater(result['source_fps'], 0)
+            self.assertEqual(result['sample_frame_interval'], 5)
             self.assertIsNone(result['condition'])
             self.assertEqual(result['processed_frame_count'], len(result['frames']))
             self.assertEqual(result['crossing_event_count'], len(result['crossing_events']))
+            self.assertEqual(result['tracking_quality']['single_detection_track_count'], sum(track['observations'] == 1 for track in result['tracked_objects']))
+            self.assertTrue(all(0 <= track['mean_detection_confidence'] <= 1 for track in result['tracked_objects']))
             self.assertEqual(result['tracking_quality']['status'], 'not_ground_truth_validated')
             self.assertIsNone(result['ground_truth_evaluation'])
             self.assertEqual(

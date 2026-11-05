@@ -3,20 +3,24 @@
   "record_kind": "demo_video_analysis",
   "is_live_cctv": false,
   "source_video_identifier": "traffic_sample_01",
+  "source_video_sha256": "84066ad4f0302f105cd28dbaef2f00a72f62b2ad4760c1030dc11efc7dd078c4",
   "source_reference": "Pexels: City Intersection with Traffic and Signals, SHOX ART; Pexels Free License",
   "input_duration_seconds": 23.023,
   "video_dimensions": {
     "width": 1280,
     "height": 720
   },
+  "source_fps": 23.976024,
   "source_frame_count": 552,
+  "sample_frame_interval": 5,
   "processed_frame_count": 111,
   "requested_sampled_fps": 5.0,
   "sampled_fps": 4.795,
   "model": {
     "name": "OpenCV Zoo YOLOX-S COCO",
     "version": "object_detection_yolox_2022nov_int8",
-    "license": "Apache-2.0"
+    "license": "Apache-2.0",
+    "sha256": "01a3b0f400b30bc1e45230e991b2e499ab42622485a330021947333fbaf03935"
   },
   "tracking": {
     "enabled": true,
@@ -80,7 +84,12 @@
       "last_frame": 55,
       "first_timestamp_seconds": 0.0,
       "last_timestamp_seconds": 2.2939583333333333,
-      "crossed_counting_line": false
+      "crossed_counting_line": false,
+      "mean_detection_confidence": 0.5289,
+      "gap_reacquisitions": 1,
+      "max_intervening_missed_samples": 2,
+      "max_prediction_error_pixels": 57.58,
+      "last_prediction_error_pixels": 19.14
     },
     {
       "track_id": 2,
@@ -91,7 +100,12 @@
       "last_frame": 0,
       "first_timestamp_seconds": 0.0,
       "last_timestamp_seconds": 0.0,
-      "crossed_counting_line": false
+      "crossed_counting_line": false,
+      "mean_detection_confidence": 0.354,
+      "gap_reacquisitions": 0,
+      "max_intervening_missed_samples": 0,
+      "max_prediction_error_pixels": 0,
+      "last_prediction_error_pixels": 0
     },
     {
       "track_id": 3,
@@ -102,7 +116,12 @@
       "last_frame": 50,
       "first_timestamp_seconds": 0.0,
       "last_timestamp_seconds": 2.0854166666666667,
-      "crossed_counting_line": false
+      "crossed_counting_line": false,
+      "mean_detection_confidence": 0.3957,
+      "gap_reacquisitions": 2,
+      "max_intervening_missed_samples": 2,
+      "max_prediction_error_pixels": 10.12,
+      "last_prediction_error_pixels": 10.12
     },
     {
       "track_id": 4,
@@ -113,7 +132,12 @@
       "last_frame": 90,
       "first_timestamp_seconds": 0.20854166666666665,
       "last_timestamp_seconds": 3.7537499999999997,
-      "crossed_counting_line": true
+      "crossed_counting_line": true,
+      "mean_detection_confidence": 0.4712,
+      "gap_reacquisitions": 3,
+      "max_intervening_missed_samples": 2,
+      "max_prediction_error_pixels": 77.41,
+      "last_prediction_error_pixels": 7.16
     },
     {
       "track_id": 5,
@@ -124,7 +148,12 @@
       "last_frame": 90,
       "first_timestamp_seconds": 2.0854166666666667,
       "last_timestamp_seconds": 3.7537499999999997,
-      "crossed_counting_line": true
+      "crossed_counting_line": true,
+      "mean_detection_confidence": 0.6121,
+      "gap_reacquisitions": 0,
+      "max_intervening_missed_samples": 0,
+      "max_prediction_error_pixels": 40.7,
+      "last_prediction_error_pixels": 6.95
     },
     {
       "track_id": 6,
@@ -135,7 +164,12 @@
       "last_frame": 110,
       "first_timestamp_seconds": 3.3366666666666664,
       "last_timestamp_seconds": 4.587916666666667,
-      "crossed_counting_line": false
+      "crossed_counting_line": false,
+      "mean_detection_confidence": 0.4024,
+      "gap_reacquisitions": 2,
+      "max_intervening_missed_samples": 1,
+      "max_prediction_error_pixels": 8.56,
+      "last_prediction_error_pixels": 8.5
     },
     {
       "track_id": 7,
@@ -146,7 +180,12 @@
       "last_frame": 110,
       "first_timestamp_seconds": 3.3366666666666664,
       "last_timestamp_seconds": 4.587916666666667,
-      "crossed_counting_line": false
+      "crossed_counting_line": false,
+      "mean_detection_confidence": 0.3697,
+      "gap_reacquisitions": 1,
+      "max_intervening_missed_samples": 2,
+      "max_prediction_error_pixels": 2.8,
+      "last_prediction_error_pixels": 2.24
     },
     {
       "track_id": 8,
@@ -157,7 +196,12 @@
       "last_frame": 115,
       "first_timestamp_seconds": 3.3366666666666664,
       "last_timestamp_seconds": 4.796458333333333,
-      "crossed_counting_line": false
+      "crossed_counting_line": false,
+      "mean_detection_confidence": 0.4437,
+      "gap_reacquisitions": 1,
+      "max_intervening_missed_samples": 1,
+      "max_prediction_error_pixels": 39.39,
+      "last_prediction_error_pixels": 39.39
     },
     {
       "track_id": 9,
@@ -168,7 +212,12 @@
       "last_frame": 90,
       "first_timestamp_seconds": 3.545208333333333,
       "last_timestamp_seconds": 3.7537499999999997,
-      "crossed_counting_line": false
+      "crossed_counting_line": false,
+      "mean_detection_confidence": 0.4088,
+      "gap_reacquisitions": 0,
+      "max_intervening_missed_samples": 0,
+      "max_prediction_error_pixels": 2.0,
+      "last_prediction_error_pixels": 2.0
     },
     {
       "track_id": 10,
@@ -179,7 +228,12 @@
       "last_frame": 140,
       "first_timestamp_seconds": 4.170833333333333,
       "last_timestamp_seconds": 5.839166666666666,
-      "crossed_counting_line": true
+      "crossed_counting_line": true,
+      "mean_detection_confidence": 0.5789,
+      "gap_reacquisitions": 2,
+      "max_intervening_missed_samples": 2,
+      "max_prediction_error_pixels": 71.38,
+      "last_prediction_error_pixels": 71.38
     },
     {
       "track_id": 11,
@@ -190,7 +244,12 @@
       "last_frame": 150,
       "first_timestamp_seconds": 4.796458333333333,
       "last_timestamp_seconds": 6.25625,
-      "crossed_counting_line": false
+      "crossed_counting_line": false,
+      "mean_detection_confidence": 0.7016,
+      "gap_reacquisitions": 1,
+      "max_intervening_missed_samples": 1,
+      "max_prediction_error_pixels": 48.09,
+      "last_prediction_error_pixels": 26.52
     },
     {
       "track_id": 12,
@@ -201,7 +260,12 @@
       "last_frame": 185,
       "first_timestamp_seconds": 5.630624999999999,
       "last_timestamp_seconds": 7.7160416666666665,
-      "crossed_counting_line": false
+      "crossed_counting_line": false,
+      "mean_detection_confidence": 0.532,
+      "gap_reacquisitions": 2,
+      "max_intervening_missed_samples": 2,
+      "max_prediction_error_pixels": 56.27,
+      "last_prediction_error_pixels": 4.61
     },
     {
       "track_id": 13,
@@ -212,7 +276,12 @@
       "last_frame": 155,
       "first_timestamp_seconds": 6.047708333333333,
       "last_timestamp_seconds": 6.464791666666666,
-      "crossed_counting_line": false
+      "crossed_counting_line": false,
+      "mean_detection_confidence": 0.42,
+      "gap_reacquisitions": 0,
+      "max_intervening_missed_samples": 0,
+      "max_prediction_error_pixels": 33.56,
+      "last_prediction_error_pixels": 33.56
     },
     {
       "track_id": 14,
@@ -223,7 +292,12 @@
       "last_frame": 215,
       "first_timestamp_seconds": 6.047708333333333,
       "last_timestamp_seconds": 8.967291666666666,
-      "crossed_counting_line": false
+      "crossed_counting_line": false,
+      "mean_detection_confidence": 0.481,
+      "gap_reacquisitions": 3,
+      "max_intervening_missed_samples": 1,
+      "max_prediction_error_pixels": 75.45,
+      "last_prediction_error_pixels": 32.19
     },
     {
       "track_id": 15,
@@ -234,7 +308,12 @@
       "last_frame": 205,
       "first_timestamp_seconds": 7.507499999999999,
       "last_timestamp_seconds": 8.550208333333332,
-      "crossed_counting_line": false
+      "crossed_counting_line": false,
+      "mean_detection_confidence": 0.7627,
+      "gap_reacquisitions": 0,
+      "max_intervening_missed_samples": 0,
+      "max_prediction_error_pixels": 32.9,
+      "last_prediction_error_pixels": 29.02
     },
     {
       "track_id": 16,
@@ -245,7 +324,12 @@
       "last_frame": 210,
       "first_timestamp_seconds": 7.7160416666666665,
       "last_timestamp_seconds": 8.75875,
-      "crossed_counting_line": false
+      "crossed_counting_line": false,
+      "mean_detection_confidence": 0.7472,
+      "gap_reacquisitions": 0,
+      "max_intervening_missed_samples": 0,
+      "max_prediction_error_pixels": 40.94,
+      "last_prediction_error_pixels": 7.16
     },
     {
       "track_id": 17,
@@ -256,7 +340,12 @@
       "last_frame": 215,
       "first_timestamp_seconds": 7.924583333333333,
       "last_timestamp_seconds": 8.967291666666666,
-      "crossed_counting_line": false
+      "crossed_counting_line": false,
+      "mean_detection_confidence": 0.7237,
+      "gap_reacquisitions": 1,
+      "max_intervening_missed_samples": 1,
+      "max_prediction_error_pixels": 73.76,
+      "last_prediction_error_pixels": 6.1
     },
     {
       "track_id": 18,
@@ -267,7 +356,12 @@
       "last_frame": 505,
       "first_timestamp_seconds": 8.75875,
       "last_timestamp_seconds": 21.062708333333333,
-      "crossed_counting_line": false
+      "crossed_counting_line": false,
+      "mean_detection_confidence": 0.4455,
+      "gap_reacquisitions": 4,
+      "max_intervening_missed_samples": 1,
+      "max_prediction_error_pixels": 59.0,
+      "last_prediction_error_pixels": 52.04
     },
     {
       "track_id": 19,
@@ -278,7 +372,12 @@
       "last_frame": 340,
       "first_timestamp_seconds": 8.75875,
       "last_timestamp_seconds": 14.180833333333332,
-      "crossed_counting_line": false
+      "crossed_counting_line": false,
+      "mean_detection_confidence": 0.5995,
+      "gap_reacquisitions": 3,
+      "max_intervening_missed_samples": 1,
+      "max_prediction_error_pixels": 98.93,
+      "last_prediction_error_pixels": 3.16
     },
     {
       "track_id": 20,
@@ -289,7 +388,12 @@
       "last_frame": 250,
       "first_timestamp_seconds": 8.967291666666666,
       "last_timestamp_seconds": 10.427083333333332,
-      "crossed_counting_line": false
+      "crossed_counting_line": false,
+      "mean_detection_confidence": 0.4713,
+      "gap_reacquisitions": 1,
+      "max_intervening_missed_samples": 1,
+      "max_prediction_error_pixels": 7.0,
+      "last_prediction_error_pixels": 6.52
     },
     {
       "track_id": 21,
@@ -300,7 +404,12 @@
       "last_frame": 540,
       "first_timestamp_seconds": 9.801458333333333,
       "last_timestamp_seconds": 22.522499999999997,
-      "crossed_counting_line": false
+      "crossed_counting_line": false,
+      "mean_detection_confidence": 0.6765,
+      "gap_reacquisitions": 3,
+      "max_intervening_missed_samples": 2,
+      "max_prediction_error_pixels": 89.04,
+      "last_prediction_error_pixels": 6.08
     },
     {
       "track_id": 22,
@@ -311,7 +420,12 @@
       "last_frame": 260,
       "first_timestamp_seconds": 10.844166666666666,
       "last_timestamp_seconds": 10.844166666666666,
-      "crossed_counting_line": false
+      "crossed_counting_line": false,
+      "mean_detection_confidence": 0.3869,
+      "gap_reacquisitions": 0,
+      "max_intervening_missed_samples": 0,
+      "max_prediction_error_pixels": 0,
+      "last_prediction_error_pixels": 0
     },
     {
       "track_id": 23,
@@ -322,7 +436,12 @@
       "last_frame": 370,
       "first_timestamp_seconds": 12.095416666666665,
       "last_timestamp_seconds": 15.432083333333333,
-      "crossed_counting_line": false
+      "crossed_counting_line": false,
+      "mean_detection_confidence": 0.5118,
+      "gap_reacquisitions": 0,
+      "max_intervening_missed_samples": 0,
+      "max_prediction_error_pixels": 30.5,
+      "last_prediction_error_pixels": 1.12
     },
     {
       "track_id": 24,
@@ -333,7 +452,12 @@
       "last_frame": 355,
       "first_timestamp_seconds": 13.346666666666666,
       "last_timestamp_seconds": 14.806458333333332,
-      "crossed_counting_line": false
+      "crossed_counting_line": false,
+      "mean_detection_confidence": 0.4328,
+      "gap_reacquisitions": 0,
+      "max_intervening_missed_samples": 0,
+      "max_prediction_error_pixels": 6.5,
+      "last_prediction_error_pixels": 0.71
     },
     {
       "track_id": 25,
@@ -344,7 +468,12 @@
       "last_frame": 480,
       "first_timestamp_seconds": 15.223541666666666,
       "last_timestamp_seconds": 20.02,
-      "crossed_counting_line": false
+      "crossed_counting_line": false,
+      "mean_detection_confidence": 0.3942,
+      "gap_reacquisitions": 7,
+      "max_intervening_missed_samples": 2,
+      "max_prediction_error_pixels": 128.52,
+      "last_prediction_error_pixels": 128.52
     },
     {
       "track_id": 26,
@@ -355,7 +484,12 @@
       "last_frame": 550,
       "first_timestamp_seconds": 16.683333333333334,
       "last_timestamp_seconds": 22.93958333333333,
-      "crossed_counting_line": false
+      "crossed_counting_line": false,
+      "mean_detection_confidence": 0.5037,
+      "gap_reacquisitions": 3,
+      "max_intervening_missed_samples": 2,
+      "max_prediction_error_pixels": 67.68,
+      "last_prediction_error_pixels": 1.12
     },
     {
       "track_id": 27,
@@ -366,7 +500,12 @@
       "last_frame": 440,
       "first_timestamp_seconds": 16.683333333333334,
       "last_timestamp_seconds": 18.351666666666667,
-      "crossed_counting_line": false
+      "crossed_counting_line": false,
+      "mean_detection_confidence": 0.5219,
+      "gap_reacquisitions": 1,
+      "max_intervening_missed_samples": 2,
+      "max_prediction_error_pixels": 12.5,
+      "last_prediction_error_pixels": 12.5
     },
     {
       "track_id": 28,
@@ -377,7 +516,12 @@
       "last_frame": 420,
       "first_timestamp_seconds": 16.891875,
       "last_timestamp_seconds": 17.5175,
-      "crossed_counting_line": false
+      "crossed_counting_line": false,
+      "mean_detection_confidence": 0.3684,
+      "gap_reacquisitions": 1,
+      "max_intervening_missed_samples": 2,
+      "max_prediction_error_pixels": 19.24,
+      "last_prediction_error_pixels": 19.24
     },
     {
       "track_id": 29,
@@ -388,7 +532,12 @@
       "last_frame": 510,
       "first_timestamp_seconds": 20.228541666666665,
       "last_timestamp_seconds": 21.27125,
-      "crossed_counting_line": false
+      "crossed_counting_line": false,
+      "mean_detection_confidence": 0.4029,
+      "gap_reacquisitions": 1,
+      "max_intervening_missed_samples": 1,
+      "max_prediction_error_pixels": 8.63,
+      "last_prediction_error_pixels": 8.63
     },
     {
       "track_id": 30,
@@ -399,7 +548,12 @@
       "last_frame": 495,
       "first_timestamp_seconds": 20.43708333333333,
       "last_timestamp_seconds": 20.645625,
-      "crossed_counting_line": false
+      "crossed_counting_line": false,
+      "mean_detection_confidence": 0.3658,
+      "gap_reacquisitions": 0,
+      "max_intervening_missed_samples": 0,
+      "max_prediction_error_pixels": 2.0,
+      "last_prediction_error_pixels": 2.0
     },
     {
       "track_id": 31,
@@ -410,7 +564,12 @@
       "last_frame": 505,
       "first_timestamp_seconds": 21.062708333333333,
       "last_timestamp_seconds": 21.062708333333333,
-      "crossed_counting_line": false
+      "crossed_counting_line": false,
+      "mean_detection_confidence": 0.4822,
+      "gap_reacquisitions": 0,
+      "max_intervening_missed_samples": 0,
+      "max_prediction_error_pixels": 0,
+      "last_prediction_error_pixels": 0
     },
     {
       "track_id": 32,
@@ -421,7 +580,12 @@
       "last_frame": 520,
       "first_timestamp_seconds": 21.688333333333333,
       "last_timestamp_seconds": 21.688333333333333,
-      "crossed_counting_line": false
+      "crossed_counting_line": false,
+      "mean_detection_confidence": 0.4046,
+      "gap_reacquisitions": 0,
+      "max_intervening_missed_samples": 0,
+      "max_prediction_error_pixels": 0,
+      "last_prediction_error_pixels": 0
     },
     {
       "track_id": 33,
@@ -432,7 +596,12 @@
       "last_frame": 530,
       "first_timestamp_seconds": 22.105416666666667,
       "last_timestamp_seconds": 22.105416666666667,
-      "crossed_counting_line": false
+      "crossed_counting_line": false,
+      "mean_detection_confidence": 0.3507,
+      "gap_reacquisitions": 0,
+      "max_intervening_missed_samples": 0,
+      "max_prediction_error_pixels": 0,
+      "last_prediction_error_pixels": 0
     },
     {
       "track_id": 34,
@@ -443,7 +612,12 @@
       "last_frame": 550,
       "first_timestamp_seconds": 22.313958333333332,
       "last_timestamp_seconds": 22.93958333333333,
-      "crossed_counting_line": false
+      "crossed_counting_line": false,
+      "mean_detection_confidence": 0.5599,
+      "gap_reacquisitions": 0,
+      "max_intervening_missed_samples": 0,
+      "max_prediction_error_pixels": 4.47,
+      "last_prediction_error_pixels": 4.47
     },
     {
       "track_id": 35,
@@ -454,14 +628,30 @@
       "last_frame": 550,
       "first_timestamp_seconds": 22.313958333333332,
       "last_timestamp_seconds": 22.93958333333333,
-      "crossed_counting_line": true
+      "crossed_counting_line": true,
+      "mean_detection_confidence": 0.4227,
+      "gap_reacquisitions": 0,
+      "max_intervening_missed_samples": 0,
+      "max_prediction_error_pixels": 47.18,
+      "last_prediction_error_pixels": 11.0
     }
   ],
   "tracking_quality": {
     "status": "not_ground_truth_validated",
     "single_detection_track_count": 5,
     "mean_sampled_observations_per_track": 10.086,
-    "note": "These diagnostics describe tracker output only; they are not accuracy metrics."
+    "tracks_with_gap_reacquisition": 20,
+    "max_intervening_missed_samples": 2,
+    "max_prediction_error_pixels": 128.52,
+    "untracked_detection_instances_outside_roi": 187,
+    "track_count_by_class": {
+      "bicycle": 0,
+      "bus": 1,
+      "car": 28,
+      "motorcycle": 0,
+      "truck": 6
+    },
+    "note": "Track counts, confidence, gaps, and prediction residuals describe tracker output only; they are not accuracy metrics."
   },
   "crossing_event_count": 4,
   "crossing_events": [
@@ -516,19 +706,19 @@
   ],
   "crossing_counts_by_class": {
     "car": 3,
-    "truck": 1,
     "bus": 0,
-    "bicycle": 0,
-    "motorcycle": 0
+    "truck": 1,
+    "motorcycle": 0,
+    "bicycle": 0
   },
   "ground_truth_evaluation": null,
   "ground_truth_status": "not_available",
   "peak_vehicles_in_sampled_frame": {
     "car": 8,
-    "truck": 2,
     "bus": 1,
-    "bicycle": 0,
-    "motorcycle": 0
+    "truck": 2,
+    "motorcycle": 0,
+    "bicycle": 0
   },
   "vehicle_count_semantics": "Detection instances repeat across frames. Track IDs and line-crossing events are experimental and unvalidated; only manually ground-truth-matched events may be described as validated counts.",
   "condition": null,
@@ -539,10 +729,10 @@
       "offset_seconds": 0.0,
       "vehicle_counts_this_frame": {
         "car": 2,
-        "truck": 1,
         "bus": 0,
-        "bicycle": 0,
-        "motorcycle": 0
+        "truck": 1,
+        "motorcycle": 0,
+        "bicycle": 0
       },
       "detections": [
         {
@@ -592,10 +782,10 @@
       "offset_seconds": 0.209,
       "vehicle_counts_this_frame": {
         "car": 3,
-        "truck": 0,
         "bus": 0,
-        "bicycle": 0,
-        "motorcycle": 0
+        "truck": 0,
+        "motorcycle": 0,
+        "bicycle": 0
       },
       "detections": [
         {
@@ -645,10 +835,10 @@
       "offset_seconds": 0.417,
       "vehicle_counts_this_frame": {
         "car": 3,
-        "truck": 0,
         "bus": 0,
-        "bicycle": 0,
-        "motorcycle": 0
+        "truck": 0,
+        "motorcycle": 0,
+        "bicycle": 0
       },
       "detections": [
         {
@@ -698,10 +888,10 @@
       "offset_seconds": 0.626,
       "vehicle_counts_this_frame": {
         "car": 3,
-        "truck": 0,
         "bus": 0,
-        "bicycle": 0,
-        "motorcycle": 0
+        "truck": 0,
+        "motorcycle": 0,
+        "bicycle": 0
       },
       "detections": [
         {
@@ -750,10 +940,10 @@
       "offset_seconds": 0.834,
       "vehicle_counts_this_frame": {
         "car": 4,
-        "truck": 0,
         "bus": 0,
-        "bicycle": 0,
-        "motorcycle": 0
+        "truck": 0,
+        "motorcycle": 0,
+        "bicycle": 0
       },
       "detections": [
         {
@@ -815,10 +1005,10 @@
       "offset_seconds": 1.043,
       "vehicle_counts_this_frame": {
         "car": 4,
-        "truck": 0,
         "bus": 0,
-        "bicycle": 0,
-        "motorcycle": 0
+        "truck": 0,
+        "motorcycle": 0,
+        "bicycle": 0
       },
       "detections": [
         {
@@ -880,10 +1070,10 @@
       "offset_seconds": 1.251,
       "vehicle_counts_this_frame": {
         "car": 1,
-        "truck": 0,
         "bus": 0,
-        "bicycle": 0,
-        "motorcycle": 0
+        "truck": 0,
+        "motorcycle": 0,
+        "bicycle": 0
       },
       "detections": [
         {
@@ -906,10 +1096,10 @@
       "offset_seconds": 1.46,
       "vehicle_counts_this_frame": {
         "car": 1,
-        "truck": 0,
         "bus": 0,
-        "bicycle": 0,
-        "motorcycle": 0
+        "truck": 0,
+        "motorcycle": 0,
+        "bicycle": 0
       },
       "detections": [
         {
@@ -932,10 +1122,10 @@
       "offset_seconds": 1.668,
       "vehicle_counts_this_frame": {
         "car": 4,
-        "truck": 0,
         "bus": 0,
-        "bicycle": 0,
-        "motorcycle": 0
+        "truck": 0,
+        "motorcycle": 0,
+        "bicycle": 0
       },
       "detections": [
         {
@@ -997,10 +1187,10 @@
       "offset_seconds": 1.877,
       "vehicle_counts_this_frame": {
         "car": 4,
-        "truck": 0,
         "bus": 0,
-        "bicycle": 0,
-        "motorcycle": 0
+        "truck": 0,
+        "motorcycle": 0,
+        "bicycle": 0
       },
       "detections": [
         {
@@ -1062,10 +1252,10 @@
       "offset_seconds": 2.085,
       "vehicle_counts_this_frame": {
         "car": 4,
-        "truck": 1,
         "bus": 0,
-        "bicycle": 0,
-        "motorcycle": 0
+        "truck": 1,
+        "motorcycle": 0,
+        "bicycle": 0
       },
       "detections": [
         {
@@ -1140,10 +1330,10 @@
       "offset_seconds": 2.294,
       "vehicle_counts_this_frame": {
         "car": 3,
-        "truck": 1,
         "bus": 0,
-        "bicycle": 0,
-        "motorcycle": 0
+        "truck": 1,
+        "motorcycle": 0,
+        "bicycle": 0
       },
       "detections": [
         {
@@ -1205,10 +1395,10 @@
       "offset_seconds": 2.502,
       "vehicle_counts_this_frame": {
         "car": 2,
-        "truck": 1,
         "bus": 0,
-        "bicycle": 0,
-        "motorcycle": 0
+        "truck": 1,
+        "motorcycle": 0,
+        "bicycle": 0
       },
       "detections": [
         {
@@ -1257,10 +1447,10 @@
       "offset_seconds": 2.711,
       "vehicle_counts_this_frame": {
         "car": 1,
-        "truck": 1,
         "bus": 0,
-        "bicycle": 0,
-        "motorcycle": 0
+        "truck": 1,
+        "motorcycle": 0,
+        "bicycle": 0
       },
       "detections": [
         {
@@ -1296,10 +1486,10 @@
       "offset_seconds": 2.92,
       "vehicle_counts_this_frame": {
         "car": 4,
-        "truck": 1,
         "bus": 0,
-        "bicycle": 0,
-        "motorcycle": 0
+        "truck": 1,
+        "motorcycle": 0,
+        "bicycle": 0
       },
       "detections": [
         {
@@ -1372,10 +1562,10 @@
       "offset_seconds": 3.128,
       "vehicle_counts_this_frame": {
         "car": 3,
-        "truck": 1,
         "bus": 0,
-        "bicycle": 0,
-        "motorcycle": 0
+        "truck": 1,
+        "motorcycle": 0,
+        "bicycle": 0
       },
       "detections": [
         {
@@ -1448,10 +1638,10 @@
       "offset_seconds": 3.337,
       "vehicle_counts_this_frame": {
         "car": 7,
-        "truck": 1,
         "bus": 0,
-        "bicycle": 0,
-        "motorcycle": 0
+        "truck": 1,
+        "motorcycle": 0,
+        "bicycle": 0
       },
       "detections": [
         {
@@ -1576,10 +1766,10 @@
       "offset_seconds": 3.545,
       "vehicle_counts_this_frame": {
         "car": 7,
-        "truck": 1,
         "bus": 0,
-        "bicycle": 0,
-        "motorcycle": 0
+        "truck": 1,
+        "motorcycle": 0,
+        "bicycle": 0
       },
       "detections": [
         {
@@ -1691,10 +1881,10 @@
       "offset_seconds": 3.754,
       "vehicle_counts_this_frame": {
         "car": 6,
-        "truck": 1,
         "bus": 0,
-        "bicycle": 0,
-        "motorcycle": 0
+        "truck": 1,
+        "motorcycle": 0,
+        "bicycle": 0
       },
       "detections": [
         {
@@ -1794,10 +1984,10 @@
       "offset_seconds": 3.962,
       "vehicle_counts_this_frame": {
         "car": 5,
-        "truck": 1,
         "bus": 0,
-        "bicycle": 0,
-        "motorcycle": 0
+        "truck": 1,
+        "motorcycle": 0,
+        "bicycle": 0
       },
       "detections": [
         {
@@ -1882,10 +2072,10 @@
       "offset_seconds": 4.171,
       "vehicle_counts_this_frame": {
         "car": 6,
-        "truck": 1,
         "bus": 0,
-        "bicycle": 0,
-        "motorcycle": 0
+        "truck": 1,
+        "motorcycle": 0,
+        "bicycle": 0
       },
       "detections": [
         {
@@ -1983,10 +2173,10 @@
       "offset_seconds": 4.379,
       "vehicle_counts_this_frame": {
         "car": 6,
-        "truck": 1,
         "bus": 0,
-        "bicycle": 0,
-        "motorcycle": 0
+        "truck": 1,
+        "motorcycle": 0,
+        "bicycle": 0
       },
       "detections": [
         {
@@ -2084,10 +2274,10 @@
       "offset_seconds": 4.588,
       "vehicle_counts_this_frame": {
         "car": 7,
-        "truck": 1,
         "bus": 0,
-        "bicycle": 0,
-        "motorcycle": 0
+        "truck": 1,
+        "motorcycle": 0,
+        "bicycle": 0
       },
       "detections": [
         {
@@ -2198,10 +2388,10 @@
       "offset_seconds": 4.796,
       "vehicle_counts_this_frame": {
         "car": 6,
-        "truck": 1,
         "bus": 0,
-        "bicycle": 0,
-        "motorcycle": 0
+        "truck": 1,
+        "motorcycle": 0,
+        "bicycle": 0
       },
       "detections": [
         {
@@ -2299,10 +2489,10 @@
       "offset_seconds": 5.005,
       "vehicle_counts_this_frame": {
         "car": 3,
-        "truck": 1,
         "bus": 0,
-        "bicycle": 0,
-        "motorcycle": 0
+        "truck": 1,
+        "motorcycle": 0,
+        "bicycle": 0
       },
       "detections": [
         {
@@ -2361,10 +2551,10 @@
       "offset_seconds": 5.214,
       "vehicle_counts_this_frame": {
         "car": 5,
-        "truck": 1,
         "bus": 0,
-        "bicycle": 0,
-        "motorcycle": 0
+        "truck": 1,
+        "motorcycle": 0,
+        "bicycle": 0
       },
       "detections": [
         {
@@ -2448,10 +2638,10 @@
       "offset_seconds": 5.422,
       "vehicle_counts_this_frame": {
         "car": 7,
-        "truck": 1,
         "bus": 0,
-        "bicycle": 0,
-        "motorcycle": 0
+        "truck": 1,
+        "motorcycle": 0,
+        "bicycle": 0
       },
       "detections": [
         {
@@ -2573,10 +2763,10 @@
       "offset_seconds": 5.631,
       "vehicle_counts_this_frame": {
         "car": 4,
-        "truck": 1,
         "bus": 0,
-        "bicycle": 0,
-        "motorcycle": 0
+        "truck": 1,
+        "motorcycle": 0,
+        "bicycle": 0
       },
       "detections": [
         {
@@ -2649,10 +2839,10 @@
       "offset_seconds": 5.839,
       "vehicle_counts_this_frame": {
         "car": 6,
-        "truck": 0,
         "bus": 0,
-        "bicycle": 0,
-        "motorcycle": 0
+        "truck": 0,
+        "motorcycle": 0,
+        "bicycle": 0
       },
       "detections": [
         {
@@ -2738,10 +2928,10 @@
       "offset_seconds": 6.048,
       "vehicle_counts_this_frame": {
         "car": 7,
-        "truck": 0,
         "bus": 0,
-        "bicycle": 0,
-        "motorcycle": 0
+        "truck": 0,
+        "motorcycle": 0,
+        "bicycle": 0
       },
       "detections": [
         {
@@ -2840,10 +3030,10 @@
       "offset_seconds": 6.256,
       "vehicle_counts_this_frame": {
         "car": 6,
-        "truck": 0,
         "bus": 0,
-        "bicycle": 0,
-        "motorcycle": 0
+        "truck": 0,
+        "motorcycle": 0,
+        "bicycle": 0
       },
       "detections": [
         {
@@ -2929,10 +3119,10 @@
       "offset_seconds": 6.465,
       "vehicle_counts_this_frame": {
         "car": 6,
-        "truck": 0,
         "bus": 0,
-        "bicycle": 0,
-        "motorcycle": 0
+        "truck": 0,
+        "motorcycle": 0,
+        "bicycle": 0
       },
       "detections": [
         {
@@ -3018,10 +3208,10 @@
       "offset_seconds": 6.673,
       "vehicle_counts_this_frame": {
         "car": 3,
-        "truck": 0,
         "bus": 0,
-        "bicycle": 0,
-        "motorcycle": 0
+        "truck": 0,
+        "motorcycle": 0,
+        "bicycle": 0
       },
       "detections": [
         {
@@ -3068,10 +3258,10 @@
       "offset_seconds": 6.882,
       "vehicle_counts_this_frame": {
         "car": 4,
-        "truck": 0,
         "bus": 0,
-        "bicycle": 0,
-        "motorcycle": 0
+        "truck": 0,
+        "motorcycle": 0,
+        "bicycle": 0
       },
       "detections": [
         {
@@ -3131,10 +3321,10 @@
       "offset_seconds": 7.09,
       "vehicle_counts_this_frame": {
         "car": 4,
-        "truck": 0,
         "bus": 0,
-        "bicycle": 0,
-        "motorcycle": 0
+        "truck": 0,
+        "motorcycle": 0,
+        "bicycle": 0
       },
       "detections": [
         {
@@ -3194,10 +3384,10 @@
       "offset_seconds": 7.299,
       "vehicle_counts_this_frame": {
         "car": 5,
-        "truck": 0,
         "bus": 0,
-        "bicycle": 0,
-        "motorcycle": 0
+        "truck": 0,
+        "motorcycle": 0,
+        "bicycle": 0
       },
       "detections": [
         {
@@ -3270,10 +3460,10 @@
       "offset_seconds": 7.507,
       "vehicle_counts_this_frame": {
         "car": 5,
-        "truck": 1,
         "bus": 0,
-        "bicycle": 0,
-        "motorcycle": 0
+        "truck": 1,
+        "motorcycle": 0,
+        "bicycle": 0
       },
       "detections": [
         {
@@ -3359,10 +3549,10 @@
       "offset_seconds": 7.716,
       "vehicle_counts_this_frame": {
         "car": 6,
-        "truck": 0,
         "bus": 0,
-        "bicycle": 0,
-        "motorcycle": 0
+        "truck": 0,
+        "motorcycle": 0,
+        "bicycle": 0
       },
       "detections": [
         {
@@ -3449,10 +3639,10 @@
       "offset_seconds": 7.925,
       "vehicle_counts_this_frame": {
         "car": 5,
-        "truck": 0,
         "bus": 0,
-        "bicycle": 0,
-        "motorcycle": 0
+        "truck": 0,
+        "motorcycle": 0,
+        "bicycle": 0
       },
       "detections": [
         {
@@ -3526,10 +3716,10 @@
       "offset_seconds": 8.133,
       "vehicle_counts_this_frame": {
         "car": 6,
-        "truck": 0,
         "bus": 0,
-        "bicycle": 0,
-        "motorcycle": 0
+        "truck": 0,
+        "motorcycle": 0,
+        "bicycle": 0
       },
       "detections": [
         {
@@ -3616,10 +3806,10 @@
       "offset_seconds": 8.342,
       "vehicle_counts_this_frame": {
         "car": 5,
-        "truck": 0,
         "bus": 0,
-        "bicycle": 0,
-        "motorcycle": 0
+        "truck": 0,
+        "motorcycle": 0,
+        "bicycle": 0
       },
       "detections": [
         {
@@ -3693,10 +3883,10 @@
       "offset_seconds": 8.55,
       "vehicle_counts_this_frame": {
         "car": 6,
-        "truck": 0,
         "bus": 0,
-        "bicycle": 0,
-        "motorcycle": 0
+        "truck": 0,
+        "motorcycle": 0,
+        "bicycle": 0
       },
       "detections": [
         {
@@ -3783,10 +3973,10 @@
       "offset_seconds": 8.759,
       "vehicle_counts_this_frame": {
         "car": 8,
-        "truck": 0,
         "bus": 0,
-        "bicycle": 0,
-        "motorcycle": 0
+        "truck": 0,
+        "motorcycle": 0,
+        "bicycle": 0
       },
       "detections": [
         {
@@ -3898,10 +4088,10 @@
       "offset_seconds": 8.967,
       "vehicle_counts_this_frame": {
         "car": 7,
-        "truck": 0,
         "bus": 0,
-        "bicycle": 0,
-        "motorcycle": 0
+        "truck": 0,
+        "motorcycle": 0,
+        "bicycle": 0
       },
       "detections": [
         {
@@ -4001,10 +4191,10 @@
       "offset_seconds": 9.176,
       "vehicle_counts_this_frame": {
         "car": 3,
-        "truck": 0,
         "bus": 0,
-        "bicycle": 0,
-        "motorcycle": 0
+        "truck": 0,
+        "motorcycle": 0,
+        "bicycle": 0
       },
       "detections": [
         {
@@ -4052,10 +4242,10 @@
       "offset_seconds": 9.384,
       "vehicle_counts_this_frame": {
         "car": 5,
-        "truck": 0,
         "bus": 0,
-        "bicycle": 0,
-        "motorcycle": 0
+        "truck": 0,
+        "motorcycle": 0,
+        "bicycle": 0
       },
       "detections": [
         {
@@ -4129,10 +4319,10 @@
       "offset_seconds": 9.593,
       "vehicle_counts_this_frame": {
         "car": 5,
-        "truck": 0,
         "bus": 0,
-        "bicycle": 0,
-        "motorcycle": 0
+        "truck": 0,
+        "motorcycle": 0,
+        "bicycle": 0
       },
       "detections": [
         {
@@ -4206,10 +4396,10 @@
       "offset_seconds": 9.801,
       "vehicle_counts_this_frame": {
         "car": 6,
-        "truck": 0,
         "bus": 0,
-        "bicycle": 0,
-        "motorcycle": 0
+        "truck": 0,
+        "motorcycle": 0,
+        "bicycle": 0
       },
       "detections": [
         {
@@ -4295,10 +4485,10 @@
       "offset_seconds": 10.01,
       "vehicle_counts_this_frame": {
         "car": 7,
-        "truck": 0,
         "bus": 0,
-        "bicycle": 0,
-        "motorcycle": 0
+        "truck": 0,
+        "motorcycle": 0,
+        "bicycle": 0
       },
       "detections": [
         {
@@ -4397,10 +4587,10 @@
       "offset_seconds": 10.219,
       "vehicle_counts_this_frame": {
         "car": 6,
-        "truck": 0,
         "bus": 0,
-        "bicycle": 0,
-        "motorcycle": 0
+        "truck": 0,
+        "motorcycle": 0,
+        "bicycle": 0
       },
       "detections": [
         {
@@ -4486,10 +4676,10 @@
       "offset_seconds": 10.427,
       "vehicle_counts_this_frame": {
         "car": 6,
-        "truck": 0,
         "bus": 0,
-        "bicycle": 0,
-        "motorcycle": 0
+        "truck": 0,
+        "motorcycle": 0,
+        "bicycle": 0
       },
       "detections": [
         {
@@ -4575,10 +4765,10 @@
       "offset_seconds": 10.636,
       "vehicle_counts_this_frame": {
         "car": 5,
-        "truck": 0,
         "bus": 0,
-        "bicycle": 0,
-        "motorcycle": 0
+        "truck": 0,
+        "motorcycle": 0,
+        "bicycle": 0
       },
       "detections": [
         {
@@ -4652,10 +4842,10 @@
       "offset_seconds": 10.844,
       "vehicle_counts_this_frame": {
         "car": 5,
-        "truck": 1,
         "bus": 0,
-        "bicycle": 0,
-        "motorcycle": 0
+        "truck": 1,
+        "motorcycle": 0,
+        "bicycle": 0
       },
       "detections": [
         {
@@ -4742,10 +4932,10 @@
       "offset_seconds": 11.053,
       "vehicle_counts_this_frame": {
         "car": 5,
-        "truck": 0,
         "bus": 0,
-        "bicycle": 0,
-        "motorcycle": 0
+        "truck": 0,
+        "motorcycle": 0,
+        "bicycle": 0
       },
       "detections": [
         {
@@ -4819,10 +5009,10 @@
       "offset_seconds": 11.261,
       "vehicle_counts_this_frame": {
         "car": 5,
-        "truck": 0,
         "bus": 0,
-        "bicycle": 0,
-        "motorcycle": 0
+        "truck": 0,
+        "motorcycle": 0,
+        "bicycle": 0
       },
       "detections": [
         {
@@ -4896,10 +5086,10 @@
       "offset_seconds": 11.47,
       "vehicle_counts_this_frame": {
         "car": 4,
-        "truck": 0,
         "bus": 0,
-        "bicycle": 0,
-        "motorcycle": 0
+        "truck": 0,
+        "motorcycle": 0,
+        "bicycle": 0
       },
       "detections": [
         {
@@ -4961,10 +5151,10 @@
       "offset_seconds": 11.678,
       "vehicle_counts_this_frame": {
         "car": 4,
-        "truck": 0,
         "bus": 0,
-        "bicycle": 0,
-        "motorcycle": 0
+        "truck": 0,
+        "motorcycle": 0,
+        "bicycle": 0
       },
       "detections": [
         {
@@ -5026,10 +5216,10 @@
       "offset_seconds": 11.887,
       "vehicle_counts_this_frame": {
         "car": 4,
-        "truck": 0,
         "bus": 0,
-        "bicycle": 0,
-        "motorcycle": 0
+        "truck": 0,
+        "motorcycle": 0,
+        "bicycle": 0
       },
       "detections": [
         {
@@ -5091,10 +5281,10 @@
       "offset_seconds": 12.095,
       "vehicle_counts_this_frame": {
         "car": 5,
-        "truck": 0,
         "bus": 0,
-        "bicycle": 0,
-        "motorcycle": 0
+        "truck": 0,
+        "motorcycle": 0,
+        "bicycle": 0
       },
       "detections": [
         {
@@ -5169,10 +5359,10 @@
       "offset_seconds": 12.304,
       "vehicle_counts_this_frame": {
         "car": 5,
-        "truck": 0,
         "bus": 0,
-        "bicycle": 0,
-        "motorcycle": 0
+        "truck": 0,
+        "motorcycle": 0,
+        "bicycle": 0
       },
       "detections": [
         {
@@ -5247,10 +5437,10 @@
       "offset_seconds": 12.512,
       "vehicle_counts_this_frame": {
         "car": 5,
-        "truck": 0,
         "bus": 0,
-        "bicycle": 0,
-        "motorcycle": 0
+        "truck": 0,
+        "motorcycle": 0,
+        "bicycle": 0
       },
       "detections": [
         {
@@ -5325,10 +5515,10 @@
       "offset_seconds": 12.721,
       "vehicle_counts_this_frame": {
         "car": 4,
-        "truck": 0,
         "bus": 0,
-        "bicycle": 0,
-        "motorcycle": 0
+        "truck": 0,
+        "motorcycle": 0,
+        "bicycle": 0
       },
       "detections": [
         {
@@ -5390,10 +5580,10 @@
       "offset_seconds": 12.93,
       "vehicle_counts_this_frame": {
         "car": 5,
-        "truck": 0,
         "bus": 0,
-        "bicycle": 0,
-        "motorcycle": 0
+        "truck": 0,
+        "motorcycle": 0,
+        "bicycle": 0
       },
       "detections": [
         {
@@ -5468,10 +5658,10 @@
       "offset_seconds": 13.138,
       "vehicle_counts_this_frame": {
         "car": 4,
-        "truck": 0,
         "bus": 0,
-        "bicycle": 0,
-        "motorcycle": 0
+        "truck": 0,
+        "motorcycle": 0,
+        "bicycle": 0
       },
       "detections": [
         {
@@ -5533,10 +5723,10 @@
       "offset_seconds": 13.347,
       "vehicle_counts_this_frame": {
         "car": 5,
-        "truck": 0,
         "bus": 0,
-        "bicycle": 0,
-        "motorcycle": 0
+        "truck": 0,
+        "motorcycle": 0,
+        "bicycle": 0
       },
       "detections": [
         {
@@ -5611,10 +5801,10 @@
       "offset_seconds": 13.555,
       "vehicle_counts_this_frame": {
         "car": 5,
-        "truck": 0,
         "bus": 0,
-        "bicycle": 0,
-        "motorcycle": 0
+        "truck": 0,
+        "motorcycle": 0,
+        "bicycle": 0
       },
       "detections": [
         {
@@ -5689,10 +5879,10 @@
       "offset_seconds": 13.764,
       "vehicle_counts_this_frame": {
         "car": 6,
-        "truck": 0,
         "bus": 0,
-        "bicycle": 0,
-        "motorcycle": 0
+        "truck": 0,
+        "motorcycle": 0,
+        "bicycle": 0
       },
       "detections": [
         {
@@ -5780,10 +5970,10 @@
       "offset_seconds": 13.972,
       "vehicle_counts_this_frame": {
         "car": 6,
-        "truck": 0,
         "bus": 0,
-        "bicycle": 0,
-        "motorcycle": 0
+        "truck": 0,
+        "motorcycle": 0,
+        "bicycle": 0
       },
       "detections": [
         {
@@ -5871,10 +6061,10 @@
       "offset_seconds": 14.181,
       "vehicle_counts_this_frame": {
         "car": 6,
-        "truck": 0,
         "bus": 0,
-        "bicycle": 0,
-        "motorcycle": 0
+        "truck": 0,
+        "motorcycle": 0,
+        "bicycle": 0
       },
       "detections": [
         {
@@ -5962,10 +6152,10 @@
       "offset_seconds": 14.389,
       "vehicle_counts_this_frame": {
         "car": 5,
-        "truck": 0,
         "bus": 0,
-        "bicycle": 0,
-        "motorcycle": 0
+        "truck": 0,
+        "motorcycle": 0,
+        "bicycle": 0
       },
       "detections": [
         {
@@ -6040,10 +6230,10 @@
       "offset_seconds": 14.598,
       "vehicle_counts_this_frame": {
         "car": 5,
-        "truck": 0,
         "bus": 0,
-        "bicycle": 0,
-        "motorcycle": 0
+        "truck": 0,
+        "motorcycle": 0,
+        "bicycle": 0
       },
       "detections": [
         {
@@ -6118,10 +6308,10 @@
       "offset_seconds": 14.806,
       "vehicle_counts_this_frame": {
         "car": 5,
-        "truck": 0,
         "bus": 0,
-        "bicycle": 0,
-        "motorcycle": 0
+        "truck": 0,
+        "motorcycle": 0,
+        "bicycle": 0
       },
       "detections": [
         {
@@ -6196,10 +6386,10 @@
       "offset_seconds": 15.015,
       "vehicle_counts_this_frame": {
         "car": 4,
-        "truck": 0,
         "bus": 0,
-        "bicycle": 0,
-        "motorcycle": 0
+        "truck": 0,
+        "motorcycle": 0,
+        "bicycle": 0
       },
       "detections": [
         {
@@ -6261,10 +6451,10 @@
       "offset_seconds": 15.224,
       "vehicle_counts_this_frame": {
         "car": 5,
-        "truck": 0,
         "bus": 0,
-        "bicycle": 0,
-        "motorcycle": 0
+        "truck": 0,
+        "motorcycle": 0,
+        "bicycle": 0
       },
       "detections": [
         {
@@ -6339,10 +6529,10 @@
       "offset_seconds": 15.432,
       "vehicle_counts_this_frame": {
         "car": 4,
-        "truck": 0,
         "bus": 0,
-        "bicycle": 0,
-        "motorcycle": 0
+        "truck": 0,
+        "motorcycle": 0,
+        "bicycle": 0
       },
       "detections": [
         {
@@ -6404,10 +6594,10 @@
       "offset_seconds": 15.641,
       "vehicle_counts_this_frame": {
         "car": 3,
-        "truck": 0,
         "bus": 0,
-        "bicycle": 0,
-        "motorcycle": 0
+        "truck": 0,
+        "motorcycle": 0,
+        "bicycle": 0
       },
       "detections": [
         {
@@ -6456,10 +6646,10 @@
       "offset_seconds": 15.849,
       "vehicle_counts_this_frame": {
         "car": 4,
-        "truck": 0,
         "bus": 0,
-        "bicycle": 0,
-        "motorcycle": 0
+        "truck": 0,
+        "motorcycle": 0,
+        "bicycle": 0
       },
       "detections": [
         {
@@ -6521,10 +6711,10 @@
       "offset_seconds": 16.058,
       "vehicle_counts_this_frame": {
         "car": 4,
-        "truck": 0,
         "bus": 0,
-        "bicycle": 0,
-        "motorcycle": 0
+        "truck": 0,
+        "motorcycle": 0,
+        "bicycle": 0
       },
       "detections": [
         {
@@ -6586,10 +6776,10 @@
       "offset_seconds": 16.266,
       "vehicle_counts_this_frame": {
         "car": 3,
-        "truck": 0,
         "bus": 0,
-        "bicycle": 0,
-        "motorcycle": 0
+        "truck": 0,
+        "motorcycle": 0,
+        "bicycle": 0
       },
       "detections": [
         {
@@ -6638,10 +6828,10 @@
       "offset_seconds": 16.475,
       "vehicle_counts_this_frame": {
         "car": 4,
-        "truck": 0,
         "bus": 0,
-        "bicycle": 0,
-        "motorcycle": 0
+        "truck": 0,
+        "motorcycle": 0,
+        "bicycle": 0
       },
       "detections": [
         {
@@ -6703,10 +6893,10 @@
       "offset_seconds": 16.683,
       "vehicle_counts_this_frame": {
         "car": 6,
-        "truck": 0,
         "bus": 0,
-        "bicycle": 0,
-        "motorcycle": 0
+        "truck": 0,
+        "motorcycle": 0,
+        "bicycle": 0
       },
       "detections": [
         {
@@ -6794,10 +6984,10 @@
       "offset_seconds": 16.892,
       "vehicle_counts_this_frame": {
         "car": 7,
-        "truck": 0,
         "bus": 0,
-        "bicycle": 0,
-        "motorcycle": 0
+        "truck": 0,
+        "motorcycle": 0,
+        "bicycle": 0
       },
       "detections": [
         {
@@ -6898,10 +7088,10 @@
       "offset_seconds": 17.1,
       "vehicle_counts_this_frame": {
         "car": 5,
-        "truck": 0,
         "bus": 0,
-        "bicycle": 0,
-        "motorcycle": 0
+        "truck": 0,
+        "motorcycle": 0,
+        "bicycle": 0
       },
       "detections": [
         {
@@ -6976,10 +7166,10 @@
       "offset_seconds": 17.309,
       "vehicle_counts_this_frame": {
         "car": 5,
-        "truck": 0,
         "bus": 0,
-        "bicycle": 0,
-        "motorcycle": 0
+        "truck": 0,
+        "motorcycle": 0,
+        "bicycle": 0
       },
       "detections": [
         {
@@ -7054,10 +7244,10 @@
       "offset_seconds": 17.517,
       "vehicle_counts_this_frame": {
         "car": 6,
-        "truck": 0,
         "bus": 0,
-        "bicycle": 0,
-        "motorcycle": 0
+        "truck": 0,
+        "motorcycle": 0,
+        "bicycle": 0
       },
       "detections": [
         {
@@ -7145,10 +7335,10 @@
       "offset_seconds": 17.726,
       "vehicle_counts_this_frame": {
         "car": 6,
-        "truck": 0,
         "bus": 0,
-        "bicycle": 0,
-        "motorcycle": 0
+        "truck": 0,
+        "motorcycle": 0,
+        "bicycle": 0
       },
       "detections": [
         {
@@ -7236,10 +7426,10 @@
       "offset_seconds": 17.935,
       "vehicle_counts_this_frame": {
         "car": 4,
-        "truck": 0,
         "bus": 0,
-        "bicycle": 0,
-        "motorcycle": 0
+        "truck": 0,
+        "motorcycle": 0,
+        "bicycle": 0
       },
       "detections": [
         {
@@ -7301,10 +7491,10 @@
       "offset_seconds": 18.143,
       "vehicle_counts_this_frame": {
         "car": 5,
-        "truck": 0,
         "bus": 0,
-        "bicycle": 0,
-        "motorcycle": 0
+        "truck": 0,
+        "motorcycle": 0,
+        "bicycle": 0
       },
       "detections": [
         {
@@ -7379,10 +7569,10 @@
       "offset_seconds": 18.352,
       "vehicle_counts_this_frame": {
         "car": 5,
-        "truck": 0,
         "bus": 0,
-        "bicycle": 0,
-        "motorcycle": 0
+        "truck": 0,
+        "motorcycle": 0,
+        "bicycle": 0
       },
       "detections": [
         {
@@ -7457,10 +7647,10 @@
       "offset_seconds": 18.56,
       "vehicle_counts_this_frame": {
         "car": 4,
-        "truck": 0,
         "bus": 0,
-        "bicycle": 0,
-        "motorcycle": 0
+        "truck": 0,
+        "motorcycle": 0,
+        "bicycle": 0
       },
       "detections": [
         {
@@ -7522,10 +7712,10 @@
       "offset_seconds": 18.769,
       "vehicle_counts_this_frame": {
         "car": 3,
-        "truck": 0,
         "bus": 0,
-        "bicycle": 0,
-        "motorcycle": 0
+        "truck": 0,
+        "motorcycle": 0,
+        "bicycle": 0
       },
       "detections": [
         {
@@ -7574,10 +7764,10 @@
       "offset_seconds": 18.977,
       "vehicle_counts_this_frame": {
         "car": 4,
-        "truck": 0,
         "bus": 0,
-        "bicycle": 0,
-        "motorcycle": 0
+        "truck": 0,
+        "motorcycle": 0,
+        "bicycle": 0
       },
       "detections": [
         {
@@ -7639,10 +7829,10 @@
       "offset_seconds": 19.186,
       "vehicle_counts_this_frame": {
         "car": 5,
-        "truck": 0,
         "bus": 0,
-        "bicycle": 0,
-        "motorcycle": 0
+        "truck": 0,
+        "motorcycle": 0,
+        "bicycle": 0
       },
       "detections": [
         {
@@ -7717,10 +7907,10 @@
       "offset_seconds": 19.394,
       "vehicle_counts_this_frame": {
         "car": 5,
-        "truck": 0,
         "bus": 0,
-        "bicycle": 0,
-        "motorcycle": 0
+        "truck": 0,
+        "motorcycle": 0,
+        "bicycle": 0
       },
       "detections": [
         {
@@ -7795,10 +7985,10 @@
       "offset_seconds": 19.603,
       "vehicle_counts_this_frame": {
         "car": 4,
-        "truck": 0,
         "bus": 0,
-        "bicycle": 0,
-        "motorcycle": 0
+        "truck": 0,
+        "motorcycle": 0,
+        "bicycle": 0
       },
       "detections": [
         {
@@ -7860,10 +8050,10 @@
       "offset_seconds": 19.811,
       "vehicle_counts_this_frame": {
         "car": 4,
-        "truck": 0,
         "bus": 0,
-        "bicycle": 0,
-        "motorcycle": 0
+        "truck": 0,
+        "motorcycle": 0,
+        "bicycle": 0
       },
       "detections": [
         {
@@ -7925,10 +8115,10 @@
       "offset_seconds": 20.02,
       "vehicle_counts_this_frame": {
         "car": 5,
-        "truck": 0,
         "bus": 0,
-        "bicycle": 0,
-        "motorcycle": 0
+        "truck": 0,
+        "motorcycle": 0,
+        "bicycle": 0
       },
       "detections": [
         {
@@ -8003,10 +8193,10 @@
       "offset_seconds": 20.229,
       "vehicle_counts_this_frame": {
         "car": 4,
-        "truck": 1,
         "bus": 0,
-        "bicycle": 0,
-        "motorcycle": 0
+        "truck": 1,
+        "motorcycle": 0,
+        "bicycle": 0
       },
       "detections": [
         {
@@ -8081,10 +8271,10 @@
       "offset_seconds": 20.437,
       "vehicle_counts_this_frame": {
         "car": 3,
-        "truck": 2,
         "bus": 0,
-        "bicycle": 0,
-        "motorcycle": 0
+        "truck": 2,
+        "motorcycle": 0,
+        "bicycle": 0
       },
       "detections": [
         {
@@ -8159,10 +8349,10 @@
       "offset_seconds": 20.646,
       "vehicle_counts_this_frame": {
         "car": 4,
-        "truck": 2,
         "bus": 0,
-        "bicycle": 0,
-        "motorcycle": 0
+        "truck": 2,
+        "motorcycle": 0,
+        "bicycle": 0
       },
       "detections": [
         {
@@ -8250,10 +8440,10 @@
       "offset_seconds": 20.854,
       "vehicle_counts_this_frame": {
         "car": 4,
-        "truck": 1,
         "bus": 0,
-        "bicycle": 0,
-        "motorcycle": 0
+        "truck": 1,
+        "motorcycle": 0,
+        "bicycle": 0
       },
       "detections": [
         {
@@ -8328,10 +8518,10 @@
       "offset_seconds": 21.063,
       "vehicle_counts_this_frame": {
         "car": 5,
-        "truck": 0,
         "bus": 0,
-        "bicycle": 0,
-        "motorcycle": 0
+        "truck": 0,
+        "motorcycle": 0,
+        "bicycle": 0
       },
       "detections": [
         {
@@ -8406,10 +8596,10 @@
       "offset_seconds": 21.271,
       "vehicle_counts_this_frame": {
         "car": 3,
-        "truck": 1,
         "bus": 0,
-        "bicycle": 0,
-        "motorcycle": 0
+        "truck": 1,
+        "motorcycle": 0,
+        "bicycle": 0
       },
       "detections": [
         {
@@ -8471,10 +8661,10 @@
       "offset_seconds": 21.48,
       "vehicle_counts_this_frame": {
         "car": 3,
-        "truck": 0,
         "bus": 0,
-        "bicycle": 0,
-        "motorcycle": 0
+        "truck": 0,
+        "motorcycle": 0,
+        "bicycle": 0
       },
       "detections": [
         {
@@ -8523,10 +8713,10 @@
       "offset_seconds": 21.688,
       "vehicle_counts_this_frame": {
         "car": 2,
-        "truck": 0,
         "bus": 1,
-        "bicycle": 0,
-        "motorcycle": 0
+        "truck": 0,
+        "motorcycle": 0,
+        "bicycle": 0
       },
       "detections": [
         {
@@ -8575,10 +8765,10 @@
       "offset_seconds": 21.897,
       "vehicle_counts_this_frame": {
         "car": 2,
-        "truck": 0,
         "bus": 0,
-        "bicycle": 0,
-        "motorcycle": 0
+        "truck": 0,
+        "motorcycle": 0,
+        "bicycle": 0
       },
       "detections": [
         {
@@ -8614,10 +8804,10 @@
       "offset_seconds": 22.105,
       "vehicle_counts_this_frame": {
         "car": 3,
-        "truck": 1,
         "bus": 0,
-        "bicycle": 0,
-        "motorcycle": 0
+        "truck": 1,
+        "motorcycle": 0,
+        "bicycle": 0
       },
       "detections": [
         {
@@ -8679,10 +8869,10 @@
       "offset_seconds": 22.314,
       "vehicle_counts_this_frame": {
         "car": 5,
-        "truck": 0,
         "bus": 0,
-        "bicycle": 0,
-        "motorcycle": 0
+        "truck": 0,
+        "motorcycle": 0,
+        "bicycle": 0
       },
       "detections": [
         {
@@ -8757,10 +8947,10 @@
       "offset_seconds": 22.522,
       "vehicle_counts_this_frame": {
         "car": 5,
-        "truck": 0,
         "bus": 0,
-        "bicycle": 0,
-        "motorcycle": 0
+        "truck": 0,
+        "motorcycle": 0,
+        "bicycle": 0
       },
       "detections": [
         {
@@ -8835,10 +9025,10 @@
       "offset_seconds": 22.731,
       "vehicle_counts_this_frame": {
         "car": 4,
-        "truck": 0,
         "bus": 0,
-        "bicycle": 0,
-        "motorcycle": 0
+        "truck": 0,
+        "motorcycle": 0,
+        "bicycle": 0
       },
       "detections": [
         {
@@ -8900,10 +9090,10 @@
       "offset_seconds": 22.94,
       "vehicle_counts_this_frame": {
         "car": 4,
-        "truck": 0,
         "bus": 0,
-        "bicycle": 0,
-        "motorcycle": 0
+        "truck": 0,
+        "motorcycle": 0,
+        "bicycle": 0
       },
       "detections": [
         {
@@ -8974,5 +9164,5 @@
       ]
     }
   ],
-  "created_at": "2026-11-05T17:25:16.183800+00:00"
+  "created_at": "2026-11-05T18:13:09.247136+00:00"
 }

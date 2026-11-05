@@ -59,3 +59,5 @@ jobs:
         run: NODE="$(command -v node)" npm run verify
       - name: Verify offline tracking and ground-truth tools
         run: python -m unittest discover -s tools/traffic-analytics -v
+      - name: Verify annotation review package logic
+        run: node --test tools/traffic-analytics/annotation_review/review-data.test.mjs

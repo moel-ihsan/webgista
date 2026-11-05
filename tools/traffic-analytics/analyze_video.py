@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Offline YOLOX-S detection and experimental virtual-line analysis."""
 import argparse
+import hashlib
 import json
 import subprocess
 from collections import Counter
@@ -10,13 +11,21 @@ from pathlib import Path
 import cv2
 import numpy as np
 from configuration import validate_configuration
-from evaluate_ground_truth import evaluate, read_labels
+from evaluate_ground_truth import evaluate_review_package
 from taxonomy import COCO_VEHICLES, TRAFFIC_CATEGORIES, map_coco_vehicle
 from tracker import CentroidLineTracker, in_roi
 from yolox import YoloX
 
 VEHICLE_CLASSES = {'bicycle', 'car', 'motorcycle', 'bus', 'truck'}
 COCO_VEHICLE_IDS = {class_id: value[0] for class_id, value in COCO_VEHICLES.items()}
+
+
+def sha256_file(path):
+    digest = hashlib.sha256()
+    with path.open('rb') as source:
+        for block in iter(lambda: source.read(1024 * 1024), b''):
+            digest.update(block)
+    return digest.hexdigest()
 
 
 def letterbox(image, size=640):
@@ -35,7 +44,7 @@ def main():
     parser.add_argument('--json', type=Path, required=True)
     parser.add_argument('--annotated', type=Path, required=True)
     parser.add_argument('--source-reference', required=True, help='Non-secret source/license description')
-    parser.add_argument('--ground-truth', type=Path, help='Manually annotated crossing-event CSV')
+    parser.add_argument('--ground-truth', type=Path, help='Completed, human-reviewed ground-truth JSON exported by annotation_review')
     parser.add_argument('--confidence', type=float, default=0.35)
     parser.add_argument('--sampled-fps', type=float, default=1, help='Offline inference rate, up to 10 FPS')
     parser.add_argument('--roi', type=float, nargs=4, metavar=('X', 'Y', 'W', 'H'), help='Normalized region of interest')
@@ -46,6 +55,8 @@ def main():
     args = parser.parse_args()
     if not args.video.is_file() or not args.model.is_file():
         parser.error('video and model files must exist')
+    source_sha256 = sha256_file(args.video)
+    model_sha256 = sha256_file(args.model)
     try:
         validate_configuration(args.confidence, args.sampled_fps, args.roi, args.counting_line,
                                args.max_track_distance, args.max_missed_frames, args.direction)
@@ -148,15 +159,16 @@ def main():
 
     tracks = tracker.summaries()
     crossing_events = [event for frame in frames for event in frame['line_crossings_this_frame']]
-    ground_truth_result = evaluate({'crossing_events': crossing_events}, read_labels(args.ground_truth)) if args.ground_truth else None
     result = {
         'schema_version': 'webgista.traffic-analysis.v2',
         'record_kind': 'demo_video_analysis', 'is_live_cctv': False,
-        'source_video_identifier': args.video.stem, 'source_reference': args.source_reference,
+        'source_video_identifier': args.video.stem, 'source_video_sha256': source_sha256,
+        'source_reference': args.source_reference,
         'input_duration_seconds': round(duration, 3), 'video_dimensions': {'width': width, 'height': height},
-        'source_frame_count': source_frame_count, 'processed_frame_count': processed_count,
+        'source_fps': round(fps, 6), 'source_frame_count': source_frame_count,
+        'sample_frame_interval': interval, 'processed_frame_count': processed_count,
         'requested_sampled_fps': args.sampled_fps, 'sampled_fps': round(effective_sampled_fps, 3),
-        'model': {'name': 'OpenCV Zoo YOLOX-S COCO', 'version': 'object_detection_yolox_2022nov_int8', 'license': 'Apache-2.0'},
+        'model': {'name': 'OpenCV Zoo YOLOX-S COCO', 'version': 'object_detection_yolox_2022nov_int8', 'sha256': model_sha256, 'license': 'Apache-2.0'},
         'tracking': {
             'enabled': True, 'algorithm': 'greedy same-class centroid association with linear velocity prediction',
             'max_distance_pixels': args.max_track_distance, 'max_missed_frames': args.max_missed_frames,
@@ -179,18 +191,27 @@ def main():
             'status': 'not_ground_truth_validated',
             'single_detection_track_count': sum(track['observations'] == 1 for track in tracks),
             'mean_sampled_observations_per_track': round(sum(track['observations'] for track in tracks) / len(tracks), 3) if tracks else 0,
-            'note': 'These diagnostics describe tracker output only; they are not accuracy metrics.',
+            'tracks_with_gap_reacquisition': sum(track['gap_reacquisitions'] > 0 for track in tracks),
+            'max_intervening_missed_samples': max((track['max_intervening_missed_samples'] for track in tracks), default=0),
+            'max_prediction_error_pixels': max((track['max_prediction_error_pixels'] for track in tracks), default=0),
+            'untracked_detection_instances_outside_roi': sum('track_id' not in detection for frame in frames for detection in frame['detections']),
+            'track_count_by_class': {name: sum(track['class'] == name for track in tracks) for name in sorted(VEHICLE_CLASSES)},
+            'note': 'Track counts, confidence, gaps, and prediction residuals describe tracker output only; they are not accuracy metrics.',
         },
         'crossing_event_count': len(crossing_events), 'crossing_events': crossing_events,
         'crossing_counts_by_class': crossing_counts if line else None,
-        'ground_truth_evaluation': ground_truth_result,
-        'ground_truth_status': 'evaluated' if ground_truth_result and ground_truth_result['ground_truth_available'] else 'not_available',
+        'ground_truth_evaluation': None,
+        'ground_truth_status': 'not_available',
         'peak_vehicles_in_sampled_frame': max_per_frame,
         'vehicle_count_semantics': 'Detection instances repeat across frames. Track IDs and line-crossing events are experimental and unvalidated; only manually ground-truth-matched events may be described as validated counts.',
         'condition': None,
         'condition_note': 'No valid estimate: the demo clip is under 30 seconds and lacks ground-truth-validated counts and road-capacity configuration.',
         'frames': frames, 'created_at': datetime.now(timezone.utc).isoformat(),
     }
+    if args.ground_truth:
+        ground_truth_result = evaluate_review_package(result, json.loads(args.ground_truth.read_text()))
+        result['ground_truth_evaluation'] = ground_truth_result
+        result['ground_truth_status'] = 'evaluated' if ground_truth_result.get('ground_truth_available') else 'not_ready'
     args.json.write_text(json.dumps(result, indent=2) + '\n')
     print(json.dumps({key: result[key] for key in ('input_duration_seconds', 'processed_frame_count', 'detection_instances_by_class', 'tracked_objects_count', 'crossing_event_count', 'tracking_quality', 'condition')}, indent=2))
 
