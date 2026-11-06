@@ -8,6 +8,8 @@ import 'maplibre-gl/dist/maplibre-gl.css'
 import { appConfig, defaultMapStyleId, mapStyles, type MapStyleId } from '../../config/app'
 import { authSession } from '../../auth/session'
 import { createSupabaseCctvDataSource } from '../../data/supabaseCctvDataSource'
+import { listLatestTrafficObservations } from '../../data/trafficObservations'
+import { mergeLatestTrafficConditions, watchTrafficObservationChanges } from '../../data/trafficObservationRefresh'
 import { DEFAULT_MAP_VIEWPORT, loadMapViewport, type MapViewport } from '../../data/mapSettings'
 import type { CctvLocation } from '../../domain/cctv'
 import { supabaseClient } from '../../lib/supabase'
@@ -74,6 +76,9 @@ let loadTimer: ReturnType<typeof setTimeout> | null = null
 let boundaryTimer: ReturnType<typeof setTimeout> | null = null
 let boundaryController: AbortController | null = null
 let cctvController: AbortController | null = null
+let trafficConditionController: AbortController | null = null
+let trafficConditionRevision = 0
+let stopWatchingTrafficObservations: (() => void) | null = null
 let cctvPopup: maplibregl.Popup | null = null
 let cctvPopupLocationId: string | null = null
 let disposePopupVideo: (() => void) | null = null
@@ -276,6 +281,7 @@ function selectSearchResult(location: CctvLocation): void {
 }
 
 async function loadCctvLocations(): Promise<void> {
+  stopTrafficConditionPolling()
   if (!supabaseClient) {
     cctvStatus.value = 'error'
     cctvNotice.value = 'Supabase is not configured. CCTV locations are unavailable.'
@@ -294,6 +300,7 @@ async function loadCctvLocations(): Promise<void> {
     if (cctvPopupLocationId && !locations.some(({ id }) => id === cctvPopupLocationId)) closeCctvPopup()
     cctvStatus.value = locations.length ? 'ready' : 'empty'
     if (map) updateCctvSource(map, toCctvFeatureCollection(locations))
+    startTrafficConditionPolling()
   } catch {
     if (controller.signal.aborted) return
     cctvLocations.value = []
@@ -306,6 +313,39 @@ async function loadCctvLocations(): Promise<void> {
   }
 }
 
+function stopTrafficConditionPolling(): void {
+  trafficConditionRevision += 1
+  trafficConditionController?.abort()
+  trafficConditionController = null
+  stopWatchingTrafficObservations?.()
+  stopWatchingTrafficObservations = null
+}
+
+async function refreshTrafficConditions(): Promise<void> {
+  if (!supabaseClient || authSession.state.status !== 'authenticated' || componentUnmounted) return
+  trafficConditionController?.abort()
+  const controller = new AbortController()
+  trafficConditionController = controller
+  const revision = ++trafficConditionRevision
+  try {
+    const observations = await listLatestTrafficObservations(supabaseClient, controller.signal)
+    if (controller.signal.aborted || componentUnmounted || revision !== trafficConditionRevision) return
+    const merged = mergeLatestTrafficConditions(cctvLocations.value, observations)
+    if (!merged.changed) return
+    cctvLocations.value = merged.locations
+    if (map) updateCctvSource(map, toCctvFeatureCollection(merged.locations))
+  } catch {
+    // Keep the last displayed conditions until a read succeeds.
+  } finally {
+    if (trafficConditionController === controller) trafficConditionController = null
+  }
+}
+
+function startTrafficConditionPolling(): void {
+  if (props.compact || isPicker.value || authSession.state.status !== 'authenticated' || stopWatchingTrafficObservations) return
+  stopWatchingTrafficObservations = watchTrafficObservationChanges(() => { void refreshTrafficConditions() })
+}
+
 watch(() => authSession.state.status, (authStatus) => {
   if (isPicker.value) {
     cctvLocations.value = []
@@ -315,6 +355,7 @@ watch(() => authSession.state.status, (authStatus) => {
   cctvController?.abort()
   cctvController = null
   if (authStatus === 'loading') {
+    stopTrafficConditionPolling()
     cctvLocations.value = []
     cctvStatus.value = 'loading'
     cctvNotice.value = ''
@@ -558,6 +599,7 @@ onMounted(() => { void initializeMap() })
 
 onBeforeUnmount(() => {
   componentUnmounted = true
+  stopTrafficConditionPolling()
   mapSettingsController?.abort()
   mapSettingsController = null
   recordMapLifecycle('unmount')

@@ -229,7 +229,10 @@ describe('CCTV MapLibre layers', () => {
     const nextData = toCctvFeatureCollection([camera])
 
     updateCctvSource(map as never, nextData)
+    updateCctvSource(map as never, nextData)
     expect(source?.setData).toHaveBeenCalledWith(nextData)
+    expect(source?.setData).toHaveBeenCalledTimes(2)
+    expect(map.addSource).toHaveBeenCalledTimes(1)
     detach()
   })
 

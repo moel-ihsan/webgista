@@ -1,7 +1,9 @@
+// @vitest-environment happy-dom
 import { describe, expect, it, vi } from 'vitest'
 import type { SupabaseClient } from '@supabase/supabase-js'
 
 import { createManualTrafficObservation, latestTrafficConditions, listLatestTrafficObservations, validateManualObservation } from './trafficObservations'
+import { mergeLatestTrafficConditions } from './trafficObservationRefresh'
 
 const observation = (id: string, condition: string, ended: string) => ({
   id, cctv_id: 'camera-1', window_started_at: '2026-01-01T10:00:00Z', window_ended_at: ended,
@@ -17,6 +19,25 @@ describe('traffic observations', () => {
       { id: 'old', cctvId: 'camera-1', condition: 'poor' },
     ] as never
     expect(latestTrafficConditions(rows).get('camera-1')).toBe('good')
+  })
+
+  it('uses only the latest authorized condition and falls back to No Data when it is absent', () => {
+    const locations = [{ id: 'camera-1', trafficCondition: 'poor' }, { id: 'camera-2', trafficCondition: null }] as never
+    const latest = [
+      { id: 'new', cctvId: 'camera-1', condition: 'great' },
+      { id: 'old', cctvId: 'camera-1', condition: 'bad' },
+    ] as never
+    expect(mergeLatestTrafficConditions(locations, latest)).toMatchObject({
+      changed: true,
+      locations: [{ id: 'camera-1', trafficCondition: 'great' }, { id: 'camera-2', trafficCondition: null }],
+    })
+    const unchanged = mergeLatestTrafficConditions(locations, [
+      { id: 'new', cctvId: 'camera-1', condition: 'poor' },
+    ] as never)
+    expect(unchanged.changed).toBe(false)
+    expect(unchanged.locations).toBe(locations)
+    expect(mergeLatestTrafficConditions([{ id: 'camera-1', trafficCondition: 'good' }] as never, []).locations)
+      .toEqual([{ id: 'camera-1', trafficCondition: null }])
   })
 
   it('maps the restricted latest-observation view', async () => {
@@ -43,5 +64,24 @@ describe('traffic observations', () => {
     expect(payload).toMatchObject({ counting_method: 'manual', processing_status: 'completed', source_kind: 'manual', condition: 'average', sampled_frames: 0 })
     expect(Date.parse(payload.window_ended_at as string)).toBeGreaterThanOrEqual(before)
     expect(Date.parse(payload.window_ended_at as string) - Date.parse(payload.window_started_at as string)).toBe(300_000)
+  })
+
+  it('notifies an open map only after a manual observation is persisted', async () => {
+    const saved = vi.fn()
+    window.addEventListener('webgista:traffic-observation-saved', saved)
+    const client = { from: vi.fn(() => ({ insert: vi.fn().mockResolvedValue({ error: null }) })) } as unknown as SupabaseClient
+    await createManualTrafficObservation(client, { cctvId: 'camera-1', condition: 'average', lightVehicleCount: 1, heavyVehicleCount: 0, motorcycleCount: 0, bicycleCount: 0 })
+    expect(saved).toHaveBeenCalledOnce()
+    window.removeEventListener('webgista:traffic-observation-saved', saved)
+  })
+
+  it('does not notify the map when saving an observation fails', async () => {
+    const saved = vi.fn()
+    window.addEventListener('webgista:traffic-observation-saved', saved)
+    const client = { from: vi.fn(() => ({ insert: vi.fn().mockResolvedValue({ error: { code: '42501' } }) })) } as unknown as SupabaseClient
+    await expect(createManualTrafficObservation(client, { cctvId: 'camera-1', condition: 'average', lightVehicleCount: 1, heavyVehicleCount: 0, motorcycleCount: 0, bicycleCount: 0 }))
+      .rejects.toThrow('Your account cannot record an observation for this camera.')
+    expect(saved).not.toHaveBeenCalled()
+    window.removeEventListener('webgista:traffic-observation-saved', saved)
   })
 })

@@ -3,6 +3,7 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import type { TrafficCondition, TrafficObservation } from '../domain/traffic'
 
 const CONDITIONS: readonly TrafficCondition[] = ['great', 'good', 'average', 'poor', 'bad', 'terrible']
+export const TRAFFIC_OBSERVATION_SAVED_EVENT = 'webgista:traffic-observation-saved'
 
 export interface ManualObservationInput {
   cctvId: string
@@ -66,9 +67,11 @@ export async function listTrafficObservations(client: SupabaseClient, cctvId?: s
   return data.map(mapObservation).filter((row): row is TrafficObservation => row !== null)
 }
 
-export async function listLatestTrafficObservations(client: SupabaseClient): Promise<readonly TrafficObservation[]> {
-  const { data, error } = await client.from('latest_traffic_observations')
+export async function listLatestTrafficObservations(client: SupabaseClient, signal?: AbortSignal): Promise<readonly TrafficObservation[]> {
+  let query = client.from('latest_traffic_observations')
     .select('id,cctv_id,window_started_at,window_ended_at,counting_method,source_kind,condition,light_vehicle_count,heavy_vehicle_count,motorcycle_count,bicycle_count,sampled_frames,quality_flags')
+  if (signal) query = query.abortSignal(signal)
+  const { data, error } = await query
   if (error) throw new Error('Latest traffic observations could not be loaded.')
   if (!Array.isArray(data)) throw new Error('Latest traffic observations returned an invalid response.')
   return data.map(mapObservation).filter((row): row is TrafficObservation => row !== null)
@@ -94,6 +97,7 @@ export async function createManualTrafficObservation(client: SupabaseClient, inp
     sampled_frames: 0,
   })
   if (error) throw new Error(error.code === '42501' ? 'Your account cannot record an observation for this camera.' : 'Traffic observation could not be saved.')
+  if (typeof window !== 'undefined') window.dispatchEvent(new Event(TRAFFIC_OBSERVATION_SAVED_EVENT))
 }
 
 export function latestTrafficConditions(observations: readonly TrafficObservation[]): ReadonlyMap<string, TrafficCondition> {
