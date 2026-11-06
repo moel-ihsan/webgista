@@ -47,7 +47,7 @@ select is((select count(*) from public.cctv_roi_analysis_jobs where cctv_id='bf2
 reset role;
 select set_config('request.jwt.claims','{"sub":"bf000000-0000-0000-0000-000000000002","role":"authenticated"}',true);
 set local role authenticated;
-select is((select count(*) from public.cctv_roi_analysis_jobs where cctv_id='bf200000-0000-0000-0000-000000000001'),1::bigint,'agency editor can read a job for its own agency');
+select is((select count(*) from public.cctv_roi_analysis_jobs where cctv_id='bf200000-0000-0000-0000-000000000001'),2::bigint,'agency editor can read both jobs for its own agency');
 select is((select count(*) from public.cctv_roi_analysis_jobs where cctv_id='bf200000-0000-0000-0000-000000000002'),0::bigint,'agency editor cannot read a job for another agency');
 reset role;
 select set_config('request.jwt.claims','{"role":"anon"}',true);
