@@ -58,9 +58,7 @@ export function cctvPopupDetails(location: CctvLocation): readonly { label: stri
   ]
   if (location.trafficConditionSource) details.splice(4, 0, {
     label: 'Condition source',
-    value: location.trafficConditionSource === 'experimental_roi_coverage'
-      ? 'Experimental ROI coverage estimate — not MKJI V/C'
-      : location.trafficConditionSource === 'manual' ? 'Manual observation' : 'Traffic observation',
+    value: location.trafficConditionSource === 'manual' ? 'Manual observation' : 'Traffic observation',
   })
   return details
 }

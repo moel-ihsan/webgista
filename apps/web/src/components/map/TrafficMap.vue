@@ -8,7 +8,7 @@ import 'maplibre-gl/dist/maplibre-gl.css'
 import { appConfig, defaultMapStyleId, mapStyles, type MapStyleId } from '../../config/app'
 import { authSession } from '../../auth/session'
 import { createSupabaseCctvDataSource } from '../../data/supabaseCctvDataSource'
-import { listLatestCctvConditionSnapshots } from '../../data/roiCoverageCondition'
+import { latestTrafficConditionSnapshots, listLatestTrafficObservations } from '../../data/trafficObservations'
 import { mergeLatestTrafficConditions, watchTrafficObservationChanges } from '../../data/trafficObservationRefresh'
 import { DEFAULT_MAP_VIEWPORT, loadMapViewport, type MapViewport } from '../../data/mapSettings'
 import type { CctvLocation } from '../../domain/cctv'
@@ -328,7 +328,7 @@ async function refreshTrafficConditions(): Promise<void> {
   trafficConditionController = controller
   const revision = ++trafficConditionRevision
   try {
-    const conditions = await listLatestCctvConditionSnapshots(supabaseClient, controller.signal)
+    const conditions = latestTrafficConditionSnapshots(await listLatestTrafficObservations(supabaseClient, controller.signal))
     if (controller.signal.aborted || componentUnmounted || revision !== trafficConditionRevision) return
     const merged = mergeLatestTrafficConditions(cctvLocations.value, conditions)
     if (!merged.changed) return

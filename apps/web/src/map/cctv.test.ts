@@ -110,11 +110,6 @@ describe('CCTV map data and interactions', () => {
     ]))
   })
 
-  it('labels ROI coverage-derived marker conditions as experimental and not MKJI', () => {
-    expect(cctvPopupDetails({ ...camera, trafficCondition: 'great', trafficConditionSource: 'experimental_roi_coverage' }))
-      .toContainEqual({ label: 'Condition source', value: 'Experimental ROI coverage estimate — not MKJI V/C' })
-  })
-
   it('builds a v1-sized popup with signed image preview and safe text-only metadata', () => {
     const unsafeName = '<img src=x onerror=alert(1)>'
     const popup = createCctvPopupContent({ ...camera, name: unsafeName, snapshotUrl: 'https://signed.example/photo' })

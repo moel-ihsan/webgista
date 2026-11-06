@@ -2,7 +2,7 @@
 import { describe, expect, it, vi } from 'vitest'
 import type { SupabaseClient } from '@supabase/supabase-js'
 
-import { createManualTrafficObservation, latestTrafficConditions, listLatestTrafficObservations, validateManualObservation } from './trafficObservations'
+import { createManualTrafficObservation, latestTrafficConditionSnapshots, latestTrafficConditions, listLatestTrafficObservations, validateManualObservation } from './trafficObservations'
 import { mergeLatestTrafficConditions } from './trafficObservationRefresh'
 
 const observation = (id: string, condition: string, ended: string) => ({
@@ -19,6 +19,15 @@ describe('traffic observations', () => {
       { id: 'old', cctvId: 'camera-1', condition: 'poor' },
     ] as never
     expect(latestTrafficConditions(rows).get('camera-1')).toBe('good')
+  })
+
+  it('keeps map colors based on saved observations, not experimental ROI results', () => {
+    const rows = [
+      { ...observation('new', 'good', '2026-11-06T11:00:00Z'), source_kind: 'manual' },
+      { ...observation('old', 'poor', '2026-11-06T10:00:00Z'), source_kind: 'manual' },
+    ].map((row) => ({ ...row, cctvId: row.cctv_id, windowEndedAt: row.window_ended_at, sourceKind: row.source_kind })) as never
+    expect(latestTrafficConditionSnapshots(rows).get('camera-1')).toEqual({ condition: 'good', source: 'manual' })
+    expect(latestTrafficConditionSnapshots([]).has('camera-1')).toBe(false)
   })
 
   it('uses only the latest authorized condition and falls back to No Data when it is absent', () => {

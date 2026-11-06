@@ -107,3 +107,22 @@ export function latestTrafficConditions(observations: readonly TrafficObservatio
   }
   return latest
 }
+
+export function latestTrafficConditionSnapshots(observations: readonly TrafficObservation[]): ReadonlyMap<string, {
+  condition: TrafficCondition
+  source: 'manual' | 'traffic_observation'
+}> {
+  const latest = new Map<string, { condition: TrafficCondition; source: 'manual' | 'traffic_observation'; endedAt: number }>()
+  for (const observation of observations) {
+    if (!observation.condition) continue
+    const endedAt = Date.parse(observation.windowEndedAt)
+    const current = latest.get(observation.cctvId)
+    if (!Number.isFinite(endedAt) || (current && endedAt <= current.endedAt)) continue
+    latest.set(observation.cctvId, {
+      condition: observation.condition,
+      source: observation.sourceKind === 'manual' ? 'manual' : 'traffic_observation',
+      endedAt,
+    })
+  }
+  return new Map([...latest].map(([id, { condition, source }]) => [id, { condition, source }]))
+}

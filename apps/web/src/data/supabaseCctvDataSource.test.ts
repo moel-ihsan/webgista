@@ -64,7 +64,7 @@ describe('Supabase CCTV data source', () => {
     expect(mock.query.eq).toHaveBeenCalledWith('is_active', true)
     expect(mock.selectedFields[0]).not.toMatch(/private|stream|credential|source_uri/)
     expect(mock.from).toHaveBeenCalledWith('latest_traffic_observations')
-    expect(mock.from).not.toHaveBeenCalledWith('cctv_roi_analysis_results')
+    expect(mock.from).not.toHaveBeenCalledWith('cctv_roi_analysis_jobs')
   })
 
   it('returns an empty list for no visible rows and rejects query errors', async () => {
