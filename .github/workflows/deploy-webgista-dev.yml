@@ -27,6 +27,7 @@ on:
           - accept-dev-data-loss-for-009
           - accept-dev-data-loss-for-010
           - accept-dev-data-loss-for-011
+          - accept-dev-data-loss-for-012
       deploy_roi_analysis_function:
         description: Deploy only the Phase 3F process-roi-analysis Edge Function after database verification
         type: boolean
@@ -228,6 +229,13 @@ jobs:
             --command='SET TRANSACTION READ ONLY' --file=/dev/stdin \
             < supabase/verification/phase_3e_roi_density_preflight.sql
 
+      - name: Check public YouTube demo view preconditions (read-only)
+        run: |
+          docker run --rm -i --network host postgres:17-alpine \
+            psql "$SUPABASE_DB_URL" --set=ON_ERROR_STOP=1 --single-transaction \
+            --command='SET TRANSACTION READ ONLY' --file=/dev/stdin \
+            < supabase/verification/phase_3g_youtube_demo_preflight.sql
+
       - name: Preview remote migrations
         shell: bash
         run: |
@@ -259,6 +267,10 @@ jobs:
       - name: Require ROI analysis migration as the sole pending migration when using its one-time waiver
         if: ${{ inputs.apply_migrations == 'apply' && inputs.development_data_loss_waiver == 'accept-dev-data-loss-for-011' }}
         run: node scripts/phase2d-migration-guard.mjs phase3f-roi-analysis "$RUNNER_TEMP/phase2d-migrations.txt"
+
+      - name: Require public YouTube demo migration as the sole pending migration for its one-time waiver
+        if: ${{ inputs.apply_migrations == 'apply' && inputs.development_data_loss_waiver == 'accept-dev-data-loss-for-012' }}
+        run: node scripts/phase2d-migration-guard.mjs phase3g-public-youtube "$RUNNER_TEMP/phase2d-migrations.txt"
 
       - name: Validate and record the explicit development-only backup waiver
         if: ${{ inputs.apply_migrations == 'apply' && inputs.development_data_loss_waiver != 'none' }}
@@ -293,6 +305,8 @@ jobs:
             node scripts/phase2d-migration-guard.mjs phase3e-roi-density "$RUNNER_TEMP/phase2d-migrations-before-apply.txt"
           elif [[ "$DEVELOPMENT_DATA_LOSS_WAIVER" == "accept-dev-data-loss-for-011" ]]; then
             node scripts/phase2d-migration-guard.mjs phase3f-roi-analysis "$RUNNER_TEMP/phase2d-migrations-before-apply.txt"
+          elif [[ "$DEVELOPMENT_DATA_LOSS_WAIVER" == "accept-dev-data-loss-for-012" ]]; then
+            node scripts/phase2d-migration-guard.mjs phase3g-public-youtube "$RUNNER_TEMP/phase2d-migrations-before-apply.txt"
           elif [[ "$DEVELOPMENT_DATA_LOSS_WAIVER" == "none" ]]; then
             node scripts/phase2d-migration-guard.mjs phase3e-roi-density "$RUNNER_TEMP/phase2d-migrations-before-apply.txt"
           else
@@ -306,6 +320,18 @@ jobs:
           node scripts/phase2d-migration-guard.mjs dry-run \
             "$RUNNER_TEMP/phase2d-migrations-before-apply.txt" "$RUNNER_TEMP/phase2d-dry-run-before-apply.txt"
           supabase db push --yes --remote="$SUPABASE_DB_URL"
+
+      - name: Verify public YouTube demo migration after apply
+        if: ${{ inputs.apply_migrations == 'apply' && inputs.development_data_loss_waiver == 'accept-dev-data-loss-for-012' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          supabase migration list --remote="$SUPABASE_DB_URL" > "$RUNNER_TEMP/phase2d-migrations-after-apply.txt" 2>&1
+          node scripts/phase2d-migration-guard.mjs applied "$RUNNER_TEMP/phase2d-migrations-after-apply.txt"
+          docker run --rm -i --network host postgres:17-alpine \
+            psql "$SUPABASE_DB_URL" --set=ON_ERROR_STOP=1 --single-transaction \
+            --command='SET TRANSACTION READ ONLY' --file=/dev/stdin \
+            < supabase/verification/phase_3g_youtube_demo_preflight.sql
 
       - name: Create the explicitly approved Phase 2D test fixture
         if: ${{ inputs.apply_migrations == 'create-test-fixture' }}
