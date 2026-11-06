@@ -3,14 +3,15 @@ import { createApp, nextTick } from 'vue'
 import { createMemoryHistory, createRouter, RouterView } from 'vue-router'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-const { getCctvDetail, getCctvDemoAssociation, getCctvAnalysisConfig, listTrafficObservations, privateImageUrl, authState, appConfigState } = vi.hoisted(() => ({
+const { getCctvDetail, getCctvDemoAssociation, getCctvAnalysisConfig, getCurrentCctvRoiAnalysis, listTrafficObservations, privateImageUrl, authState, appConfigState } = vi.hoisted(() => ({
   getCctvDetail: vi.fn(),
   getCctvDemoAssociation: vi.fn(),
   getCctvAnalysisConfig: vi.fn(),
+  getCurrentCctvRoiAnalysis: vi.fn(),
   listTrafficObservations: vi.fn(),
   privateImageUrl: vi.fn(),
   authState: { status: 'authenticated' as string },
-  appConfigState: { privateMediaEnabled: true, roiDensityEnabled: false },
+  appConfigState: { privateMediaEnabled: true, roiDensityEnabled: false, roiAnalysisEnabled: false },
 }))
 
 vi.mock('../auth/session', () => ({ authSession: { state: authState } }))
@@ -19,6 +20,7 @@ vi.mock('../lib/supabase', () => ({ supabaseClient: {} }))
 vi.mock('../data/cctvDetail', () => ({ getCctvDetail }))
 vi.mock('../data/cctvDemoVideo', () => ({ getCctvDemoAssociation }))
 vi.mock('../data/cctvAnalysisConfig', () => ({ getCctvAnalysisConfig }))
+vi.mock('../data/cctvRoiAnalysis', () => ({ getCurrentCctvRoiAnalysis }))
 vi.mock('../data/trafficObservations', () => ({ listTrafficObservations }))
 vi.mock('../data/privateMedia', () => ({ privateImageUrl }))
 
@@ -60,7 +62,9 @@ beforeEach(() => {
   getCctvDemoAssociation.mockReset().mockResolvedValue({ video: null, editable: true })
   privateImageUrl.mockReset().mockResolvedValue('signed-photo')
   getCctvAnalysisConfig.mockReset().mockResolvedValue(null)
+  getCurrentCctvRoiAnalysis.mockReset().mockResolvedValue(null)
   appConfigState.roiDensityEnabled = false
+  appConfigState.roiAnalysisEnabled = false
 })
 
 afterEach(() => {
@@ -171,6 +175,49 @@ describe('CCTV detail page', () => {
     expect(host?.textContent).not.toContain('line-crossing')
     expect(host?.querySelector('video')?.getAttribute('controlslist')).toBe('nofullscreen')
     expect(host?.querySelector('.cctv-detail-video-stage')?.contains(host.querySelector('.cctv-detail-roi'))).toBe(true)
+  })
+
+  it('renders the matching persisted result window as playback moves through all three intervals', async () => {
+    const { trafficDemoVideos } = await import('../data/trafficDemo')
+    const video = trafficDemoVideos[1]!
+    const result = (start: number, end: number, average: number, peak: number, status: 'complete' | 'partial', valid: number) => ({
+      window_started_at_seconds: start, window_ended_at_seconds: end, window_duration_seconds: end - start, status,
+      classification_status: 'no_data' as const, condition: null, condition_reason: 'MKJI unavailable',
+      average_vehicles_present: average, peak_vehicles_present: peak,
+      class_statistics: {},
+      traffic_category_statistics: { LV: { average, peak }, HV: { average: 0, peak: 0 }, MC: { average: 0, peak: 0 }, bicycle: { average: 0, peak: 0 } },
+      roi_image_coverage_average: 0.269, busy_duration_seconds: 9.8, busy_duration_percentage: 98,
+      data_quality: { expected_samples: valid, valid_samples: valid, missing_samples: 0, effective_observation_seconds: end - start, valid_observation_coverage: 1, processing_fps: 5, sample_period_seconds: 0.2 },
+    })
+    appConfigState.roiDensityEnabled = true
+    appConfigState.roiAnalysisEnabled = true
+    getCctvDemoAssociation.mockResolvedValue({ video, editable: true })
+    getCctvAnalysisConfig.mockResolvedValue({
+      configuration: video.roiDensity.configuration_snapshot,
+      configurationVersion: 3,
+      updatedAt: '2026-11-06T09:00:00Z',
+    })
+    getCurrentCctvRoiAnalysis.mockResolvedValue({
+      jobId: 'job-3', status: 'completed', failureReason: null,
+      results: [result(0, 10, 6.8, 12, 'complete', 50), result(10, 20, 7.24, 14, 'complete', 50), result(20, 26, 5.4334, 11, 'partial', 30)],
+    })
+    await mountPage()
+
+    expect(getCurrentCctvRoiAnalysis).toHaveBeenCalledWith({}, 'camera-1', 'traffic_sample_02', video.analysis.source_video_sha256, 3)
+    expect(host?.textContent).toContain('Analysis Ready')
+    const player = host?.querySelector<HTMLVideoElement>('.cctv-detail-media video')
+    expect(player).not.toBeNull()
+    for (const [time, interval, average, peak, completeness] of [
+      [4, '0–10 seconds', '6.80', '12', 'complete'],
+      [15, '10–20 seconds', '7.24', '14', 'complete'],
+      [23, '20–26 seconds', '5.43', '11', 'partial'],
+    ]) {
+      player!.currentTime = time as number
+      player!.dispatchEvent(new Event('timeupdate'))
+      await flush()
+      expect(host?.textContent).toContain(`Observation interval: ${interval} · ${completeness}.`)
+      expect(host?.textContent).toContain(`Average Vehicles: ${average} · Peak: ${peak}`)
+    }
   })
 
   it('withholds the bundled demo ROI when no authorized camera configuration is returned', async () => {

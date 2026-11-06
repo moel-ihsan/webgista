@@ -50,7 +50,6 @@ const activeDensityWindow = computed<RoiAnalysisResult | null>(() => {
   if (appConfig.roiAnalysisEnabled) return backendAnalysis.value?.results.find((window) => videoTime.value >= window.window_started_at_seconds && videoTime.value < window.window_ended_at_seconds) ?? null
   return demoVideo.value?.roiDensity.windows.find((window) => videoTime.value >= window.window_started_at_seconds && videoTime.value < window.window_ended_at_seconds) ?? null
 })
-const demoDensityWindow = activeDensityWindow
 function configKey(config: RoiDensityConfig): string {
   return JSON.stringify([
     config.roi_type, config.roi_geometry, config.video_dimensions, config.observation_window_seconds,
@@ -367,15 +366,17 @@ onBeforeUnmount(() => {
             <span v-else-if="appConfig.roiAnalysisEnabled && backendAnalysisStatus === 'failed'" role="status">Analysis Failed — {{ backendAnalysis?.failureReason || 'retry by saving the ROI again.' }}</span>
             <span v-else-if="appConfig.roiAnalysisEnabled && backendAnalysisStatus === 'error'" role="status">Analysis status is unavailable to this account.</span>
             <span v-else-if="appConfig.roiAnalysisEnabled && backendAnalysisStatus === 'ready'" role="status">Analysis Ready — current results match the saved ROI and video source.</span>
-            <span v-else-if="demoDensityStale" role="status">Analysis Stale — the saved ROI configuration does not match this result. {{ appConfig.roiAnalysisEnabled ? 'Save the ROI to schedule reaggregation.' : 'Rerun the local offline analyzer for this camera and source video.' }}</span>
-            <template v-else>
-              <span v-if="demoDensityFrame">ROI Detection at {{ demoDensityFrame.timestamp_seconds.toFixed(1) }}s: {{ demoDensityFrame.vehicle_presence_total }} vehicles present in the sampled frame.</span>
-              <template v-if="demoDensityWindow">
-                <span>Average Vehicles: {{ demoDensityWindow.average_vehicles_present?.toFixed(2) ?? 'unavailable' }} · Peak: {{ demoDensityWindow.peak_vehicles_present ?? 'unavailable' }} · Observation Duration: {{ demoDensityWindow.window_duration_seconds.toFixed(1) }} seconds.</span>
-                <span>Vehicle Classes — LV {{ demoDensityWindow.traffic_category_statistics.LV.average?.toFixed(2) ?? '—' }}, HV {{ demoDensityWindow.traffic_category_statistics.HV.average?.toFixed(2) ?? '—' }}, MC {{ demoDensityWindow.traffic_category_statistics.MC.average?.toFixed(2) ?? '—' }}, bicycle {{ demoDensityWindow.traffic_category_statistics.bicycle.average?.toFixed(2) ?? '—' }}.</span>
-                <span>ROI Coverage: {{ demoDensityWindow.roi_image_coverage_average !== null ? `${(demoDensityWindow.roi_image_coverage_average * 100).toFixed(1)}%` : 'unavailable' }} · Busy duration: {{ demoDensityWindow.busy_duration_seconds.toFixed(1) }}s · Valid samples: {{ demoDensityWindow.data_quality.valid_samples }}/{{ demoDensityWindow.data_quality.expected_samples }} · Measurement Status: {{ demoDensityWindow.status }} / {{ demoDensityWindow.classification_status.replaceAll('_', ' ') }}.</span>
-                <span>Traffic Condition: {{ demoDensityWindow.condition ? demoDensityWindow.condition : `No Data — ${demoDensityWindow.condition_reason}` }}</span>
+            <span v-else-if="(appConfig.roiAnalysisEnabled && backendAnalysisStatus === 'stale') || (!appConfig.roiAnalysisEnabled && demoDensityStale)" role="status">Analysis Stale — the saved ROI configuration does not match this result.</span>
+            <template v-if="appConfig.roiAnalysisEnabled ? backendAnalysisStatus === 'ready' : appConfig.roiDensityEnabled && demoAnalysisConfig && !demoDensityStale">
+              <span v-if="!appConfig.roiAnalysisEnabled && demoDensityFrame">ROI Detection at {{ demoDensityFrame.timestamp_seconds.toFixed(1) }}s: {{ demoDensityFrame.vehicle_presence_total }} vehicles present in the sampled frame.</span>
+              <template v-if="activeDensityWindow">
+                <span>Observation interval: {{ activeDensityWindow.window_started_at_seconds }}–{{ activeDensityWindow.window_ended_at_seconds }} seconds · {{ activeDensityWindow.status }}.</span>
+                <span>Average Vehicles: {{ activeDensityWindow.average_vehicles_present?.toFixed(2) ?? 'unavailable' }} · Peak: {{ activeDensityWindow.peak_vehicles_present ?? 'unavailable' }} · Observation Duration: {{ activeDensityWindow.window_duration_seconds.toFixed(1) }} seconds.</span>
+                <span>Vehicle Classes — LV {{ activeDensityWindow.traffic_category_statistics.LV.average?.toFixed(2) ?? '—' }}, HV {{ activeDensityWindow.traffic_category_statistics.HV.average?.toFixed(2) ?? '—' }}, MC {{ activeDensityWindow.traffic_category_statistics.MC.average?.toFixed(2) ?? '—' }}, bicycle {{ activeDensityWindow.traffic_category_statistics.bicycle.average?.toFixed(2) ?? '—' }}.</span>
+                <span>ROI Coverage: {{ activeDensityWindow.roi_image_coverage_average !== null ? `${(activeDensityWindow.roi_image_coverage_average * 100).toFixed(1)}%` : 'unavailable' }} · Busy duration: {{ activeDensityWindow.busy_duration_seconds.toFixed(1) }}s · Valid samples: {{ activeDensityWindow.data_quality.valid_samples }}/{{ activeDensityWindow.data_quality.expected_samples }} · Measurement Status: {{ activeDensityWindow.status }} / {{ activeDensityWindow.classification_status.replaceAll('_', ' ') }}.</span>
+                <span>Traffic Condition: {{ activeDensityWindow.condition ? activeDensityWindow.condition : `No Data — ${activeDensityWindow.condition_reason}` }}</span>
               </template>
+              <span v-else-if="appConfig.roiAnalysisEnabled" role="status">No saved analysis window matches the current playback position.</span>
             </template>
             <span>ROI density is visual presence only. Demo footage does not update the saved Traffic Condition or Observation History.</span>
             <span>Experimental demo footage; it does not depict current traffic at this camera location.</span>
