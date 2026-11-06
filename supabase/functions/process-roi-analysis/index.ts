@@ -78,10 +78,11 @@ Deno.serve(async (request) => {
   const origin = request.headers.get('origin')
   if (origin && origin !== cors['Access-Control-Allow-Origin'] && !/^http:\/\/localhost:5173$/.test(origin)) return response({ error: 'Origin not allowed' }, 403)
   const authorization = request.headers.get('authorization')
+  if (!authorization?.startsWith('Bearer ')) return response({ error: 'Sign in with an authorized CCTV account' }, 401)
   const projectUrl = Deno.env.get('SUPABASE_URL')
   const anonKey = Deno.env.get('SUPABASE_ANON_KEY')
   const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
-  if (!authorization?.startsWith('Bearer ') || !projectUrl || !anonKey || !serviceKey) return response({ error: 'Authenticated backend configuration is unavailable' }, 503)
+  if (!projectUrl || !anonKey || !serviceKey) return response({ error: 'Authenticated backend configuration is unavailable' }, 503)
 
   let cameraId: string
   try {
