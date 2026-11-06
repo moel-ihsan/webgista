@@ -360,7 +360,7 @@ jobs:
 
       - name: Deploy only the Phase 3F ROI analysis Edge Function
         if: ${{ inputs.deploy_roi_analysis_function && (inputs.apply_migrations == 'apply' || inputs.apply_migrations == 'verify') }}
-        run: supabase functions deploy process-roi-analysis --project-ref "$SUPABASE_PROJECT_REF"
+        run: supabase functions deploy process-roi-analysis --project-ref "$SUPABASE_PROJECT_REF" --yes
 
       - name: Confirm Phase 3F function is deployed
         if: ${{ inputs.deploy_roi_analysis_function && (inputs.apply_migrations == 'apply' || inputs.apply_migrations == 'verify') }}
