@@ -1,42 +1,49 @@
 import { describe, expect, it } from 'vitest'
 
-import { enforceLiveDemoNoData, liveDemoStreamForCamera } from './liveDemoStreams'
+import { attachLiveDemoStream, enforceLiveDemoNoData, listPublicDemoStreams, liveDemoStream, youtubeVideoId } from './liveDemoStreams'
 
 const camera = {
-  id: 'dec221d0-87ae-4194-a3ab-bf60eb4d041f', legacyId: null, agency: { id: 'a', name: 'Agency' },
-  name: 'Demo CCTV', address: 'Banda Aceh', category: 'analytic' as const, longitude: 95, latitude: 5,
-  snapshotUrl: null, publicStreamUrl: null, isActive: true,
+  id: 'camera-1', legacyId: null, agency: { id: 'a', name: 'Agency' }, name: 'Demo CCTV', address: 'Banda Aceh',
+  category: 'analytic' as const, longitude: 95, latitude: 5, snapshotUrl: null, publicStreamUrl: null, isActive: true,
 }
 
-describe('fixed public live demo streams', () => {
-  it('maps the requested streams only to their two QA cameras', () => {
-    expect(liveDemoStreamForCamera('a60eb814-12dc-42df-b1f8-14234631dbeb')).toMatchObject({
-      videoId: 'UTR-nG4SK7E',
-      embedUrl: 'https://www.youtube-nocookie.com/embed/UTR-nG4SK7E?autoplay=1&mute=1&playsinline=1&controls=1',
-      city: 'Yogyakarta',
+describe('public YouTube demo sources', () => {
+  it('accepts only secure canonical YouTube watch URLs and creates a no-cookie embed', () => {
+    expect(youtubeVideoId(' https://www.youtube.com/watch?v=UTR-nG4SK7E ')).toBe('UTR-nG4SK7E')
+    expect(liveDemoStream('camera-1', 'https://www.youtube.com/watch?v=BdPvBNLy5kc')).toMatchObject({
+      videoId: 'BdPvBNLy5kc',
+      sourceUrl: 'https://www.youtube.com/watch?v=BdPvBNLy5kc',
+      embedUrl: 'https://www.youtube-nocookie.com/embed/BdPvBNLy5kc?autoplay=1&mute=1&playsinline=1&controls=1',
     })
-    expect(liveDemoStreamForCamera('dec221d0-87ae-4194-a3ab-bf60eb4d041f')?.videoId).toBe('BdPvBNLy5kc')
-    expect(liveDemoStreamForCamera('other-camera')).toBeNull()
+    expect(youtubeVideoId('http://www.youtube.com/watch?v=UTR-nG4SK7E')).toBeNull()
+    expect(youtubeVideoId('https://youtube.attacker.example/watch?v=UTR-nG4SK7E')).toBeNull()
+    expect(youtubeVideoId('https://www.youtube.com/watch?v=short')).toBeNull()
   })
 
-  it('forces the mapped demo camera to No Data without changing its stored observation', () => {
-    const withManualCondition = { ...camera, trafficCondition: 'terrible' as const, trafficConditionSource: 'manual' as const }
-    expect(enforceLiveDemoNoData(withManualCondition)).toEqual({
-      id: camera.id,
-      legacyId: null,
-      agency: camera.agency,
-      name: camera.name,
-      address: camera.address,
-      category: camera.category,
-      longitude: camera.longitude,
-      latitude: camera.latitude,
-      snapshotUrl: null,
-      publicStreamUrl: null,
-      isActive: true,
-      trafficCondition: null,
-      trafficConditionSource: 'live_demo_unanalyzed',
+  it('sets only a configured YouTube camera to No Data and preserves its manual record elsewhere', () => {
+    const manual = { ...camera, trafficCondition: 'terrible' as const, trafficConditionSource: 'manual' as const }
+    const stream = liveDemoStream('camera-1', 'https://www.youtube.com/watch?v=UTR-nG4SK7E')
+    const attached = attachLiveDemoStream(manual, stream)
+    expect(attached).toMatchObject({ publicStreamUrl: stream?.sourceUrl, trafficCondition: null, trafficConditionSource: 'youtube_demo_unanalyzed' })
+    expect(enforceLiveDemoNoData({ ...attached, trafficCondition: 'terrible', trafficConditionSource: 'manual' })).toMatchObject({
+      trafficCondition: null, trafficConditionSource: 'youtube_demo_unanalyzed',
     })
-    expect(withManualCondition.trafficCondition).toBe('terrible')
-    expect(enforceLiveDemoNoData({ ...camera, id: 'other-camera', trafficCondition: 'great' }).trafficCondition).toBe('great')
+    expect(manual.trafficCondition).toBe('terrible')
+    expect(enforceLiveDemoNoData({ ...camera, trafficCondition: 'great' })).toMatchObject({ trafficCondition: 'great' })
+  })
+
+  it('loads only public camera and video IDs from the narrow projection', async () => {
+    const query = {
+      select: (fields: string) => { expect(fields).toBe('cctv_id,video_id'); return query },
+      in: (column: string, ids: string[]) => { expect(column).toBe('cctv_id'); expect(ids).toEqual(['camera-1']); return query },
+      then: (resolve: (value: unknown) => unknown) => Promise.resolve({ data: [
+        { cctv_id: 'camera-1', video_id: 'UTR-nG4SK7E' },
+        { cctv_id: 'camera-2', video_id: 'invalid' },
+      ], error: null }).then(resolve),
+    }
+    const client = { from: (table: string) => { expect(table).toBe('public_cctv_demo_streams'); return query } } as never
+    const streams = await listPublicDemoStreams(client, ['camera-1'])
+    expect([...streams.keys()]).toEqual(['camera-1'])
+    expect(streams.get('camera-1')).toMatchObject({ videoId: 'UTR-nG4SK7E' })
   })
 })

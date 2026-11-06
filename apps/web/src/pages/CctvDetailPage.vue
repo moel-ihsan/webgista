@@ -5,8 +5,8 @@ import { RouterLink, useRoute, useRouter } from 'vue-router'
 import { authSession } from '../auth/session'
 import { appConfig } from '../config/app'
 import { getCctvDetail, type CctvDetail } from '../data/cctvDetail'
-import { getCctvDemoAssociation } from '../data/cctvDemoVideo'
-import { liveDemoStreamForCamera, type LiveDemoStream } from '../data/liveDemoStreams'
+import { getCctvDemoAssociation, getPublicCctvDemoStream } from '../data/cctvDemoVideo'
+import type { LiveDemoStream } from '../data/liveDemoStreams'
 import { listTrafficObservations } from '../data/trafficObservations'
 import { privateImageUrl } from '../data/privateMedia'
 import { getCctvAnalysisConfig, type StoredRoiDensityConfig } from '../data/cctvAnalysisConfig'
@@ -210,8 +210,7 @@ watch([() => String(route.params.id ?? ''), () => authSession.state.status], ([i
       }
       camera.value = result
       pageStatus.value = 'ready'
-      liveDemoStream.value = liveDemoStreamForCamera(id)
-      videoAssociationReady.value = liveDemoStream.value !== null || authStatus !== 'authenticated'
+      videoAssociationReady.value = authStatus !== 'authenticated'
 
       if (authStatus === 'authenticated') {
         void getCctvDemoAssociation(client, id).then(({ video, liveStream }) => {
@@ -242,6 +241,15 @@ watch([() => String(route.params.id ?? ''), () => authSession.state.status], ([i
             videoAssociationReady.value = true
             demoConfigStatus.value = 'error'
           }
+        })
+      } else {
+        void getPublicCctvDemoStream(client, id).then((stream) => {
+          if (revision === loadRevision) {
+            liveDemoStream.value = stream
+            videoAssociationReady.value = true
+          }
+        }).catch(() => {
+          if (revision === loadRevision) videoAssociationReady.value = true
         })
       }
 
@@ -311,15 +319,15 @@ onBeforeUnmount(() => {
             <div class="cctv-detail-live-stage">
               <iframe
                 :src="liveDemoStream.embedUrl"
-                :title="`Live traffic demo from ${liveDemoStream.city}: ${liveDemoStream.title}`"
+                :title="`YouTube demo: ${liveDemoStream.title}`"
                 allow="autoplay; encrypted-media; picture-in-picture; fullscreen"
                 allowfullscreen
                 referrerpolicy="strict-origin-when-cross-origin"
                 @error="liveFrameFailed = true"
               />
             </div>
-            <p class="cctv-detail-demo-label">LIVE STREAM DEMO — {{ liveDemoStream.city }} · NOT THIS CAMERA’S MAPPED LOCATION</p>
-            <p class="cctv-detail-media-note">Source: <a :href="liveDemoStream.sourceUrl" target="_blank" rel="noreferrer">{{ liveDemoStream.title }} — official YouTube stream</a>. This public stream is not analyzed by the CCTV ROI pipeline.</p>
+            <p class="cctv-detail-demo-label">DEMO · YOUTUBE LIVE</p>
+            <p class="cctv-detail-media-note"><a :href="liveDemoStream.sourceUrl" target="_blank" rel="noreferrer">Open YouTube video</a>.</p>
           </template>
           <template v-else-if="demoVideo && !videoFailed">
             <div ref="demoVideoStage" class="cctv-detail-video-stage" :style="{ aspectRatio: `${demoVideo.analysis.video_dimensions.width} / ${demoVideo.analysis.video_dimensions.height}` }">

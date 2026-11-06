@@ -61,7 +61,7 @@ export function cctvPopupDetails(location: CctvLocation): readonly { label: stri
     label: 'Condition source',
     value: location.trafficConditionSource === 'manual' ? 'Manual observation'
       : location.trafficConditionSource === 'experimental_v1_estimate' ? 'Experimental V1-style estimate — demo video'
-          : location.trafficConditionSource === 'live_demo_unanalyzed' ? 'Live stream demo — no traffic measurement'
+      : location.trafficConditionSource === 'youtube_demo_unanalyzed' ? 'YouTube demo — no traffic measurement'
         : 'Traffic observation',
   })
   return details
@@ -207,15 +207,15 @@ export function mountPopupLiveDemoStream(content: HTMLElement, location: CctvLoc
   const media = content.querySelector('.cctv-map-popup__media')
   if (!media) return () => undefined
 
-  setPopupVideoStatus(content, `Live demo stream: ${stream.title}`)
+  setPopupVideoStatus(content, 'Demo YouTube stream')
   const label = document.createElement('p')
   label.className = 'cctv-map-popup__demo-label'
-  label.textContent = `LIVE STREAM DEMO — ${stream.city} · not the mapped camera location.`
+  label.textContent = 'DEMO · YouTube live.'
   const source = document.createElement('a')
   source.href = stream.sourceUrl
   source.target = '_blank'
   source.rel = 'noreferrer'
-  source.textContent = 'Open YouTube source'
+  source.textContent = 'Open YouTube video'
   label.append(document.createTextNode(' '), source)
 
   const stop = document.createElement('button')
@@ -226,7 +226,7 @@ export function mountPopupLiveDemoStream(content: HTMLElement, location: CctvLoc
     const frame = document.createElement('iframe')
     frame.className = 'cctv-map-popup__live-frame'
     frame.src = stream.embedUrl
-    frame.title = `Live traffic demo from ${stream.city}: ${stream.title}`
+    frame.title = 'YouTube live demo stream'
     frame.allow = 'autoplay; encrypted-media; picture-in-picture; fullscreen'
     frame.allowFullscreen = true
     frame.referrerPolicy = 'strict-origin-when-cross-origin'

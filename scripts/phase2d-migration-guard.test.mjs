@@ -11,6 +11,7 @@ import {
   assertPhase3d1CctvDeleteOnlyPending,
   assertPhase3eRoiDensityOnlyPending,
   assertPhase3fRoiAnalysisOnlyPending,
+  assertPhase3gPublicYoutubeOnlyPending,
   assertPhase2eOnlyPending,
   assertDryRunMatches,
   assertRecoveryAvailable,
@@ -109,14 +110,15 @@ test('parses complete migration-list output and fails closed for inspection erro
 });
 
 test('accepts only a chronological suffix of the reviewed migrations', () => {
-  assert.deepEqual(assessMigrationHistory({ localVersions: versions, remoteVersions: versions.slice(0, 4) }), ['20261104000300', '20261104000400', '20261105000100', '20261105000200', '20261105000400', '20261105000500', '20261106000100', '20261106000200']);
-  assert.deepEqual(assessMigrationHistory({ localVersions: versions, remoteVersions: versions.slice(0, 5) }), ['20261104000400', '20261105000100', '20261105000200', '20261105000400', '20261105000500', '20261106000100', '20261106000200']);
-  assert.deepEqual(assessMigrationHistory({ localVersions: versions, remoteVersions: versions.slice(0, 6) }), ['20261105000100', '20261105000200', '20261105000400', '20261105000500', '20261106000100', '20261106000200']);
-  assert.deepEqual(assessMigrationHistory({ localVersions: versions, remoteVersions: versions.slice(0, 7) }), ['20261105000200', '20261105000400', '20261105000500', '20261106000100', '20261106000200']);
-  assert.deepEqual(assessMigrationHistory({ localVersions: versions, remoteVersions: versions.slice(0, 8) }), ['20261105000400', '20261105000500', '20261106000100', '20261106000200']);
-  assert.deepEqual(assessMigrationHistory({ localVersions: versions, remoteVersions: versions.slice(0, 9) }), ['20261105000500', '20261106000100', '20261106000200']);
-  assert.deepEqual(assessMigrationHistory({ localVersions: versions, remoteVersions: versions.slice(0, 10) }), ['20261106000100', '20261106000200']);
-  assert.deepEqual(assessMigrationHistory({ localVersions: versions, remoteVersions: versions.slice(0, 11) }), ['20261106000200']);
+  assert.deepEqual(assessMigrationHistory({ localVersions: versions, remoteVersions: versions.slice(0, 4) }), ['20261104000300', '20261104000400', '20261105000100', '20261105000200', '20261105000400', '20261105000500', '20261106000100', '20261106000200', '20261106000300']);
+  assert.deepEqual(assessMigrationHistory({ localVersions: versions, remoteVersions: versions.slice(0, 5) }), ['20261104000400', '20261105000100', '20261105000200', '20261105000400', '20261105000500', '20261106000100', '20261106000200', '20261106000300']);
+  assert.deepEqual(assessMigrationHistory({ localVersions: versions, remoteVersions: versions.slice(0, 6) }), ['20261105000100', '20261105000200', '20261105000400', '20261105000500', '20261106000100', '20261106000200', '20261106000300']);
+  assert.deepEqual(assessMigrationHistory({ localVersions: versions, remoteVersions: versions.slice(0, 7) }), ['20261105000200', '20261105000400', '20261105000500', '20261106000100', '20261106000200', '20261106000300']);
+  assert.deepEqual(assessMigrationHistory({ localVersions: versions, remoteVersions: versions.slice(0, 8) }), ['20261105000400', '20261105000500', '20261106000100', '20261106000200', '20261106000300']);
+  assert.deepEqual(assessMigrationHistory({ localVersions: versions, remoteVersions: versions.slice(0, 9) }), ['20261105000500', '20261106000100', '20261106000200', '20261106000300']);
+  assert.deepEqual(assessMigrationHistory({ localVersions: versions, remoteVersions: versions.slice(0, 10) }), ['20261106000100', '20261106000200', '20261106000300']);
+  assert.deepEqual(assessMigrationHistory({ localVersions: versions, remoteVersions: versions.slice(0, 11) }), ['20261106000200', '20261106000300']);
+  assert.deepEqual(assessMigrationHistory({ localVersions: versions, remoteVersions: versions.slice(0, 12) }), ['20261106000300']);
   assert.deepEqual(assessMigrationHistory({ localVersions: versions, remoteVersions: versions }), []);
   assert.throws(() => assessMigrationHistory({ localVersions: [...versions, '20261107000100'], remoteVersions: versions.slice(0, 4) }), /Unapproved pending/);
   assert.throws(() => assessMigrationHistory({ localVersions: versions, remoteVersions: [...versions, '20261107000100'] }), /absent locally/);
@@ -174,6 +176,12 @@ test('allows ROI analysis migration only as the sole pending migration', () => {
   assert.doesNotThrow(() => assertPhase3fRoiAnalysisOnlyPending(['20261106000200']));
   assert.throws(() => assertPhase3fRoiAnalysisOnlyPending([]), /only for ROI analysis migration/);
   assert.throws(() => assertPhase3fRoiAnalysisOnlyPending(['20261106000100', '20261106000200']), /only for ROI analysis migration/);
+});
+
+test('allows the public YouTube view migration only as the sole pending migration', () => {
+  assert.doesNotThrow(() => assertPhase3gPublicYoutubeOnlyPending(['20261106000300']));
+  assert.throws(() => assertPhase3gPublicYoutubeOnlyPending([]), /only for public YouTube demo view migration/);
+  assert.throws(() => assertPhase3gPublicYoutubeOnlyPending(['20261106000200', '20261106000300']), /only for public YouTube demo view migration/);
 });
 
 test('requires at least one completed backup with a valid, nonfuture timestamp', () => {

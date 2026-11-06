@@ -90,6 +90,9 @@ jobs:
       - name: Run Phase 3F ROI analysis job and result security tests
         run: supabase test db supabase/tests/phase_3f_roi_analysis.test.sql
 
+      - name: Run Phase 3G public YouTube demo projection security tests
+        run: supabase test db supabase/tests/phase_3g_public_youtube_streams.test.sql
+
       - name: Verify Phase 3F database contract on the disposable database
         run: |
           docker exec -i supabase_db_webgista-v2 psql -U postgres -d postgres \

@@ -18,7 +18,7 @@ import { attachBoundaryLayers, setBoundaryVisibility } from '../../map/boundaryL
 import { attachCctvLayers, setCctvVisibility, updateCctvSource } from '../../map/cctvLayers'
 import { createCctvPopupContent, focusCctvLocation, mountPopupDemoVideo, mountPopupLiveDemoStream, searchCctvLocations, toCctvFeatureCollection } from '../../map/cctv'
 import { getCctvDemoAssociation } from '../../data/cctvDemoVideo'
-import { enforceLiveDemoNoData, liveDemoStreamForCamera } from '../../data/liveDemoStreams'
+import { enforceLiveDemoNoData, liveDemoStream } from '../../data/liveDemoStreams'
 import { districtDetails, loadBoundary } from '../../map/boundary'
 import { applyMapStyle, cleanupMap, listenForMapReadiness, mapFailure, mapLoadTimeout, type MapFailure } from '../../map/maplibre'
 import AppIcon from '../ui/AppIcon.vue'
@@ -254,7 +254,7 @@ function showCctvPopup(location: CctvLocation): void {
       cctvPopupLocationId = null
     }
   })
-  const liveStream = liveDemoStreamForCamera(location.id)
+  const liveStream = liveDemoStream(location.id, location.publicStreamUrl)
   if (liveStream) {
     disposePopupVideo = mountPopupLiveDemoStream(content, location, liveStream)
   } else if (authSession.state.status === 'authenticated' && supabaseClient) {

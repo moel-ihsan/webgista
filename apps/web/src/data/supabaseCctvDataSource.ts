@@ -6,7 +6,8 @@ import { privateImageUrl } from './privateMedia'
 import { appConfig } from '../config/app'
 import { latestTrafficConditionSnapshots, listLatestTrafficObservations } from './trafficObservations'
 import { listLatestV1RoiConditions, mergeExperimentalRoiConditions, type MarkerConditionSnapshot } from './roiV1MarkerCondition'
-import { enforceLiveDemoNoData } from './liveDemoStreams'
+import { attachLiveDemoStream, enforceLiveDemoNoData, listPublicDemoStreams } from './liveDemoStreams'
+import { listAuthorizedYoutubeDemoStreams } from './cctvDemoVideo'
 
 const PUBLIC_FIELDS = 'id,name,address,category,agency_id,agency_name,longitude,latitude,snapshot_path'
 const AUTHENTICATED_FIELDS = 'id,name,address,category,agency_id,longitude,latitude,snapshot_path,is_active,agency:agencies(id,name)'
@@ -87,6 +88,13 @@ export function createSupabaseCctvDataSource(client: SupabaseClient): CctvDataSo
       if (!Array.isArray(result.data)) throw new Error('CCTV locations could not be loaded.')
 
       let locations = result.data.map(mapCctvLocation).filter((location): location is CctvLocation => location !== null)
+      const ids = locations.map(({ id }) => id)
+      let demoStreams = await listPublicDemoStreams(client, ids, signal)
+      if (sessionResult.session) {
+        const authorizedStreams = await listAuthorizedYoutubeDemoStreams(client, ids)
+        demoStreams = new Map([...demoStreams, ...authorizedStreams])
+      }
+      locations = locations.map((location) => attachLiveDemoStream(location, demoStreams.get(location.id) ?? null))
       if (sessionResult.session) {
         try {
           let conditions: ReadonlyMap<string, MarkerConditionSnapshot> = latestTrafficConditionSnapshots(await listLatestTrafficObservations(client, signal))

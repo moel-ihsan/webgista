@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest'
 import type { SupabaseClient } from '@supabase/supabase-js'
 
 import { createSupabaseCctvDataSource, mapCctvLocation } from './supabaseCctvDataSource'
+import { attachLiveDemoStream, liveDemoStream } from './liveDemoStreams'
 
 const camera = {
   id: 'camera-1',
@@ -22,6 +23,8 @@ function clientMock(session: unknown, result: { data: unknown; error: unknown })
       return query
     }),
     eq: vi.fn(() => query),
+    in: vi.fn(() => query),
+    filter: vi.fn(() => query),
     abortSignal: vi.fn(() => query),
     then: (resolve: (value: typeof result) => unknown, reject?: (error: unknown) => unknown) =>
       Promise.resolve(result).then(resolve, reject),
@@ -36,13 +39,12 @@ function clientMock(session: unknown, result: { data: unknown; error: unknown })
 
 describe('Supabase CCTV data source', () => {
   it('overrides an old manual condition for the live demo camera with No Data', () => {
-    const location = mapCctvLocation({
+    const base = mapCctvLocation({
       ...camera,
       id: 'dec221d0-87ae-4194-a3ab-bf60eb4d041f',
-      trafficCondition: 'terrible',
-      trafficConditionSource: 'manual',
     })
-    expect(location).toMatchObject({ trafficCondition: null, trafficConditionSource: 'live_demo_unanalyzed' })
+    const location = attachLiveDemoStream(base!, liveDemoStream(base!.id, 'https://www.youtube.com/watch?v=BdPvBNLy5kc'))
+    expect(location).toMatchObject({ trafficCondition: null, trafficConditionSource: 'youtube_demo_unanalyzed' })
   })
 
   it('reads anonymous cameras only from the public projection and maps safe fields', async () => {

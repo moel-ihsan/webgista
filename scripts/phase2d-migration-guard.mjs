@@ -12,6 +12,7 @@ export const approvedHashes = new Map([
   ['20261105000500', '374cecda12bd657cc4be45590b0bb07a98091501e9a8a6c959bc4c0772c4a982'],
   ['20261106000100', 'b3adb0e3fd76134a388c045b3a37b97b6d1acc335bfe37306c7c8223643c0f18'],
   ['20261106000200', '00b9c031eafd4c7dce5f94930c20fb3285df3bbb1a0955c1ddeb5f4c4217add6'],
+  ['20261106000300', '87ac7cb5c9723530cb2c51bdf8106d79ba7fb2b4b1e8b279f45e05743aa343c6'],
 ]);
 
 const approvedVersions = [...approvedHashes.keys()];
@@ -192,6 +193,12 @@ export function assertPhase3fRoiAnalysisOnlyPending(pendingVersions) {
   }
 }
 
+export function assertPhase3gPublicYoutubeOnlyPending(pendingVersions) {
+  if (pendingVersions.length !== 1 || pendingVersions[0] !== '20261106000300') {
+    throw new Error('This deployment is authorized only for public YouTube demo view migration 20261106000300; refusing any other pending set.');
+  }
+}
+
 export function assertRecoveryAvailable(payload, now = Date.now()) {
   if (!Array.isArray(payload?.backups)) throw new Error('Supabase backup API returned an invalid response.');
   const available = payload.backups.filter((backup) =>
@@ -256,6 +263,10 @@ if (process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.ar
       const pending = await inspectHistory(first);
       assertPhase3fRoiAnalysisOnlyPending(pending);
       console.log('The only pending migration is ROI analysis results migration 20261106000200.');
+    } else if (command === 'phase3g-public-youtube' && first) {
+      const pending = await inspectHistory(first);
+      assertPhase3gPublicYoutubeOnlyPending(pending);
+      console.log('The only pending migration is public YouTube demo projection migration 20261106000300.');
     } else if (command === 'dry-run' && first && second) {
       const pending = await inspectHistory(first);
       const dryRun = await readFile(second, 'utf8');
@@ -276,7 +287,7 @@ if (process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.ar
       });
       console.log(`Explicit development data-loss waiver accepted for approved pending migrations: ${waivedVersions.join(', ')}.`);
     } else {
-      throw new Error('Usage: snapshot | history <migration-list-output> | applied <migration-list-output> | phase2e <migration-list-output> | phase2e-acl-fix <migration-list-output> | phase3d-cctv-cleanup <migration-list-output> | phase3d1-cctv-delete <migration-list-output> | phase3e-roi-density <migration-list-output> | phase3f-roi-analysis <migration-list-output> | dry-run <migration-list-output> <dry-run-output> | backup <backup-api-json> | waiver <migration-list-output>');
+      throw new Error('Usage: snapshot | history <migration-list-output> | applied <migration-list-output> | phase2e <migration-list-output> | phase2e-acl-fix <migration-list-output> | phase3d-cctv-cleanup <migration-list-output> | phase3d1-cctv-delete <migration-list-output> | phase3e-roi-density <migration-list-output> | phase3f-roi-analysis <migration-list-output> | phase3g-public-youtube <migration-list-output> | dry-run <migration-list-output> <dry-run-output> | backup <backup-api-json> | waiver <migration-list-output>');
     }
   } catch (error) {
     console.error(error.message);

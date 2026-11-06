@@ -89,12 +89,12 @@ describe('CCTV detail page', () => {
     expect(host?.querySelector('.cctv-detail-actions a')?.getAttribute('href')).toBe('/map?cctv=camera-1')
   })
 
-  it('renders an allowlisted live demo stream with an explicit location disclaimer', async () => {
+  it('renders a YouTube demo stream with a short demo label', async () => {
     getCctvDemoAssociation.mockResolvedValue({
       video: null,
       editable: false,
       liveStream: {
-        cameraId: 'camera-1', videoId: 'UTR-nG4SK7E', title: 'Karang Tunggal', city: 'Yogyakarta',
+        cameraId: 'camera-1', videoId: 'UTR-nG4SK7E', title: 'YouTube live demo',
         sourceUrl: 'https://www.youtube.com/watch?v=UTR-nG4SK7E',
         embedUrl: 'https://www.youtube-nocookie.com/embed/UTR-nG4SK7E?autoplay=1&mute=1&playsinline=1&controls=1',
       },
@@ -104,8 +104,7 @@ describe('CCTV detail page', () => {
     const frame = host?.querySelector<HTMLIFrameElement>('.cctv-detail-live-stage iframe')
     expect(frame?.src).toContain('/embed/UTR-nG4SK7E?autoplay=1')
     expect(frame?.allow).toContain('autoplay')
-    expect(host?.textContent).toContain('LIVE STREAM DEMO — Yogyakarta')
-    expect(host?.textContent).toContain('NOT THIS CAMERA’S MAPPED LOCATION')
+    expect(host?.textContent).toContain('DEMO · YOUTUBE LIVE')
     expect(host?.querySelector('.cctv-detail-cv')).toBeNull()
   })
 
