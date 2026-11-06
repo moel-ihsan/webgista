@@ -17,6 +17,7 @@ vi.mock('../../data/cctvAnalysisConfig', () => ({
 }))
 
 import { trafficDemoVideos } from '../../data/trafficDemo'
+import { ROI_PROCESSING_DEFAULTS } from '../../domain/roiDensity'
 import TrafficAnalysisConfig from './TrafficAnalysisConfig.vue'
 
 let app: ReturnType<typeof createApp> | undefined
@@ -108,6 +109,34 @@ describe('TrafficAnalysisConfig', () => {
     expect(geometry[2]).toBeCloseTo(0.7)
     expect(geometry[3]).toBeCloseTo(0.7)
     expect(host.textContent).toContain('ROI saved (configuration v3)')
+  })
+
+  it('restores the saved normalized ROI when the editor loads again', async () => {
+    const video = trafficDemoVideos[0]!
+    roiHarness.load.mockResolvedValue({
+      configuration: {
+        schema_version: 'webgista.roi-density-config.v1',
+        source_video_identifier: video.analysis.source_video_identifier,
+        roi_type: 'rectangle', roi_geometry: [0.2, 0.25, 0.6, 0.5],
+        video_dimensions: video.analysis.video_dimensions,
+        ...ROI_PROCESSING_DEFAULTS,
+        included_classes: [...ROI_PROCESSING_DEFAULTS.included_classes],
+      },
+      configurationVersion: 8,
+      updatedAt: '2026-11-06T00:00:00Z',
+    })
+    host = document.createElement('div')
+    document.body.append(host)
+    app = createApp({
+      render: () => h(TrafficAnalysisConfig, { cameraId: 'qa-camera', video, editable: true }),
+    })
+    app.mount(host)
+    await new Promise((resolve) => setTimeout(resolve, 0))
+    await nextTick()
+
+    expect(roiHarness.load).toHaveBeenCalledWith({}, 'qa-camera')
+    expect(host.querySelector('polygon')?.getAttribute('points')).toBe('200,250 800,250 800,750 200,750')
+    expect(host.textContent).toContain('Saved configuration v8')
   })
 
   it('finishes a valid polygon on double-click without an extra visible action', async () => {
