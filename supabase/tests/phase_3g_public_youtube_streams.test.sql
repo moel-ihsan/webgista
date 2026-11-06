@@ -1,7 +1,7 @@
 begin;
 create extension if not exists pgtap with schema extensions;
 set search_path = public, extensions;
-select plan(10);
+select plan(11);
 
 select has_view('public', 'public_cctv_demo_streams', 'public demo stream projection exists');
 select has_column('public', 'public_cctv_demo_streams', 'video_id', 'projection exposes a parsed video id');
