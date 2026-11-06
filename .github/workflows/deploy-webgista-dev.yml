@@ -410,8 +410,13 @@ jobs:
             LOG_HTTP_STATUS="$http_status" node --input-type=module - "$RUNNER_TEMP/phase3f-function-logs.json" <<'NODE'
           import { readFileSync } from 'node:fs';
           let code = null;
-          try { const value = JSON.parse(readFileSync(process.argv[2], 'utf8')); if (typeof value.code === 'string' && /^[a-z0-9_-]+$/i.test(value.code)) code = value.code; } catch {}
-          console.error(JSON.stringify({ logs_http_status: Number(process.env.LOG_HTTP_STATUS), error_code: code }));
+          let missingPermissions = [];
+          try {
+            const value = JSON.parse(readFileSync(process.argv[2], 'utf8'));
+            if (typeof value.code === 'string' && /^[a-z0-9_-]+$/i.test(value.code)) code = value.code;
+            if (Array.isArray(value.missing_permissions)) missingPermissions = value.missing_permissions.filter((item) => typeof item === 'string' && /^[a-z0-9_-]+$/i.test(item));
+          } catch {}
+          console.error(JSON.stringify({ logs_http_status: Number(process.env.LOG_HTTP_STATUS), error_code: code, missing_permissions: missingPermissions }));
           NODE
             exit 1
           fi
