@@ -49,13 +49,20 @@ export function searchCctvLocations(
 }
 
 export function cctvPopupDetails(location: CctvLocation): readonly { label: string; value: string }[] {
-  return [
+  const details = [
     { label: 'Address', value: location.address || 'Not recorded' },
     { label: 'Agency', value: location.agency.name || 'Not recorded' },
     { label: 'Category', value: location.category === 'analytic' ? 'Analytic' : 'Regular' },
     { label: 'Traffic condition', value: location.trafficCondition ? conditionLabel(location.trafficCondition) : 'No Data' },
     { label: 'Video', value: 'No authorized video is attached' },
   ]
+  if (location.trafficConditionSource) details.splice(4, 0, {
+    label: 'Condition source',
+    value: location.trafficConditionSource === 'experimental_roi_coverage'
+      ? 'Experimental ROI coverage estimate — not MKJI V/C'
+      : location.trafficConditionSource === 'manual' ? 'Manual observation' : 'Traffic observation',
+  })
+  return details
 }
 
 function conditionLabel(condition: NonNullable<CctvLocation['trafficCondition']>): string {

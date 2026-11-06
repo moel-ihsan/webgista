@@ -4,7 +4,7 @@ import type { CctvDataSource } from './contracts'
 import type { AgencySummary, CctvCategory, CctvLocation } from '../domain/cctv'
 import { privateImageUrl } from './privateMedia'
 import { appConfig } from '../config/app'
-import { latestTrafficConditions, listLatestTrafficObservations } from './trafficObservations'
+import { listLatestCctvConditionSnapshots } from './roiCoverageCondition'
 
 const PUBLIC_FIELDS = 'id,name,address,category,agency_id,agency_name,longitude,latitude,snapshot_path'
 const AUTHENTICATED_FIELDS = 'id,name,address,category,agency_id,longitude,latitude,snapshot_path,is_active,agency:agencies(id,name)'
@@ -87,10 +87,14 @@ export function createSupabaseCctvDataSource(client: SupabaseClient): CctvDataSo
       let locations = result.data.map(mapCctvLocation).filter((location): location is CctvLocation => location !== null)
       if (sessionResult.session) {
         try {
-          const conditions = latestTrafficConditions(await listLatestTrafficObservations(client))
-          locations = locations.map((location) => ({ ...location, trafficCondition: conditions.get(location.id) ?? null }))
+          const conditions = await listLatestCctvConditionSnapshots(client, signal)
+          locations = locations.map((location) => ({
+            ...location,
+            trafficCondition: conditions.get(location.id)?.condition ?? null,
+            trafficConditionSource: conditions.get(location.id)?.source ?? null,
+          }))
         } catch {
-          locations = locations.map((location) => ({ ...location, trafficCondition: null }))
+          locations = locations.map((location) => ({ ...location, trafficCondition: null, trafficConditionSource: null }))
         }
       }
       const withImages = appConfig.privateMediaEnabled

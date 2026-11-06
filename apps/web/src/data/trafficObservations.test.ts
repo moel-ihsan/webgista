@@ -23,21 +23,15 @@ describe('traffic observations', () => {
 
   it('uses only the latest authorized condition and falls back to No Data when it is absent', () => {
     const locations = [{ id: 'camera-1', trafficCondition: 'poor' }, { id: 'camera-2', trafficCondition: null }] as never
-    const latest = [
-      { id: 'new', cctvId: 'camera-1', condition: 'great' },
-      { id: 'old', cctvId: 'camera-1', condition: 'bad' },
-    ] as never
-    expect(mergeLatestTrafficConditions(locations, latest)).toMatchObject({
+    expect(mergeLatestTrafficConditions(locations, new Map([['camera-1', { condition: 'great', source: 'manual' }]]))).toMatchObject({
       changed: true,
       locations: [{ id: 'camera-1', trafficCondition: 'great' }, { id: 'camera-2', trafficCondition: null }],
     })
-    const unchanged = mergeLatestTrafficConditions(locations, [
-      { id: 'new', cctvId: 'camera-1', condition: 'poor' },
-    ] as never)
+    const unchanged = mergeLatestTrafficConditions(locations, new Map([['camera-1', { condition: 'poor', source: null }]]))
     expect(unchanged.changed).toBe(false)
     expect(unchanged.locations).toBe(locations)
-    expect(mergeLatestTrafficConditions([{ id: 'camera-1', trafficCondition: 'good' }] as never, []).locations)
-      .toEqual([{ id: 'camera-1', trafficCondition: null }])
+    expect(mergeLatestTrafficConditions([{ id: 'camera-1', trafficCondition: 'good' }] as never, new Map()).locations)
+      .toEqual([{ id: 'camera-1', trafficCondition: null, trafficConditionSource: null }])
   })
 
   it('maps the restricted latest-observation view', async () => {

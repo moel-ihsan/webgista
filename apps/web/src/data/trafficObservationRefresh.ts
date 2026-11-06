@@ -1,4 +1,4 @@
-import { latestTrafficConditions, TRAFFIC_OBSERVATION_SAVED_EVENT } from './trafficObservations'
+import { TRAFFIC_OBSERVATION_SAVED_EVENT } from './trafficObservations'
 import type { TrafficObservation } from '../domain/traffic'
 import type { CctvLocation } from '../domain/cctv'
 
@@ -6,15 +6,16 @@ const REFRESH_INTERVAL_MS = 30_000
 
 export function mergeLatestTrafficConditions(
   locations: readonly CctvLocation[],
-  observations: readonly TrafficObservation[],
+  snapshots: ReadonlyMap<string, { condition: TrafficObservation['condition']; source: CctvLocation['trafficConditionSource'] }>,
 ): { locations: readonly CctvLocation[]; changed: boolean } {
-  const conditions = latestTrafficConditions(observations)
   let changed = false
   const updated = locations.map((location) => {
-    const condition = conditions.get(location.id) ?? null
-    if ((location.trafficCondition ?? null) === condition) return location
+    const snapshot = snapshots.get(location.id)
+    const condition = snapshot?.condition ?? null
+    const source = snapshot?.source ?? null
+    if ((location.trafficCondition ?? null) === condition && (location.trafficConditionSource ?? null) === source) return location
     changed = true
-    return { ...location, trafficCondition: condition }
+    return { ...location, trafficCondition: condition, trafficConditionSource: source }
   })
   return { locations: changed ? updated : locations, changed }
 }

@@ -89,7 +89,10 @@ describe('CCTV map data and interactions', () => {
 
   it('shows only the persisted latest condition when one is available', () => {
     expect(toCctvFeatureCollection([{ ...camera, trafficCondition: 'poor' }]).features[0]?.properties.condition).toBe('poor')
-    expect(cctvPopupDetails({ ...camera, trafficCondition: 'poor' })).toContainEqual({ label: 'Traffic condition', value: 'Poor' })
+    expect(cctvPopupDetails({ ...camera, trafficCondition: 'poor', trafficConditionSource: 'manual' })).toEqual(expect.arrayContaining([
+      { label: 'Traffic condition', value: 'Poor' },
+      { label: 'Condition source', value: 'Manual observation' },
+    ]))
   })
 
   it('searches names, addresses, and agencies case-insensitively with partial matches', () => {
@@ -105,6 +108,11 @@ describe('CCTV map data and interactions', () => {
       { label: 'Traffic condition', value: 'No Data' },
       { label: 'Video', value: 'No authorized video is attached' },
     ]))
+  })
+
+  it('labels ROI coverage-derived marker conditions as experimental and not MKJI', () => {
+    expect(cctvPopupDetails({ ...camera, trafficCondition: 'great', trafficConditionSource: 'experimental_roi_coverage' }))
+      .toContainEqual({ label: 'Condition source', value: 'Experimental ROI coverage estimate — not MKJI V/C' })
   })
 
   it('builds a v1-sized popup with signed image preview and safe text-only metadata', () => {
