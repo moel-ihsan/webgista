@@ -5,6 +5,7 @@ import type { AgencySummary, CctvCategory, CctvLocation } from '../domain/cctv'
 import { privateImageUrl } from './privateMedia'
 import { appConfig } from '../config/app'
 import { latestTrafficConditionSnapshots, listLatestTrafficObservations } from './trafficObservations'
+import { listLatestV1RoiConditions, mergeExperimentalRoiConditions, type MarkerConditionSnapshot } from './roiV1MarkerCondition'
 
 const PUBLIC_FIELDS = 'id,name,address,category,agency_id,agency_name,longitude,latitude,snapshot_path'
 const AUTHENTICATED_FIELDS = 'id,name,address,category,agency_id,longitude,latitude,snapshot_path,is_active,agency:agencies(id,name)'
@@ -87,7 +88,15 @@ export function createSupabaseCctvDataSource(client: SupabaseClient): CctvDataSo
       let locations = result.data.map(mapCctvLocation).filter((location): location is CctvLocation => location !== null)
       if (sessionResult.session) {
         try {
-          const conditions = latestTrafficConditionSnapshots(await listLatestTrafficObservations(client, signal))
+          let conditions: ReadonlyMap<string, MarkerConditionSnapshot> = latestTrafficConditionSnapshots(await listLatestTrafficObservations(client, signal))
+          if (appConfig.roiAnalysisEnabled) {
+            try {
+              const roiConditions = await listLatestV1RoiConditions(client, locations.map(({ id }) => id), signal)
+              conditions = mergeExperimentalRoiConditions(conditions, roiConditions)
+            } catch {
+              // Keep authorized saved observations if experimental analysis is temporarily unavailable.
+            }
+          }
           locations = locations.map((location) => ({
             ...location,
             trafficCondition: conditions.get(location.id)?.condition ?? null,

@@ -9,6 +9,7 @@ import { appConfig, defaultMapStyleId, mapStyles, type MapStyleId } from '../../
 import { authSession } from '../../auth/session'
 import { createSupabaseCctvDataSource } from '../../data/supabaseCctvDataSource'
 import { latestTrafficConditionSnapshots, listLatestTrafficObservations } from '../../data/trafficObservations'
+import { listLatestV1RoiConditions, mergeExperimentalRoiConditions, type MarkerConditionSnapshot } from '../../data/roiV1MarkerCondition'
 import { mergeLatestTrafficConditions, watchTrafficObservationChanges } from '../../data/trafficObservationRefresh'
 import { DEFAULT_MAP_VIEWPORT, loadMapViewport, type MapViewport } from '../../data/mapSettings'
 import type { CctvLocation } from '../../domain/cctv'
@@ -328,7 +329,11 @@ async function refreshTrafficConditions(): Promise<void> {
   trafficConditionController = controller
   const revision = ++trafficConditionRevision
   try {
-    const conditions = latestTrafficConditionSnapshots(await listLatestTrafficObservations(supabaseClient, controller.signal))
+    let conditions: ReadonlyMap<string, MarkerConditionSnapshot> = latestTrafficConditionSnapshots(await listLatestTrafficObservations(supabaseClient, controller.signal))
+    if (appConfig.roiAnalysisEnabled) {
+      const roiConditions = await listLatestV1RoiConditions(supabaseClient, cctvLocations.value.map(({ id }) => id), controller.signal)
+      conditions = mergeExperimentalRoiConditions(conditions, roiConditions)
+    }
     if (controller.signal.aborted || componentUnmounted || revision !== trafficConditionRevision) return
     const merged = mergeLatestTrafficConditions(cctvLocations.value, conditions)
     if (!merged.changed) return

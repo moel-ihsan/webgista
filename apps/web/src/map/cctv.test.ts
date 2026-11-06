@@ -125,6 +125,11 @@ describe('CCTV map data and interactions', () => {
     expect(noImage.querySelector('img')).toBeNull()
   })
 
+  it('labels a marker condition derived from a demo ROI result as experimental', () => {
+    expect(cctvPopupDetails({ ...camera, trafficCondition: 'great', trafficConditionSource: 'experimental_v1_estimate' }))
+      .toContainEqual({ label: 'Condition source', value: 'Experimental V1-style estimate — demo video' })
+  })
+
   it('mounts a muted looping preview only in the active popup and releases its media source on close', () => {
     const play = vi.spyOn(HTMLMediaElement.prototype, 'play').mockResolvedValue(undefined)
     const popup = createCctvPopupContent({ ...camera, snapshotUrl: 'https://signed.example/image.jpg' })

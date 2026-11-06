@@ -10,6 +10,7 @@ import { listTrafficObservations } from '../data/trafficObservations'
 import { privateImageUrl } from '../data/privateMedia'
 import { getCctvAnalysisConfig, type StoredRoiDensityConfig } from '../data/cctvAnalysisConfig'
 import { getCurrentCctvRoiAnalysis, type CurrentRoiAnalysis, type RoiAnalysisResult } from '../data/cctvRoiAnalysis'
+import { classifyV1RoiWindow, v1RoiRatio } from '../data/roiV1MarkerCondition'
 import { demoDetectionTotal, type TrafficDemoVideo } from '../data/trafficDemo'
 import { rectangleToPolygon, type RoiDensityConfig } from '../domain/roiDensity'
 import { roiDensityFrameAt } from '../domain/roiDensityResult'
@@ -49,6 +50,11 @@ const demoDensityFrame = computed(() => !appConfig.roiAnalysisEnabled && demoVid
 const activeDensityWindow = computed<RoiAnalysisResult | null>(() => {
   if (appConfig.roiAnalysisEnabled) return backendAnalysis.value?.results.find((window) => videoTime.value >= window.window_started_at_seconds && videoTime.value < window.window_ended_at_seconds) ?? null
   return demoVideo.value?.roiDensity.windows.find((window) => videoTime.value >= window.window_started_at_seconds && videoTime.value < window.window_ended_at_seconds) ?? null
+})
+const activeV1Estimate = computed(() => {
+  const ratio = activeDensityWindow.value ? v1RoiRatio(activeDensityWindow.value) : null
+  const condition = activeDensityWindow.value ? classifyV1RoiWindow(activeDensityWindow.value) : null
+  return ratio === null || condition === null ? null : { ratio, condition }
 })
 function configKey(config: RoiDensityConfig): string {
   return JSON.stringify([
@@ -375,6 +381,7 @@ onBeforeUnmount(() => {
                 <span>Vehicle Classes — LV {{ activeDensityWindow.traffic_category_statistics.LV.average?.toFixed(2) ?? '—' }}, HV {{ activeDensityWindow.traffic_category_statistics.HV.average?.toFixed(2) ?? '—' }}, MC {{ activeDensityWindow.traffic_category_statistics.MC.average?.toFixed(2) ?? '—' }}, bicycle {{ activeDensityWindow.traffic_category_statistics.bicycle.average?.toFixed(2) ?? '—' }}.</span>
                 <span>ROI Coverage: {{ activeDensityWindow.roi_image_coverage_average !== null ? `${(activeDensityWindow.roi_image_coverage_average * 100).toFixed(1)}%` : 'unavailable' }} · Busy duration: {{ activeDensityWindow.busy_duration_seconds.toFixed(1) }}s · Valid samples: {{ activeDensityWindow.data_quality.valid_samples }}/{{ activeDensityWindow.data_quality.expected_samples }} · Measurement Status: {{ activeDensityWindow.status }} / {{ activeDensityWindow.classification_status.replaceAll('_', ' ') }}.</span>
                 <span>Traffic Condition: {{ activeDensityWindow.condition ? activeDensityWindow.condition : `No Data — ${activeDensityWindow.condition_reason}` }}</span>
+                <span>V1-style marker estimate: {{ activeV1Estimate ? `${activeV1Estimate.condition} (ratio ${activeV1Estimate.ratio.toFixed(3)})` : 'No Data — valid complete ROI window unavailable' }}. Experimental 10-second estimate using the original v1 coefficients; it does not change saved observations.</span>
               </template>
               <span v-else-if="appConfig.roiAnalysisEnabled" role="status">No saved analysis window matches the current playback position.</span>
             </template>

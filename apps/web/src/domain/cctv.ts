@@ -18,5 +18,5 @@ export interface CctvLocation {
   publicStreamUrl: string | null
   isActive: boolean
   trafficCondition?: import('./traffic').TrafficCondition | null
-  trafficConditionSource?: 'manual' | 'traffic_observation' | null
+  trafficConditionSource?: 'manual' | 'traffic_observation' | 'experimental_v1_estimate' | null
 }

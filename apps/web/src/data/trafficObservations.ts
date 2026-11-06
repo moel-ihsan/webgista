@@ -110,9 +110,9 @@ export function latestTrafficConditions(observations: readonly TrafficObservatio
 
 export function latestTrafficConditionSnapshots(observations: readonly TrafficObservation[]): ReadonlyMap<string, {
   condition: TrafficCondition
-  source: 'manual' | 'traffic_observation'
+  source: 'manual' | 'traffic_observation' | 'experimental_v1_estimate'
 }> {
-  const latest = new Map<string, { condition: TrafficCondition; source: 'manual' | 'traffic_observation'; endedAt: number }>()
+  const latest = new Map<string, { condition: TrafficCondition; source: 'manual' | 'traffic_observation' | 'experimental_v1_estimate'; endedAt: number }>()
   for (const observation of observations) {
     if (!observation.condition) continue
     const endedAt = Date.parse(observation.windowEndedAt)

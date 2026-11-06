@@ -217,7 +217,12 @@ describe('CCTV detail page', () => {
       await flush()
       expect(host?.textContent).toContain(`Observation interval: ${interval} · ${completeness}.`)
       expect(host?.textContent).toContain(`Average Vehicles: ${average} · Peak: ${peak}`)
+      expect(host?.textContent).toContain('V1-style marker estimate:')
     }
+    player!.currentTime = 23
+    player!.dispatchEvent(new Event('timeupdate'))
+    await flush()
+    expect(host?.textContent).toContain('V1-style marker estimate: No Data — valid complete ROI window unavailable')
   })
 
   it('withholds the bundled demo ROI when no authorized camera configuration is returned', async () => {
