@@ -1,7 +1,7 @@
 begin;
 create extension if not exists pgtap with schema extensions;
 set search_path = public, extensions;
-select plan(26);
+select plan(27);
 
 select has_table('public', 'cctv_roi_analysis_jobs', 'analysis jobs table exists');
 select has_table('public', 'cctv_roi_analysis_results', 'compact result table exists');
@@ -25,9 +25,9 @@ insert into public.cctv_locations (id,agency_id,name,address,longitude,latitude)
  ('bf200000-0000-0000-0000-000000000002','bf100000-0000-0000-0000-000000000002','ROI 3F B','QA',95.3,5.5);
 select set_config('request.jwt.claims','{"sub":"bf000000-0000-0000-0000-000000000001","role":"authenticated"}',true);
 set local role authenticated;
-insert into public.cctv_analysis_config (cctv_id,configuration) values
+select lives_ok($$insert into public.cctv_analysis_config (cctv_id,configuration) values
  ('bf200000-0000-0000-0000-000000000001','{"schema_version":"webgista.roi-density-config.v1","source_video_identifier":"traffic_sample_01","roi_type":"rectangle","roi_geometry":[0.1,0.2,0.6,0.5],"video_dimensions":{"width":1280,"height":720},"observation_window_seconds":10,"refresh_seconds":10,"sampled_fps":5,"minimum_detection_confidence":0.35,"included_classes":["car","motorcycle","bus","truck"],"busy_threshold_vehicles":0,"minimum_valid_coverage":0.8,"density_thresholds":null,"calibration_status":"uncalibrated","calibration_note":""}),
- ('bf200000-0000-0000-0000-000000000002','{"schema_version":"webgista.roi-density-config.v1","source_video_identifier":"traffic_sample_02","roi_type":"rectangle","roi_geometry":[0.1,0.2,0.6,0.5],"video_dimensions":{"width":1280,"height":720},"observation_window_seconds":10,"refresh_seconds":10,"sampled_fps":5,"minimum_detection_confidence":0.35,"included_classes":["car","motorcycle","bus","truck"],"busy_threshold_vehicles":0,"minimum_valid_coverage":0.8,"density_thresholds":null,"calibration_status":"uncalibrated","calibration_note":""}');
+ ('bf200000-0000-0000-0000-000000000002','{"schema_version":"webgista.roi-density-config.v1","source_video_identifier":"traffic_sample_02","roi_type":"rectangle","roi_geometry":[0.1,0.2,0.6,0.5],"video_dimensions":{"width":1280,"height":720},"observation_window_seconds":10,"refresh_seconds":10,"sampled_fps":5,"minimum_detection_confidence":0.35,"included_classes":["car","motorcycle","bus","truck"],"busy_threshold_vehicles":0,"minimum_valid_coverage":0.8,"density_thresholds":null,"calibration_status":"uncalibrated","calibration_note":""}');$$,'QA ROI configurations are inserted for both cameras');
 reset role;
 insert into public.cctv_roi_analysis_jobs(id,cctv_id,source_video_identifier,source_video_sha256,detection_artifact_version,configuration_version,analysis_method_version,status,created_by) values
  ('bf300000-0000-0000-0000-000000000001','bf200000-0000-0000-0000-000000000001','traffic_sample_01','aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa','test-artifact-v1',1,'roi_density_v1','processing','bf000000-0000-0000-0000-000000000001'),
