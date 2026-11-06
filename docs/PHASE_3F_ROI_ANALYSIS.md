@@ -17,7 +17,7 @@ Migration `20261106000200_cctv_roi_analysis_results.sql` is migration 011. It is
 
 The Edge Function and production ROI analysis flag have not been deployed/enabled. Keep `VITE_SUPABASE_ROI_ANALYSIS_ENABLED` false until migration 011 is approved and applied, the function is deployed, and the backend execution path is verified on hosted development. The function needs Supabase's server-side service-role environment variable; it must never be copied into a `VITE_*` setting.
 
-Cached JSON artifacts are publicly served as fixed demo inputs from the existing Vercel project. Their source-video SHA, artifact SHA, identifier, and schema are checked before processing. Local Node tests process each cached artifact in roughly 0.16–0.37 seconds, but this is not a hosted Edge CPU measurement. Supabase documents a 2-second CPU budget per request on the Free plan; hosted runtime profiling is still required. A new camera source needs a separately operated authorized Python worker; Vercel and Edge Functions do not run YOLOX inference.
+Cached JSON artifacts are publicly served from `apps/web/public/traffic-demo/` as fixed demo inputs from the existing Vercel project. Their source-video SHA, artifact SHA, identifier, and schema are checked before processing, and tests require the public copies to match the canonical source artifacts byte for byte. Local Node tests process each cached artifact in roughly 0.16–0.37 seconds, but this is not a hosted Edge CPU measurement. Supabase documents a 2-second CPU budget per request on the Free plan; hosted runtime profiling is still required. A new camera source needs a separately operated authorized Python worker; Vercel and Edge Functions do not run YOLOX inference.
 
 ## Verification
 

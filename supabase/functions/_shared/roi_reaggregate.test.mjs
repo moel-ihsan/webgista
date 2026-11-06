@@ -1,11 +1,21 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
+import { createHash } from 'node:crypto'
 import { readFile } from 'node:fs/promises'
 import { reaggregate } from './roi_reaggregate.mjs'
 
+const artifactHashes = {
+  '01': '4f0cbe29eb9a62a28ba7be60c8600354407fdc03ddf8d8ed976cd34983ddf6f1',
+  '02': 'a09ed55977c7df92bc5def5b5ffa52c94a0192393a4524bdddc7fda51a28ba75',
+}
+
 for (const id of ['01', '02']) {
   test(`reaggregates demo ${id} into two complete ten-second windows and one partial window`, async () => {
-    const document = JSON.parse(await readFile(new URL(`../../../apps/web/src/data/traffic-demo/traffic_sample_${id}.analysis.json`, import.meta.url)))
+    const artifact = await readFile(new URL(`../../../apps/web/src/data/traffic-demo/traffic_sample_${id}.analysis.json`, import.meta.url))
+    const deployedArtifact = await readFile(new URL(`../../../apps/web/public/traffic-demo/traffic_sample_${id}.analysis.json`, import.meta.url))
+    assert.deepEqual(deployedArtifact, artifact)
+    assert.equal(createHash('sha256').update(deployedArtifact).digest('hex'), artifactHashes[id])
+    const document = JSON.parse(artifact)
     const reviewed = JSON.parse(await readFile(new URL(`../../../apps/web/src/data/traffic-demo/traffic_sample_${id}.roi-density.json`, import.meta.url)))
     const result = reaggregate(document, reviewed.configuration_snapshot, reviewed.configuration_version)
     assert.equal(result.source_video_identifier, `traffic_sample_${id}`)
