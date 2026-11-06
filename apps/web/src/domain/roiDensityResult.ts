@@ -37,6 +37,7 @@ export interface RoiDensityResult {
   schema_version: 'webgista.roi-density-result.v1'
   analysis_method: 'roi_density_v1'
   provenance: {
+    camera_id?: string
     source_video_identifier: string
     source_video_sha256: string
     is_live_cctv: boolean
@@ -47,7 +48,7 @@ export interface RoiDensityResult {
   }
   input_duration_seconds: number
   configuration_version: number
-  configuration_snapshot: RoiDensityConfig
+  configuration_snapshot: RoiDensityConfig & { camera_id?: string }
   roi_type: 'rectangle' | 'polygon'
   roi_geometry: number[] | [number, number][]
   video_dimensions: { width: number; height: number }

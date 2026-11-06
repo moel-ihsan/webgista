@@ -1,5 +1,6 @@
 {
   "schema_version": "webgista.roi-density-config.v1",
+  "source_video_identifier": "traffic_sample_02",
   "roi_type": "rectangle",
   "roi_geometry": [0.02, 0.4, 0.96, 0.58],
   "video_dimensions": { "width": 1280, "height": 720 },

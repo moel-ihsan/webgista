@@ -8,7 +8,7 @@ from roi_density import aggregate_windows, classify_density, point_in_polygon, r
 
 def config(**changes):
     value = {
-        'schema_version': 'webgista.roi-density-config.v1', 'roi_type': 'rectangle',
+        'schema_version': 'webgista.roi-density-config.v1', 'source_video_identifier': 'demo01', 'roi_type': 'rectangle',
         'roi_geometry': [0.25, 0.25, 0.5, 0.5], 'video_dimensions': {'width': 100, 'height': 100},
         'observation_window_seconds': 10, 'refresh_seconds': 10, 'sampled_fps': 5,
         'minimum_detection_confidence': 0.35,
@@ -156,6 +156,33 @@ class RoiDensityTest(unittest.TestCase):
         self.assertFalse(result['provenance']['is_live_cctv'])
         self.assertEqual(result['provenance']['model']['name'], 'YOLOX-S')
         self.assertEqual(result['windows'][0]['condition'], 'good')
+
+    def test_camera_export_binds_source_and_preserves_saved_configuration_version(self):
+        document = {
+            'record_kind': 'authorized_video_analysis', 'is_live_cctv': False,
+            'source_video_identifier': 'camera-video-01', 'source_video_sha256': 'sha',
+            'video_dimensions': {'width': 100, 'height': 100}, 'input_duration_seconds': 10,
+            'frames': [{'offset_seconds': index / 5, 'detections': []} for index in range(50)],
+        }
+        exported = config(camera_id='cctv-123', source_video_identifier='camera-video-01', configuration_version=4)
+        result = analyze_detection_document(document, exported)
+        self.assertEqual(result['provenance']['camera_id'], 'cctv-123')
+        self.assertEqual(result['provenance']['source_video_identifier'], 'camera-video-01')
+        self.assertEqual(result['configuration_version'], 4)
+
+    def test_camera_export_rejects_a_different_source_video(self):
+        document = {
+            'record_kind': 'authorized_video_analysis', 'source_video_identifier': 'another-video',
+            'source_video_sha256': 'sha', 'video_dimensions': {'width': 100, 'height': 100},
+            'input_duration_seconds': 10, 'frames': [],
+        }
+        exported = config(camera_id='cctv-123', source_video_identifier='camera-video-01', configuration_version=4)
+        with self.assertRaisesRegex(ValueError, 'does not match'):
+            analyze_detection_document(document, exported)
+
+    def test_unbound_roi_configuration_is_rejected(self):
+        with self.assertRaisesRegex(ValueError, 'source_video_identifier is required'):
+            validate_config(config(source_video_identifier=''))
 
 
 if __name__ == '__main__':

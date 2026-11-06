@@ -4,7 +4,7 @@ import { rectangleToPolygon, validateRoiDensityConfig, validateRoiPolygon, type 
 
 function config(overrides: Partial<RoiDensityConfig> = {}): RoiDensityConfig {
   return {
-    schema_version: 'webgista.roi-density-config.v1', roi_type: 'rectangle', roi_geometry: [0.2, 0.2, 0.6, 0.5],
+    schema_version: 'webgista.roi-density-config.v1', source_video_identifier: 'video-01', roi_type: 'rectangle', roi_geometry: [0.2, 0.2, 0.6, 0.5],
     video_dimensions: { width: 1280, height: 720 }, observation_window_seconds: 10, refresh_seconds: 10,
     sampled_fps: 5, minimum_detection_confidence: 0.35, included_classes: ['car', 'bus', 'truck', 'motorcycle', 'bicycle'],
     busy_threshold_vehicles: 4, minimum_valid_coverage: 0.8, density_thresholds: null,
@@ -36,6 +36,7 @@ describe('ROI density configuration', () => {
 
   it('keeps the ten-second monitoring defaults and rejects invalid refresh values', () => {
     expect(validateRoiDensityConfig(config())).toBeNull()
+    expect(validateRoiDensityConfig(config({ source_video_identifier: '' }))).toMatch(/source video identifier/)
     expect(validateRoiDensityConfig(config({ observation_window_seconds: 0 }))).toMatch(/Window or sampling/)
     expect(validateRoiDensityConfig(config({ refresh_seconds: 10.5 }))).toMatch(/Window or sampling/)
     expect(validateRoiDensityConfig(config({ observation_window_seconds: 10, refresh_seconds: 11 }))).toMatch(/cannot exceed/)

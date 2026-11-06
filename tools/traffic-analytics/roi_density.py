@@ -90,6 +90,8 @@ def self_intersects(points):
 def validate_config(config):
     if not isinstance(config, dict) or config.get('schema_version') != 'webgista.roi-density-config.v1':
         raise ValueError('unsupported ROI density configuration')
+    if not isinstance(config.get('source_video_identifier'), str) or not config['source_video_identifier'].strip():
+        raise ValueError('source_video_identifier is required')
     if config.get('roi_type') == 'rectangle':
         polygon = rectangle_points(config.get('roi_geometry'))
     elif config.get('roi_type') == 'polygon':

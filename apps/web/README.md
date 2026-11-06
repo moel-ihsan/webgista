@@ -72,7 +72,7 @@ On 2026-11-03, `npm run verify` completed successfully with the Supabase integra
 | `VITE_SUPABASE_PUBLISHABLE_KEY` | For sign-in | Browser-safe publishable key. Never use a secret or service-role key. |
 | `VITE_SUPABASE_PROFILE_FIELDS_ENABLED` | After migration | Set `true` only after migration `20261104000300` is applied; enables profile address, coordinates, and description. Defaults to `false`. |
 | `VITE_SUPABASE_PRIVATE_MEDIA_ENABLED` | After Storage setup | Set `true` only after the same migration is applied and private buckets/policies are verified; enables profile and CCTV image upload and signed previews. Defaults to `false`. |
-| `VITE_SUPABASE_ROI_DENSITY_ENABLED` | After migration 010 | Set `true` only after `20261106000100` is approved and applied; enables per-camera ROI density configuration. Defaults to `false`. |
+| `VITE_SUPABASE_ROI_DENSITY_ENABLED` | Production enabled after migration 010 | `true` enables per-camera ROI density configuration; keep `false` in environments where migration `20261106000100` is not applied. Defaults to `false`. |
 | `VITE_AGENCY_REMOVAL_ENABLED` | After migration 004 | Set `true` only after `20261104000400` is applied and the membership foreign key is verified as `ON DELETE RESTRICT`. Defaults to `false` to prevent cascading membership deletion. |
 
 Copy `.env.example` to `.env.local` and configure only the Supabase values needed for sign-in. Do not remove the map style's OpenStreetMap/OpenMapTiles attribution.

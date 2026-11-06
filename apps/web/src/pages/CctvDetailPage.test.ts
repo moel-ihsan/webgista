@@ -144,6 +144,7 @@ describe('CCTV detail page', () => {
 
     expect(getCctvAnalysisConfig).toHaveBeenCalledWith({}, 'camera-1')
     expect(host?.textContent).toContain('This analysis is stale')
+    expect(host?.textContent).toContain('Results are not uploaded or published automatically')
     expect(host?.textContent).not.toContain('10-second ROI window')
   })
 

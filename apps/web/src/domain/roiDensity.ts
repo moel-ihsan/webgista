@@ -7,6 +7,7 @@ export const ROI_VEHICLE_CLASSES = ['car', 'bus', 'truck', 'motorcycle', 'bicycl
 
 export interface RoiDensityConfig {
   schema_version: 'webgista.roi-density-config.v1'
+  source_video_identifier: string
   roi_type: RoiType
   roi_geometry: number[] | RoiPoint[]
   video_dimensions: { width: number; height: number }
@@ -81,6 +82,7 @@ export function validateRoiPolygon(points: readonly RoiPoint[]): RoiPoint[] {
 
 export function validateRoiDensityConfig(config: RoiDensityConfig): string | null {
   try {
+    if (!config.source_video_identifier.trim()) throw new Error('A source video identifier is required.')
     if (config.roi_type === 'rectangle') rectangleToPolygon(config.roi_geometry as number[])
     else validateRoiPolygon(config.roi_geometry as RoiPoint[])
     if (!Number.isInteger(config.video_dimensions.width) || !Number.isInteger(config.video_dimensions.height)

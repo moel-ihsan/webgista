@@ -10,6 +10,13 @@ from roi_density import aggregate_windows, bottom_center_in_roi, roi_image_cover
 def analyze_detection_document(document, config):
     polygon = validate_config(config)
     dimensions = config['video_dimensions']
+    if config['source_video_identifier'] != document.get('source_video_identifier'):
+        raise ValueError('ROI configuration source video does not match the analyzed source')
+    if 'camera_id' in config:
+        if not isinstance(config.get('camera_id'), str) or not config['camera_id'].strip():
+            raise ValueError('camera ID is required for a camera-bound ROI configuration')
+        if not isinstance(config.get('configuration_version'), int) or config['configuration_version'] < 1:
+            raise ValueError('a valid saved configuration version is required')
     if document.get('video_dimensions') != dimensions:
         raise ValueError('configuration video dimensions do not match the analyzed source')
     if document.get('record_kind') != 'demo_video_analysis' and not document.get('source_video_sha256'):
@@ -57,6 +64,7 @@ def analyze_detection_document(document, config):
             'record_kind': document.get('record_kind', 'authorized_video_analysis'),
             'model': document.get('model'), 'detections_reused_from': document.get('schema_version'),
             'sampled_fps': document.get('sampled_fps'),
+            **({'camera_id': config['camera_id']} if 'camera_id' in config else {}),
         },
     )
 

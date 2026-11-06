@@ -11,6 +11,7 @@ const props = defineProps<{ cameraId: string; video: TrafficDemoVideo | null; ed
 const loading = ref(false)
 const saving = ref(false)
 const savedVersion = ref<number | null>(null)
+const savedConfigJson = ref('')
 const error = ref('')
 const status = ref('')
 const videoReady = ref(false)
@@ -36,6 +37,7 @@ const form = reactive({
   calibrationStatus: 'uncalibrated' as 'uncalibrated' | 'experimental' | 'calibrated',
   calibrationNote: '',
 })
+const canExport = computed(() => savedVersion.value !== null && savedConfigJson.value === JSON.stringify(config.value))
 
 const dimensions = computed(() => props.video?.analysis.video_dimensions ?? { width: 1280, height: 720 })
 const videoUrl = computed(() => props.video?.previewVideoUrl ?? '')
@@ -59,6 +61,7 @@ const thresholdPreview = computed(() => {
 })
 const config = computed<RoiDensityConfig>(() => ({
   schema_version: 'webgista.roi-density-config.v1',
+  source_video_identifier: props.video?.analysis.source_video_identifier ?? '',
   roi_type: form.roiType,
   roi_geometry: form.roiType === 'rectangle' ? [...rect.value] as [number, number, number, number] : points.value.map(([x, y]) => [x, y] as RoiPoint),
   video_dimensions: { ...dimensions.value },
@@ -78,6 +81,7 @@ function defaults(): RoiDensityConfig {
   const source = props.video?.analysis.processing_config.roi_normalized
   return {
     schema_version: 'webgista.roi-density-config.v1',
+    source_video_identifier: props.video?.analysis.source_video_identifier ?? '',
     roi_type: 'rectangle',
     roi_geometry: source ? [...source] as [number, number, number, number] : [0.55, 0.48, 0.44, 0.43],
     video_dimensions: { ...dimensions.value },
@@ -110,9 +114,18 @@ async function load(): Promise<void> {
   error.value = ''
   try {
     const stored = await getCctvAnalysisConfig(supabaseClient, props.cameraId)
-    applyConfig(stored?.configuration ?? defaults())
-    savedVersion.value = stored?.configurationVersion ?? null
-    status.value = stored ? `Saved configuration v${stored.configurationVersion} · ${new Date(stored.updatedAt).toLocaleString()}` : 'No ROI configuration is saved yet.'
+    const sourceId = props.video?.analysis.source_video_identifier
+    if (stored && stored.configuration.source_video_identifier !== sourceId) {
+      applyConfig(defaults())
+      savedVersion.value = null
+      savedConfigJson.value = ''
+      error.value = 'The saved ROI belongs to a different video source. Review and save a new ROI for this video before exporting it.'
+    } else {
+      applyConfig(stored?.configuration ?? defaults())
+      savedVersion.value = stored?.configurationVersion ?? null
+      savedConfigJson.value = stored ? JSON.stringify(config.value) : ''
+    }
+    status.value = stored ? `Saved configuration v${stored.configurationVersion}${stored.configuration.source_video_identifier === sourceId ? ` · ${new Date(stored.updatedAt).toLocaleString()}` : ' · source video differs'}` : 'No ROI configuration is saved yet.'
   } catch (cause) {
     error.value = cause instanceof Error ? cause.message : 'ROI configuration could not be loaded.'
   } finally {
@@ -275,7 +288,8 @@ function resetArea(): void {
 }
 
 function exportConfig(): void {
-  const url = URL.createObjectURL(new Blob([`${JSON.stringify({ ...config.value, camera_id: props.cameraId, configuration_version: savedVersion.value ?? 1 }, null, 2)}\n`], { type: 'application/json' }))
+  if (!props.video || !savedVersion.value || !canExport.value) return
+  const url = URL.createObjectURL(new Blob([`${JSON.stringify({ ...config.value, camera_id: props.cameraId, configuration_version: savedVersion.value }, null, 2)}\n`], { type: 'application/json' }))
   const link = document.createElement('a')
   link.href = url
   link.download = `cctv-${props.cameraId}-roi-density.json`
@@ -303,6 +317,7 @@ async function save(): Promise<void> {
   try {
     const stored = await saveCctvAnalysisConfig(supabaseClient, props.cameraId, config.value)
     savedVersion.value = stored.configurationVersion
+    savedConfigJson.value = JSON.stringify(config.value)
     status.value = `ROI configuration v${stored.configurationVersion} saved. Existing analysis results are stale until reprocessed.`
   } catch (cause) {
     error.value = cause instanceof Error ? cause.message : 'ROI configuration could not be saved.'
@@ -368,7 +383,7 @@ async function save(): Promise<void> {
       </fieldset>
       <label v-if="form.calibrationStatus === 'calibrated'">Calibration evidence note<textarea v-model="form.calibrationNote" class="legacy-input" rows="3" minlength="12" /></label>
       <div class="roi-config__actions">
-        <button class="legacy-button legacy-button--outline" type="button" :disabled="!editable || loading || !normalizedPoints.length" @click="exportConfig">Export Configuration JSON</button>
+        <button class="legacy-button legacy-button--outline" type="button" :disabled="!editable || loading || !normalizedPoints.length || !canExport" @click="exportConfig">Export Configuration JSON</button>
         <button class="legacy-button legacy-button--primary" type="button" :disabled="!editable || saving || loading || !videoReady" @click="save">{{ saving ? 'Saving…' : 'Save Configuration' }}</button>
       </div>
     </template>

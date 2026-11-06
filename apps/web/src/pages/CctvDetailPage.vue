@@ -47,14 +47,17 @@ function configKey(config: RoiDensityConfig): string {
     config.roi_type, config.roi_geometry, config.video_dimensions, config.observation_window_seconds,
     config.refresh_seconds, config.sampled_fps, config.minimum_detection_confidence,
     [...config.included_classes].sort(), config.busy_threshold_vehicles, config.minimum_valid_coverage,
-    config.density_thresholds, config.calibration_status, config.calibration_note,
+    config.density_thresholds, config.calibration_status, config.calibration_note, config.source_video_identifier,
   ])
 }
 const demoDensityStale = computed(() => {
   if (!demoVideo.value || !appConfig.roiDensityEnabled || !demoAssociationEditable.value) return false
   if (demoConfigStatus.value !== 'ready') return true
-  return demoAnalysisConfig.value !== null
-    && configKey(demoAnalysisConfig.value.configuration) !== configKey(demoVideo.value.roiDensity.configuration_snapshot)
+  if (demoAnalysisConfig.value === null) return false
+  return configKey(demoAnalysisConfig.value.configuration) !== configKey(demoVideo.value.roiDensity.configuration_snapshot)
+    || demoVideo.value.roiDensity.configuration_version !== demoAnalysisConfig.value.configurationVersion
+    || demoVideo.value.roiDensity.provenance.camera_id !== camera.value?.id
+    || demoVideo.value.roiDensity.provenance.source_video_identifier !== demoAnalysisConfig.value.configuration.source_video_identifier
 })
 const demoRoiPoints = computed(() => {
   const result = demoVideo.value?.roiDensity
@@ -301,7 +304,7 @@ onBeforeUnmount(() => {
             <span v-if="demoFrame">Frame at {{ demoFrame.offset_seconds.toFixed(1) }}s: {{ demoFrame.detections.length }} vehicle detections.</span>
             <span v-if="demoConfigStatus === 'loading'" role="status">Checking whether the stored ROI matches this analysis…</span>
             <span v-else-if="demoConfigStatus === 'error'" role="status">Saved ROI status is unavailable; ROI results are withheld until it can be checked.</span>
-            <span v-else-if="demoDensityStale" role="status">This analysis is stale: the saved ROI or analysis settings changed. Re-run the offline pipeline with the exported configuration.</span>
+            <span v-else-if="demoDensityStale" role="status">This analysis is stale: the saved ROI or analysis settings changed. Export the saved configuration and rerun the local offline analyzer for this source video. Results are not uploaded or published automatically.</span>
             <template v-else>
               <span v-if="demoDensityFrame">Bundled demo ROI presence at current sampled frame: {{ demoDensityFrame.vehicle_presence_total }} detections · image coverage {{ ((demoDensityFrame.roi_image_coverage ?? 0) * 100).toFixed(1) }}%.</span>
               <template v-if="demoDensityWindow">
