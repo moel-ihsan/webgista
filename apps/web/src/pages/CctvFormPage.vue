@@ -5,7 +5,7 @@ import { RouterLink, useRoute, useRouter } from 'vue-router'
 import { authSession } from '../auth/session'
 import TrafficMap from '../components/map/TrafficMap.vue'
 import TrafficAnalysisConfig from '../components/cctv/TrafficAnalysisConfig.vue'
-import { getCctvDemoAssociation, saveCctvDemoVideo, type TrafficDemoId } from '../data/cctvDemoVideo'
+import { getCctvDemoAssociation, saveCctvDemoSource, type TrafficDemoId } from '../data/cctvDemoVideo'
 import type { LiveDemoStream } from '../data/liveDemoStreams'
 import { trafficDemoVideos } from '../data/trafficDemo'
 import { createCctvLocation, getCctvLocation, getCctvSnapshotUrl, listCctvAgencies, replaceCctvSnapshot, updateCctvLocation, validateCctvLocationInput, type CctvAgencyOption, type CctvLocationInput } from '../data/cctvManagement'
@@ -32,9 +32,10 @@ const imagePreview = ref<string | null>(null)
 const savedImageUrl = ref<string | null>(null)
 const snapshotPath = ref<string | null>(null)
 const demoVideoId = ref<TrafficDemoId | null>(null)
-const originalDemoVideoId = ref<TrafficDemoId | null>(null)
 const demoVideoEditable = ref(true)
 const liveDemoStream = ref<LiveDemoStream | null>(null)
+const demoVideoUrl = ref('')
+const originalDemoVideoUrl = ref('')
 const createdId = ref<string | null>(null)
 const form = reactive({ name: '', address: '', category: 'regular' as 'regular' | 'analytic', agencyId: '', longitude: '', latitude: '' })
 const allowedAgencyIds = computed(() => agencies.value.map(({ id }) => id))
@@ -137,8 +138,9 @@ async function loadForm(): Promise<void> {
       savedImageUrl.value = appConfig.privateMediaEnabled ? await getCctvSnapshotUrl(supabaseClient, location.snapshotPath).catch(() => null) : null
       const videoAssociation = await getCctvDemoAssociation(supabaseClient, editingId)
       liveDemoStream.value = videoAssociation.liveStream
+      demoVideoUrl.value = videoAssociation.sourceUrl
+      originalDemoVideoUrl.value = videoAssociation.sourceUrl
       demoVideoId.value = videoAssociation.video?.id ?? null
-      originalDemoVideoId.value = demoVideoId.value
       demoVideoEditable.value = videoAssociation.editable
     }
     formAvailable.value = true
@@ -211,11 +213,11 @@ async function submit(): Promise<void> {
       if (imagePreview.value) URL.revokeObjectURL(imagePreview.value)
       imagePreview.value = null
     }
-    if (demoVideoEditable.value && (form.category === 'analytic' || demoVideoId.value !== originalDemoVideoId.value)) {
+    if (demoVideoEditable.value && demoVideoUrl.value.trim() !== originalDemoVideoUrl.value) {
       savingAssociation = true
-      await saveCctvDemoVideo(supabaseClient, cameraId, userId ?? '', demoVideoId.value)
+      await saveCctvDemoSource(supabaseClient, cameraId, demoVideoUrl.value.trim() || null)
       savingAssociation = false
-      originalDemoVideoId.value = demoVideoId.value
+      originalDemoVideoUrl.value = demoVideoUrl.value.trim()
     }
     successMessage.value = editing ? 'CCTV location updated.' : 'CCTV location created. It is private on the public map until publication is approved.'
     await router.replace({ path: '/cctv', query: { saved: editing ? 'updated' : 'created' } })
@@ -288,28 +290,20 @@ onBeforeUnmount(() => {
         <img v-if="imagePreview || savedImageUrl" class="cctv-image-preview" :src="imagePreview || savedImageUrl || ''" alt="CCTV image preview">
         <input id="cctv-image" class="legacy-input" type="file" accept="image/jpeg,image/png,image/webp" :disabled="saving || !appConfig.privateMediaEnabled" aria-describedby="cctv-image-note" @change="chooseImage">
         <p id="cctv-image-note" class="cctv-form-note">{{ appConfig.privateMediaEnabled ? 'Private JPEG, PNG, or WebP image; maximum 5 MB. Only authorized agency managers can access it.' : 'Image upload is unavailable until the private Storage migration is approved and applied.' }}</p>
-        <template v-if="form.category === 'analytic' && liveDemoStream">
-          <p class="cctv-form-note">LIVE STREAM DEMO — {{ liveDemoStream.city }} · {{ liveDemoStream.title }}. This public stream is shown for demonstration only; it is not this camera’s live feed or mapped location. <a :href="liveDemoStream.sourceUrl" target="_blank" rel="noreferrer">Open official YouTube stream</a>.</p>
-        </template>
-        <template v-else-if="form.category === 'analytic'">
-          <label for="cctv-demo-video">Analytic / Video Source</label>
-          <select id="cctv-demo-video" v-model="demoVideoId" class="legacy-select" :disabled="saving || !demoVideoEditable">
-            <option :value="null">No video — use uploaded image</option>
-            <option v-for="video in trafficDemoVideos" :key="video.id" :value="video.id">{{ video.title }} — DEMO VIDEO, NOT LIVE CCTV</option>
-          </select>
-          <p id="cctv-url-note" class="cctv-form-note">
-            Only the two licensed local demo clips are selectable for a clearly named QA/demo camera. The footage does not depict this camera location; private stream URLs and credentials are not accepted.
-            <template v-if="demoVideoId"> Source: {{ trafficDemoVideos.find((video) => video.id === demoVideoId)?.creator }} · <a :href="trafficDemoVideos.find((video) => video.id === demoVideoId)?.sourceUrl" target="_blank" rel="noreferrer">Pexels source</a>.</template>
-            <template v-if="!demoVideoEditable"> This camera has a separate private video configuration that this form cannot change.</template>
-          </p>
-        </template>
+        <label for="cctv-demo-video-url">Demo YouTube link</label>
+        <input id="cctv-demo-video-url" v-model="demoVideoUrl" class="legacy-input" type="url" inputmode="url" autocomplete="url" placeholder="https://www.youtube.com/watch?v=…" :disabled="saving || !demoVideoEditable" aria-describedby="cctv-url-note">
+        <p id="cctv-url-note" class="cctv-form-note">
+          <template v-if="liveDemoStream">DEMO · YouTube live. <a :href="liveDemoStream.sourceUrl" target="_blank" rel="noreferrer">Open video</a>.</template>
+          <template v-else-if="demoVideoId">An offline demo video is currently attached. Add a YouTube link to replace it.</template>
+          <template v-else>Paste a YouTube video link to show it in the map popup and CCTV detail.</template>
+          <template v-if="!demoVideoEditable"> This camera has a separate video configuration that this form cannot change.</template>
+        </p>
         <TrafficAnalysisConfig
-          v-if="editingId && appConfig.roiDensityEnabled && !liveDemoStream"
+          v-if="editingId && appConfig.roiDensityEnabled && form.category === 'analytic' && demoVideoId && !liveDemoStream && !demoVideoUrl"
           :camera-id="editingId"
           :video="form.category === 'analytic' ? selectedDemoVideo : null"
           :editable="demoVideoEditable && agencies.some(({ id }) => id === form.agencyId)"
         />
-        <p class="cctv-form-note">Camera stream credentials and URLs are managed separately and are not part of this form. New camera locations remain private on the public map by default.</p>
         <div class="cctv-form-actions"><RouterLink class="legacy-button legacy-button--outline" to="/cctv">Cancel</RouterLink><button class="legacy-button legacy-button--primary" type="submit" :disabled="saving || agencies.length === 0">{{ saving ? 'Saving…' : 'Submit' }}</button></div>
       </div>
       <div class="cctv-form-map"><h3>Select location</h3><p>Click the map to fill longitude and latitude, or enter coordinates above.</p><TrafficMap compact location-picker :location-coordinates="locationCoordinates" @location-selected="setCoordinates" /></div>

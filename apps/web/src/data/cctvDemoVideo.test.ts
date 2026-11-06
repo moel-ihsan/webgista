@@ -1,96 +1,102 @@
 import { describe, expect, it, vi } from 'vitest'
 
-import { demoVideoForSource, getCctvDemoAssociation, saveCctvDemoVideo } from './cctvDemoVideo'
+import { canonicalYoutubeDemoUrl, demoVideoForSource, getCctvDemoAssociation, saveCctvDemoSource } from './cctvDemoVideo'
 import { trafficDemoVideos } from './trafficDemo'
 
-function cameraConfig(config: { cctv_id: string; source_kind: string; source_uri: string } | null, insertError: { code: string } | null = null) {
-  const selectCalls: string[] = []
+function cameraConfig(config: { cctv_id: string; source_kind: string; source_uri: string } | null, writeError: { code: string } | null = null) {
+  const selects: { fields: string; filters: Record<string, unknown> }[] = []
+  const requests: { fields: string; filters: Record<string, unknown> }[] = []
   const writes: unknown[] = []
   const from = vi.fn().mockImplementation(() => {
-    let filters: Record<string, unknown> = {}
-    interface Query {
-      select(fields: string): Query
-      eq(key: string, value: unknown): Query
-      maybeSingle(): Promise<{ data: { cctv_id: string } | null; error: null }>
-      insert(value: unknown): Promise<{ error: { code: string } | null }>
-      update(value: unknown): Query
-      delete(): Query
-    }
-    const query: Query = {
-      select(fields) { selectCalls.push(fields); filters = {}; return this },
-      eq(key, value) { filters[key] = value; return this },
+    const filters: Record<string, unknown> = {}
+    let selected = 'cctv_id'
+    const query = {
+      select(fields: string) { selects.push({ fields, filters: { ...filters } }); selected = fields; return query },
+      eq(key: string, value: unknown) { filters[key] = value; return query },
+      match(key: string, value: unknown) { filters[key] = value; return query },
+      filter(key: string, _operator: string, value: unknown) { filters[key] = value; return query },
+      in() { return query },
       async maybeSingle() {
-        if (!config || filters.cctv_id !== config.cctv_id) return { data: null, error: null }
+        requests.push({ fields: selected, filters: { ...filters } })
+        if (!config) return { data: null, error: null }
         for (const [key, value] of Object.entries(filters)) {
-          if (key !== 'cctv_id' && config[key as keyof typeof config] !== value) return { data: null, error: null }
+          if (key === 'source_uri' && typeof value === 'string' && value.startsWith('^')) {
+            if (!new RegExp(value).test(config.source_uri)) return { data: null, error: null }
+          } else if (key !== 'cctv_id' && config[key as keyof typeof config] !== value) return { data: null, error: null }
         }
-        return { data: { cctv_id: config.cctv_id }, error: null }
+        return { data: selected === 'cctv_id' ? { cctv_id: config.cctv_id } : config, error: null }
       },
-      async insert(value) { writes.push(value); return { error: insertError } },
-      update(value) { writes.push(value); return this },
-      delete() { return this },
+      async insert(value: unknown) { writes.push(value); return { data: null, error: writeError } },
+      update(value: unknown) { writes.push(value); return query },
+      async delete() { writes.push('delete'); return { error: writeError } },
     }
     return query
   })
-  return { client: { from } as never, from, selectCalls, writes }
+  return { client: { from } as never, from, selects, requests, writes }
 }
 
-describe('authorized demo-video association', () => {
-  it('resolves only exact local allowlisted stored demo paths', () => {
+describe('YouTube and offline demo CCTV sources', () => {
+  it('resolves only exact bundled offline paths and canonicalizes YouTube watch URLs', () => {
     expect(demoVideoForSource('stored_clip', trafficDemoVideos[0]!.videoUrl)?.id).toBe('traffic-sample-01')
     expect(demoVideoForSource('private_stream', trafficDemoVideos[0]!.videoUrl)).toBeNull()
-    expect(demoVideoForSource('stored_clip', 'https://attacker.example/video.mp4')).toBeNull()
     expect(demoVideoForSource('stored_clip', `${trafficDemoVideos[0]!.videoUrl}?token=secret`)).toBeNull()
+    expect(canonicalYoutubeDemoUrl('https://www.youtube.com/watch?v=BdPvBNLy5kc&feature=share')).toBe('https://www.youtube.com/watch?v=BdPvBNLy5kc')
+    expect(canonicalYoutubeDemoUrl('https://attacker.example/watch?v=BdPvBNLy5kc')).toBeNull()
   })
 
-  it('returns only the camera id, does not select or reveal a private URI, and protects unknown configs', async () => {
-    const absent = cameraConfig(null)
-    await expect(getCctvDemoAssociation(absent.client, 'camera-1')).resolves.toEqual({ video: null, liveStream: null, editable: true })
-    const privateConfig = cameraConfig({ cctv_id: 'camera-1', source_kind: 'private_stream', source_uri: 'must-not-leak' })
-    await expect(getCctvDemoAssociation(privateConfig.client, 'camera-1')).resolves.toEqual({ video: null, liveStream: null, editable: false })
-    expect(privateConfig.selectCalls).toEqual(['cctv_id', 'cctv_id', 'cctv_id'])
-    expect(privateConfig.selectCalls.join(',')).not.toMatch(/source_uri|credential/i)
+  it('does not reveal unknown private source URIs to the form', async () => {
+    const hidden = cameraConfig({ cctv_id: 'camera-1', source_kind: 'private_stream', source_uri: 'rtsp://secret' })
+    await expect(getCctvDemoAssociation(hidden.client, 'camera-1')).resolves.toMatchObject({ video: null, liveStream: null, sourceUrl: '', editable: false })
+    expect(hidden.requests.filter(({ fields }) => fields === 'cctv_id,source_uri')).toEqual([expect.objectContaining({
+      filters: expect.objectContaining({
+        source_kind: 'public_https',
+        source_uri: '^https://www\\.youtube\\.com/watch\\?v=[A-Za-z0-9_-]{11}$',
+      }),
+    })])
   })
 
-  it('matches the second demo by server-side allowlist filter while returning no source URI', async () => {
-    const sample = trafficDemoVideos[1]!
-    const mock = cameraConfig({ cctv_id: 'camera-2', source_kind: 'stored_clip', source_uri: sample.videoUrl })
-    await expect(getCctvDemoAssociation(mock.client, 'camera-2')).resolves.toMatchObject({ video: { id: sample.id }, editable: true })
-    expect(mock.selectCalls.every((fields) => fields === 'cctv_id')).toBe(true)
+  it('loads an authorized Pexels clip through its exact path without returning the source URI', async () => {
+    const clip = trafficDemoVideos[1]!
+    const mock = cameraConfig({ cctv_id: 'camera-2', source_kind: 'stored_clip', source_uri: clip.videoUrl })
+    await expect(getCctvDemoAssociation(mock.client, 'camera-2')).resolves.toMatchObject({ video: { id: clip.id }, liveStream: null, editable: true })
+    expect(mock.selects).not.toContain('cctv_id,source_uri')
   })
 
-  it('uses the fixed public stream override without reading or changing private video configuration', async () => {
-    const mock = cameraConfig({ cctv_id: 'dec221d0-87ae-4194-a3ab-bf60eb4d041f', source_kind: 'stored_clip', source_uri: trafficDemoVideos[1]!.videoUrl })
-    await expect(getCctvDemoAssociation(mock.client, 'dec221d0-87ae-4194-a3ab-bf60eb4d041f')).resolves.toMatchObject({
-      video: null, liveStream: { videoId: 'BdPvBNLy5kc' }, editable: false,
+  it('loads only an exact safe YouTube URL into the authorized editor', async () => {
+    const url = 'https://www.youtube.com/watch?v=UTR-nG4SK7E'
+    const mock = cameraConfig({ cctv_id: 'camera-1', source_kind: 'public_https', source_uri: url })
+    await expect(getCctvDemoAssociation(mock.client, 'camera-1')).resolves.toMatchObject({
+      liveStream: { videoId: 'UTR-nG4SK7E', embedUrl: expect.stringContaining('youtube-nocookie.com') },
+      sourceUrl: url,
+      editable: true,
     })
-    expect(mock.from).not.toHaveBeenCalled()
   })
 
-  it('stores only a selected demo asset with its provenance and leaves actor identity to the database trigger', async () => {
+  it('saves a canonical YouTube link in the existing RLS-protected source row', async () => {
     const mock = cameraConfig(null)
-    await saveCctvDemoVideo(mock.client, 'camera-1', 'user-1', 'traffic-sample-02')
-    expect(mock.writes[0]).toEqual(expect.objectContaining({
-      cctv_id: 'camera-1', source_kind: 'stored_clip',
-      source_uri: '/traffic-demo/traffic_sample_02_annotated.mp4',
-      notes: expect.stringContaining('DEMO VIDEO — NOT LIVE CCTV'),
-    }))
-    expect(mock.writes[0]).not.toHaveProperty('created_by')
-    expect(JSON.stringify(mock.writes)).not.toMatch(/credential_reference|rtsp|password/i)
-    await expect(saveCctvDemoVideo(mock.client, 'camera-1', 'user-1', 'https://unknown.example/a.mp4' as never))
-      .rejects.toThrow('Select a supported demo video.')
+    await saveCctvDemoSource(mock.client, 'camera-1', 'https://www.youtube.com/watch?v=BdPvBNLy5kc&feature=share')
+    expect(mock.writes[0]).toEqual({
+      cctv_id: 'camera-1', source_kind: 'public_https', source_uri: 'https://www.youtube.com/watch?v=BdPvBNLy5kc',
+      credential_reference: null, notes: 'Public YouTube demo video',
+    })
   })
 
-  it('refuses to replace a private source with a demo clip', async () => {
-    const mock = cameraConfig({ cctv_id: 'camera-1', source_kind: 'private_stream', source_uri: 'private' })
-    await expect(saveCctvDemoVideo(mock.client, 'camera-1', 'user-1', 'traffic-sample-01'))
+  it('rejects arbitrary URLs before database writes', async () => {
+    const mock = cameraConfig(null)
+    await expect(saveCctvDemoSource(mock.client, 'camera-1', 'https://attacker.example/video.mp4')).rejects.toThrow('Enter a valid YouTube video link.')
+    expect(mock.writes).toHaveLength(0)
+  })
+
+  it('refuses to replace a private camera configuration', async () => {
+    const mock = cameraConfig({ cctv_id: 'camera-1', source_kind: 'private_stream', source_uri: 'rtsp://secret' })
+    await expect(saveCctvDemoSource(mock.client, 'camera-1', 'https://www.youtube.com/watch?v=UTR-nG4SK7E'))
       .rejects.toThrow('This camera has a separate private video configuration')
     expect(mock.writes).toHaveLength(0)
   })
 
-  it('reports the confirmed missing database privilege without exposing private configuration', async () => {
+  it('reports denied storage permission without pretending the URL was saved', async () => {
     const mock = cameraConfig(null, { code: '42501' })
-    await expect(saveCctvDemoVideo(mock.client, 'camera-1', 'user-1', 'traffic-sample-01'))
-      .rejects.toThrow('The database denied permission to save the video association (42501).')
+    await expect(saveCctvDemoSource(mock.client, 'camera-1', 'https://www.youtube.com/watch?v=UTR-nG4SK7E'))
+      .rejects.toThrow('Your account cannot save a video source for this camera.')
   })
 })

@@ -12,6 +12,7 @@ export const approvedHashes = new Map([
   ['20261105000500', '374cecda12bd657cc4be45590b0bb07a98091501e9a8a6c959bc4c0772c4a982'],
   ['20261106000100', 'b3adb0e3fd76134a388c045b3a37b97b6d1acc335bfe37306c7c8223643c0f18'],
   ['20261106000200', '00b9c031eafd4c7dce5f94930c20fb3285df3bbb1a0955c1ddeb5f4c4217add6'],
+  ['20261106000300', '87ac7cb5c9723530cb2c51bdf8106d79ba7fb2b4b1e8b279f45e05743aa343c6'],
 ]);
 
 const approvedVersions = [...approvedHashes.keys()];
@@ -22,6 +23,7 @@ export const developmentWaiver008 = 'accept-dev-data-loss-for-008';
 export const developmentWaiver009 = 'accept-dev-data-loss-for-009';
 export const developmentWaiver010 = 'accept-dev-data-loss-for-010';
 export const developmentWaiver011 = 'accept-dev-data-loss-for-011';
+export const developmentWaiver012 = 'accept-dev-data-loss-for-012';
 
 export function verifyContext({ githubRef, projectRef, expectedProjectRef }) {
   if (githubRef !== 'refs/heads/feat/webgista-v2') throw new Error('Deployment is restricted to feat/webgista-v2.');
@@ -109,7 +111,7 @@ export function assessMigrationHistory({ localVersions, remoteVersions }) {
 
 export function validateDevelopmentBackupWaiver({ applyMigrations, waiver, githubRef, projectRef, expectedProjectRef, pendingVersions }) {
   verifyContext({ githubRef, projectRef, expectedProjectRef });
-  if (applyMigrations !== 'apply' || ![developmentWaiver003004, developmentWaiver005, developmentWaiver006, developmentWaiver008, developmentWaiver009, developmentWaiver010, developmentWaiver011].includes(waiver)) {
+  if (applyMigrations !== 'apply' || ![developmentWaiver003004, developmentWaiver005, developmentWaiver006, developmentWaiver008, developmentWaiver009, developmentWaiver010, developmentWaiver011, developmentWaiver012].includes(waiver)) {
     throw new Error('The one-time data-loss waiver is valid only for an explicit apply run.');
   }
   if (!Array.isArray(pendingVersions) || !pendingVersions.length) {
@@ -128,8 +130,10 @@ export function validateDevelopmentBackupWaiver({ applyMigrations, waiver, githu
             ? pendingVersions.length === 1 && pendingVersions[0] === '20261106000100'
             : waiver === developmentWaiver011
               ? pendingVersions.length === 1 && pendingVersions[0] === '20261106000200'
-            : pendingVersions.every((version) => legacyVersions.includes(version))
-              && pendingVersions.join(',') === legacyVersions.slice(legacyVersions.indexOf(pendingVersions[0])).join(',');
+              : waiver === developmentWaiver012
+                ? pendingVersions.length === 1 && pendingVersions[0] === '20261106000300'
+                : pendingVersions.every((version) => legacyVersions.includes(version))
+                  && pendingVersions.join(',') === legacyVersions.slice(legacyVersions.indexOf(pendingVersions[0])).join(',');
   if (!allowed) {
     throw new Error('The selected one-time waiver does not match the exact approved pending migration set.');
   }
@@ -189,6 +193,12 @@ export function assertPhase3eRoiDensityOnlyPending(pendingVersions) {
 export function assertPhase3fRoiAnalysisOnlyPending(pendingVersions) {
   if (pendingVersions.length !== 1 || pendingVersions[0] !== '20261106000200') {
     throw new Error('This deployment is authorized only for ROI analysis migration 20261106000200; refusing any other pending set.');
+  }
+}
+
+export function assertPhase3gPublicYoutubeOnlyPending(pendingVersions) {
+  if (pendingVersions.length !== 1 || pendingVersions[0] !== '20261106000300') {
+    throw new Error('This deployment is authorized only for public YouTube demo view migration 20261106000300; refusing any other pending set.');
   }
 }
 
@@ -256,6 +266,10 @@ if (process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.ar
       const pending = await inspectHistory(first);
       assertPhase3fRoiAnalysisOnlyPending(pending);
       console.log('The only pending migration is ROI analysis results migration 20261106000200.');
+    } else if (command === 'phase3g-public-youtube' && first) {
+      const pending = await inspectHistory(first);
+      assertPhase3gPublicYoutubeOnlyPending(pending);
+      console.log('The only pending migration is public YouTube demo projection migration 20261106000300.');
     } else if (command === 'dry-run' && first && second) {
       const pending = await inspectHistory(first);
       const dryRun = await readFile(second, 'utf8');
@@ -276,7 +290,7 @@ if (process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.ar
       });
       console.log(`Explicit development data-loss waiver accepted for approved pending migrations: ${waivedVersions.join(', ')}.`);
     } else {
-      throw new Error('Usage: snapshot | history <migration-list-output> | applied <migration-list-output> | phase2e <migration-list-output> | phase2e-acl-fix <migration-list-output> | phase3d-cctv-cleanup <migration-list-output> | phase3d1-cctv-delete <migration-list-output> | phase3e-roi-density <migration-list-output> | phase3f-roi-analysis <migration-list-output> | dry-run <migration-list-output> <dry-run-output> | backup <backup-api-json> | waiver <migration-list-output>');
+      throw new Error('Usage: snapshot | history <migration-list-output> | applied <migration-list-output> | phase2e <migration-list-output> | phase2e-acl-fix <migration-list-output> | phase3d-cctv-cleanup <migration-list-output> | phase3d1-cctv-delete <migration-list-output> | phase3e-roi-density <migration-list-output> | phase3f-roi-analysis <migration-list-output> | phase3g-public-youtube <migration-list-output> | dry-run <migration-list-output> <dry-run-output> | backup <backup-api-json> | waiver <migration-list-output>');
     }
   } catch (error) {
     console.error(error.message);
