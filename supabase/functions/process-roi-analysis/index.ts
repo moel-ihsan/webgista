@@ -1,15 +1,10 @@
 import 'jsr:@supabase/functions-js/edge-runtime.d.ts'
 import { createClient, type SupabaseClient } from 'npm:@supabase/supabase-js@2.118.0'
+import { roiAnalysisCorsHeaders } from '../_shared/roi_analysis_cors.mjs'
 import { reaggregate } from '../_shared/roi_reaggregate.mjs'
 
 declare const EdgeRuntime: { waitUntil<T>(promise: Promise<T>): Promise<T> }
 
-const cors = {
-  'Access-Control-Allow-Origin': 'https://webgista-v2.vercel.app',
-  'Access-Control-Allow-Headers': 'authorization, apikey, content-type, x-client-info',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS',
-  'Vary': 'Origin',
-}
 const algorithm = 'roi_density_v1'
 const demos = {
   '/traffic-demo/traffic_sample_01_annotated.mp4': {
@@ -26,8 +21,8 @@ const demos = {
   },
 } as const
 
-function response(body: unknown, status = 200) {
-  return new Response(JSON.stringify(body), { status, headers: { ...cors, 'Content-Type': 'application/json' } })
+function response(body: unknown, status: number, headers: Record<string, string>) {
+  return new Response(JSON.stringify(body), { status, headers: { ...headers, 'Content-Type': 'application/json' } })
 }
 
 async function processCachedJob(service: SupabaseClient<any>, job: { id: string; cctv_id: string }, source: (typeof demos)[keyof typeof demos], config: Record<string, unknown>, configurationVersion: number) {
@@ -73,39 +68,41 @@ async function processCachedJob(service: SupabaseClient<any>, job: { id: string;
 }
 
 Deno.serve(async (request) => {
-  if (request.method === 'OPTIONS') return new Response('ok', { headers: cors })
-  if (request.method !== 'POST') return response({ error: 'POST required' }, 405)
   const origin = request.headers.get('origin')
-  if (origin && origin !== cors['Access-Control-Allow-Origin'] && !/^http:\/\/localhost:5173$/.test(origin)) return response({ error: 'Origin not allowed' }, 403)
+  const cors = roiAnalysisCorsHeaders(origin)
+  const respond = (body: unknown, status = 200) => response(body, status, cors)
+  if (request.method === 'OPTIONS') return new Response('ok', { headers: cors })
+  if (request.method !== 'POST') return respond({ error: 'POST required' }, 405)
+  if (origin && !cors['Access-Control-Allow-Origin']) return respond({ error: 'Origin not allowed' }, 403)
   const authorization = request.headers.get('authorization')
-  if (!authorization?.startsWith('Bearer ')) return response({ error: 'Sign in with an authorized CCTV account' }, 401)
+  if (!authorization?.startsWith('Bearer ')) return respond({ error: 'Sign in with an authorized CCTV account' }, 401)
   const projectUrl = Deno.env.get('SUPABASE_URL')
   const anonKey = Deno.env.get('SUPABASE_ANON_KEY')
   const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
-  if (!projectUrl || !anonKey || !serviceKey) return response({ error: 'Authenticated backend configuration is unavailable' }, 503)
+  if (!projectUrl || !anonKey || !serviceKey) return respond({ error: 'Authenticated backend configuration is unavailable' }, 503)
 
   let cameraId: string
   try {
     const bodyText = await request.text()
-    if (new TextEncoder().encode(bodyText).byteLength > 512) return response({ error: 'Request is too large' }, 413)
+    if (new TextEncoder().encode(bodyText).byteLength > 512) return respond({ error: 'Request is too large' }, 413)
     const body = JSON.parse(bodyText)
     cameraId = body?.camera_id
-    if (typeof cameraId !== 'string' || !/^[0-9a-f-]{36}$/i.test(cameraId)) return response({ error: 'Invalid CCTV identifier' }, 400)
-  } catch { return response({ error: 'Invalid request body' }, 400) }
+    if (typeof cameraId !== 'string' || !/^[0-9a-f-]{36}$/i.test(cameraId)) return respond({ error: 'Invalid CCTV identifier' }, 400)
+  } catch { return respond({ error: 'Invalid request body' }, 400) }
 
   const userClient = createClient(projectUrl, anonKey, { global: { headers: { Authorization: authorization } }, auth: { persistSession: false } })
   const { data: userData, error: authError } = await userClient.auth.getUser()
-  if (authError || !userData.user) return response({ error: 'Sign in with an authorized CCTV account' }, 401)
+  if (authError || !userData.user) return respond({ error: 'Sign in with an authorized CCTV account' }, 401)
   const [{ data: saved, error: configError }, { data: media, error: mediaError }] = await Promise.all([
     userClient.from('cctv_analysis_config').select('configuration,configuration_version').eq('cctv_id', cameraId).maybeSingle(),
     userClient.from('cctv_private_config').select('source_kind,source_uri').eq('cctv_id', cameraId).maybeSingle(),
   ])
-  if (configError || mediaError) return response({ error: 'CCTV analysis access could not be verified' }, 403)
-  if (!saved) return response({ error: 'No authorized saved ROI is available' }, 404)
+  if (configError || mediaError) return respond({ error: 'CCTV analysis access could not be verified' }, 403)
+  if (!saved) return respond({ error: 'No authorized saved ROI is available' }, 404)
   const config = saved.configuration as Record<string, unknown>
-  if (typeof config.source_video_identifier !== 'string') return response({ error: 'Saved ROI source is invalid' }, 409)
+  if (typeof config.source_video_identifier !== 'string') return respond({ error: 'Saved ROI source is invalid' }, 409)
   const source = media?.source_kind === 'stored_clip' ? demos[media.source_uri as keyof typeof demos] : undefined
-  if (source && source.id !== config.source_video_identifier) return response({ error: 'Saved ROI and associated video do not match' }, 409)
+  if (source && source.id !== config.source_video_identifier) return respond({ error: 'Saved ROI and associated video do not match' }, 409)
 
   const service = createClient<any>(projectUrl, serviceKey, { auth: { persistSession: false, autoRefreshToken: false } })
   let lookup = service.from('cctv_roi_analysis_jobs').select('*')
@@ -114,7 +111,7 @@ Deno.serve(async (request) => {
     .eq('configuration_version', saved.configuration_version).eq('analysis_method_version', algorithm)
   lookup = source ? lookup.eq('source_video_sha256', source.sourceHash) : lookup.is('source_video_sha256', null)
   const { data: existing, error: lookupError } = await lookup.maybeSingle()
-  if (lookupError) return response({ error: 'Analysis job storage is not ready' }, 503)
+  if (lookupError) return respond({ error: 'Analysis job storage is not ready' }, 503)
   let job = existing
   if (!job) {
     const { data, error } = await service.from('cctv_roi_analysis_jobs').insert({
@@ -132,16 +129,16 @@ Deno.serve(async (request) => {
       retry = source ? retry.eq('source_video_sha256', source.sourceHash) : retry.is('source_video_sha256', null)
       const { data: duplicate } = await retry.maybeSingle()
       job = duplicate
-    } else if (error) return response({ error: 'Analysis job could not be scheduled' }, 503)
+    } else if (error) return respond({ error: 'Analysis job could not be scheduled' }, 503)
     else job = data
-    if (!job) return response({ error: 'Analysis job could not be scheduled' }, 503)
+    if (!job) return respond({ error: 'Analysis job could not be scheduled' }, 503)
   }
-  if (job.status === 'completed' || job.status === 'processing' || job.status === 'superseded') return response({ job_id: job.id, status: job.status }, 202)
-  if (!source) return response({ job_id: job.id, status: 'pending', reason: job.failure_reason }, 202)
+  if (job.status === 'completed' || job.status === 'processing' || job.status === 'superseded') return respond({ job_id: job.id, status: job.status }, 202)
+  if (!source) return respond({ job_id: job.id, status: 'pending', reason: job.failure_reason }, 202)
   const { data: claimed, error: claimError } = await service.from('cctv_roi_analysis_jobs').update({ status: 'processing', started_at: new Date().toISOString(), failure_reason: null })
     .eq('id', job.id).in('status', ['pending', 'failed']).select('id').maybeSingle()
-  if (claimError) return response({ job_id: job.id, status: 'pending', reason: 'Analysis could not be scheduled; save the ROI again to retry.' }, 202)
-  if (!claimed) return response({ job_id: job.id, status: 'processing' }, 202)
+  if (claimError) return respond({ job_id: job.id, status: 'pending', reason: 'Analysis could not be scheduled; save the ROI again to retry.' }, 202)
+  if (!claimed) return respond({ job_id: job.id, status: 'processing' }, 202)
   EdgeRuntime.waitUntil(processCachedJob(service, job, source, config, saved.configuration_version))
-  return response({ job_id: job.id, status: 'processing' }, 202)
+  return respond({ job_id: job.id, status: 'processing' }, 202)
 })
