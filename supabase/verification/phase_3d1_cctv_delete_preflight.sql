@@ -4,10 +4,14 @@ do $$
 declare
   config_delete_action "char";
   analysis_config_delete_action "char";
+  roi_jobs_delete_action "char";
+  roi_results_delete_action "char";
   observations_delete_action "char";
   referencing_table_count integer;
   expected_referencing_table_count integer;
   analysis_config_exists boolean := to_regclass('public.cctv_analysis_config') is not null;
+  roi_jobs_exist boolean := to_regclass('public.cctv_roi_analysis_jobs') is not null;
+  roi_results_exist boolean := to_regclass('public.cctv_roi_analysis_results') is not null;
   image_bucket_private boolean;
   delete_policy text;
   delete_function oid := to_regprocedure('public.delete_cctv_permanently(uuid,bigint)');
@@ -29,6 +33,20 @@ begin
       and constraints.conrelid = 'public.cctv_analysis_config'::regclass
       and constraints.confrelid = 'public.cctv_locations'::regclass;
   end if;
+  if to_regclass('public.cctv_roi_analysis_jobs') is not null then
+    select constraints.confdeltype into roi_jobs_delete_action
+    from pg_catalog.pg_constraint as constraints
+    where constraints.contype = 'f'
+      and constraints.conrelid = 'public.cctv_roi_analysis_jobs'::regclass
+      and constraints.confrelid = 'public.cctv_locations'::regclass;
+  end if;
+  if to_regclass('public.cctv_roi_analysis_results') is not null then
+    select constraints.confdeltype into roi_results_delete_action
+    from pg_catalog.pg_constraint as constraints
+    where constraints.contype = 'f'
+      and constraints.conrelid = 'public.cctv_roi_analysis_results'::regclass
+      and constraints.confrelid = 'public.cctv_roi_analysis_jobs'::regclass;
+  end if;
   select count(*) into referencing_table_count
   from pg_catalog.pg_constraint as constraints
   where constraints.contype = 'f' and constraints.confrelid = 'public.cctv_locations'::regclass;
@@ -38,7 +56,9 @@ begin
   from pg_catalog.pg_policies as policies
   where policies.schemaname = 'storage' and policies.tablename = 'objects'
     and policies.policyname = 'cctv_images_delete_managed' and policies.cmd = 'DELETE';
-  expected_referencing_table_count := case when analysis_config_exists then 3 else 2 end;
+  expected_referencing_table_count := 2
+    + analysis_config_exists::integer
+    + roi_jobs_exist::integer;
 
   if config_delete_action is distinct from 'c' then
     raise exception 'private CCTV configuration must remain ON DELETE CASCADE';
@@ -51,6 +71,15 @@ begin
   end if;
   if analysis_config_exists and analysis_config_delete_action is distinct from 'c' then
     raise exception 'ROI analysis configuration must be removed with its CCTV record';
+  end if;
+  if roi_jobs_exist is distinct from roi_results_exist then
+    raise exception 'ROI analysis jobs and results must be installed together';
+  end if;
+  if roi_jobs_exist and roi_jobs_delete_action is distinct from 'c' then
+    raise exception 'ROI analysis jobs must be removed with their CCTV record';
+  end if;
+  if roi_results_exist and roi_results_delete_action is distinct from 'c' then
+    raise exception 'ROI analysis results must be removed with their job';
   end if;
   if image_bucket_private is distinct from true then
     raise exception 'CCTV image bucket is missing or public';

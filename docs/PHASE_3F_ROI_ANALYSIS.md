@@ -7,6 +7,7 @@
 - The two approved Pexels demos use detection JSON artifacts pinned to SHA-256 values. The function reaggregates those cached YOLOX-S detections into the existing 10-second ROI presence windows; it does not run YOLOX, tracking, or inference.
 - Jobs and compact window summaries are stored in new private tables. Authenticated users can read results only for CCTV their agency can manage. Only the backend service role can write jobs or publish results.
 - ROI or source-video changes supersede prior jobs. Publication locks the current configuration and rejects results for an old configuration version.
+- Permanent CCTV deletion removes its analysis jobs and per-window result summaries through the reviewed cascade chain; manual `traffic_observations` remain `ON DELETE RESTRICT`. The deployment preflight now checks both new foreign-key actions explicitly.
 - These experimental demo results do not write `traffic_observations`, manual conditions, or map-marker state. MKJI V/C remains No Data without validated flow and camera-specific capacity.
 - A source without an allowlisted cached artifact receives an honest Pending job; no continuous worker or new-source inference is configured. The Edge background task is bounded by platform limits, not an always-on worker. Saving again creates a new ROI version and retries through a new job if a previous task failed.
 
