@@ -18,6 +18,7 @@ import {
   developmentWaiver006,
   developmentWaiver008,
   developmentWaiver009,
+  developmentWaiver010,
   parseMigrationList,
   validateDevelopmentBackupWaiver,
   verifyContext,
@@ -176,7 +177,9 @@ test('accepts each one-time waiver only for its exact development migration set'
   assert.deepEqual(validateDevelopmentBackupWaiver({ ...context, waiver: developmentWaiver006, pendingVersions: ['20261105000200'] }), ['20261105000200']);
   assert.deepEqual(validateDevelopmentBackupWaiver({ ...context, waiver: developmentWaiver008, pendingVersions: ['20261105000400'] }), ['20261105000400']);
   assert.deepEqual(validateDevelopmentBackupWaiver({ ...context, waiver: developmentWaiver009, pendingVersions: ['20261105000500'] }), ['20261105000500']);
+  assert.deepEqual(validateDevelopmentBackupWaiver({ ...context, waiver: developmentWaiver010, pendingVersions: ['20261106000100'] }), ['20261106000100']);
   assert.throws(() => validateDevelopmentBackupWaiver({ ...context, waiver: developmentWaiver009, pendingVersions: ['20261106000100'] }), /exact approved/);
+  assert.throws(() => validateDevelopmentBackupWaiver({ ...context, waiver: developmentWaiver010, pendingVersions: ['20261106000100', '20261105000500'] }), /exact approved/);
   assert.throws(() => validateDevelopmentBackupWaiver({ ...context, applyMigrations: 'preview', pendingVersions: ['20261104000300'] }), /explicit apply/);
   assert.throws(() => validateDevelopmentBackupWaiver({ ...context, waiver: 'none', pendingVersions: ['20261104000300'] }), /explicit apply/);
   assert.throws(() => validateDevelopmentBackupWaiver({ ...context, projectRef: 'ponmlkjihgfedcbaqrst', pendingVersions: ['20261104000300'] }), /target/);
@@ -196,5 +199,8 @@ test('accepts each one-time waiver only for its exact development migration set'
   assert.throws(() => validateDevelopmentBackupWaiver({ ...context, waiver: developmentWaiver006, projectRef: 'ponmlkjihgfedcbaqrst', pendingVersions: ['20261105000200'] }), /target/);
   assert.throws(() => validateDevelopmentBackupWaiver({ ...context, waiver: developmentWaiver006, githubRef: 'refs/heads/main', pendingVersions: ['20261105000200'] }), /restricted/);
   assert.throws(() => validateDevelopmentBackupWaiver({ ...context, waiver: developmentWaiver006, applyMigrations: 'verify', pendingVersions: ['20261105000200'] }), /explicit apply/);
+  assert.throws(() => validateDevelopmentBackupWaiver({ ...context, waiver: developmentWaiver010, githubRef: 'refs/heads/main', pendingVersions: ['20261106000100'] }), /restricted/);
+  assert.throws(() => validateDevelopmentBackupWaiver({ ...context, waiver: developmentWaiver010, projectRef: 'ponmlkjihgfedcbaqrst', pendingVersions: ['20261106000100'] }), /target/);
+  assert.throws(() => validateDevelopmentBackupWaiver({ ...context, waiver: developmentWaiver010, applyMigrations: 'preview', pendingVersions: ['20261106000100'] }), /explicit apply/);
   assert.throws(() => validateDevelopmentBackupWaiver({ ...context, pendingVersions: [] }), /exact approved/);
 });

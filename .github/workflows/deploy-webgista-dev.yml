@@ -25,6 +25,7 @@ on:
           - accept-dev-data-loss-for-006
           - accept-dev-data-loss-for-008
           - accept-dev-data-loss-for-009
+          - accept-dev-data-loss-for-010
 
 permissions:
   contents: read
@@ -233,6 +234,10 @@ jobs:
         if: ${{ inputs.apply_migrations == 'apply' && inputs.development_data_loss_waiver == 'none' }}
         run: node scripts/phase2d-migration-guard.mjs phase3e-roi-density "$RUNNER_TEMP/phase2d-migrations.txt"
 
+      - name: Require ROI density migration as the sole pending migration when using its one-time waiver
+        if: ${{ inputs.apply_migrations == 'apply' && inputs.development_data_loss_waiver == 'accept-dev-data-loss-for-010' }}
+        run: node scripts/phase2d-migration-guard.mjs phase3e-roi-density "$RUNNER_TEMP/phase2d-migrations.txt"
+
       - name: Validate and record the explicit development-only backup waiver
         if: ${{ inputs.apply_migrations == 'apply' && inputs.development_data_loss_waiver != 'none' }}
         shell: bash
@@ -262,6 +267,8 @@ jobs:
             node scripts/phase2d-migration-guard.mjs phase3d-cctv-cleanup "$RUNNER_TEMP/phase2d-migrations-before-apply.txt"
           elif [[ "$DEVELOPMENT_DATA_LOSS_WAIVER" == "accept-dev-data-loss-for-009" ]]; then
             node scripts/phase2d-migration-guard.mjs phase3d1-cctv-delete "$RUNNER_TEMP/phase2d-migrations-before-apply.txt"
+          elif [[ "$DEVELOPMENT_DATA_LOSS_WAIVER" == "accept-dev-data-loss-for-010" ]]; then
+            node scripts/phase2d-migration-guard.mjs phase3e-roi-density "$RUNNER_TEMP/phase2d-migrations-before-apply.txt"
           elif [[ "$DEVELOPMENT_DATA_LOSS_WAIVER" == "none" ]]; then
             node scripts/phase2d-migration-guard.mjs phase3e-roi-density "$RUNNER_TEMP/phase2d-migrations-before-apply.txt"
           else
