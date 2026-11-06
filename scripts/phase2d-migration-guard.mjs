@@ -21,6 +21,7 @@ export const developmentWaiver006 = 'accept-dev-data-loss-for-006';
 export const developmentWaiver008 = 'accept-dev-data-loss-for-008';
 export const developmentWaiver009 = 'accept-dev-data-loss-for-009';
 export const developmentWaiver010 = 'accept-dev-data-loss-for-010';
+export const developmentWaiver011 = 'accept-dev-data-loss-for-011';
 
 export function verifyContext({ githubRef, projectRef, expectedProjectRef }) {
   if (githubRef !== 'refs/heads/feat/webgista-v2') throw new Error('Deployment is restricted to feat/webgista-v2.');
@@ -108,7 +109,7 @@ export function assessMigrationHistory({ localVersions, remoteVersions }) {
 
 export function validateDevelopmentBackupWaiver({ applyMigrations, waiver, githubRef, projectRef, expectedProjectRef, pendingVersions }) {
   verifyContext({ githubRef, projectRef, expectedProjectRef });
-  if (applyMigrations !== 'apply' || ![developmentWaiver003004, developmentWaiver005, developmentWaiver006, developmentWaiver008, developmentWaiver009, developmentWaiver010].includes(waiver)) {
+  if (applyMigrations !== 'apply' || ![developmentWaiver003004, developmentWaiver005, developmentWaiver006, developmentWaiver008, developmentWaiver009, developmentWaiver010, developmentWaiver011].includes(waiver)) {
     throw new Error('The one-time data-loss waiver is valid only for an explicit apply run.');
   }
   if (!Array.isArray(pendingVersions) || !pendingVersions.length) {
@@ -125,6 +126,8 @@ export function validateDevelopmentBackupWaiver({ applyMigrations, waiver, githu
           ? pendingVersions.length === 1 && pendingVersions[0] === '20261105000500'
           : waiver === developmentWaiver010
             ? pendingVersions.length === 1 && pendingVersions[0] === '20261106000100'
+            : waiver === developmentWaiver011
+              ? pendingVersions.length === 1 && pendingVersions[0] === '20261106000200'
             : pendingVersions.every((version) => legacyVersions.includes(version))
               && pendingVersions.join(',') === legacyVersions.slice(legacyVersions.indexOf(pendingVersions[0])).join(',');
   if (!allowed) {
@@ -180,6 +183,12 @@ export function assertPhase3d1CctvDeleteOnlyPending(pendingVersions) {
 export function assertPhase3eRoiDensityOnlyPending(pendingVersions) {
   if (pendingVersions.length !== 1 || pendingVersions[0] !== '20261106000100') {
     throw new Error('This deployment is authorized only for ROI density configuration migration 20261106000100; refusing any other pending set.');
+  }
+}
+
+export function assertPhase3fRoiAnalysisOnlyPending(pendingVersions) {
+  if (pendingVersions.length !== 1 || pendingVersions[0] !== '20261106000200') {
+    throw new Error('This deployment is authorized only for ROI analysis migration 20261106000200; refusing any other pending set.');
   }
 }
 
@@ -243,6 +252,10 @@ if (process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.ar
       console.log(pending.includes('20261106000100')
         ? 'The only pending migration is the ROI density configuration migration 20261106000100.'
         : 'ROI density configuration migration 20261106000100 is not pending.');
+    } else if (command === 'phase3f-roi-analysis' && first) {
+      const pending = await inspectHistory(first);
+      assertPhase3fRoiAnalysisOnlyPending(pending);
+      console.log('The only pending migration is ROI analysis results migration 20261106000200.');
     } else if (command === 'dry-run' && first && second) {
       const pending = await inspectHistory(first);
       const dryRun = await readFile(second, 'utf8');
@@ -263,7 +276,7 @@ if (process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.ar
       });
       console.log(`Explicit development data-loss waiver accepted for approved pending migrations: ${waivedVersions.join(', ')}.`);
     } else {
-      throw new Error('Usage: snapshot | history <migration-list-output> | applied <migration-list-output> | phase2e <migration-list-output> | phase2e-acl-fix <migration-list-output> | phase3d-cctv-cleanup <migration-list-output> | phase3d1-cctv-delete <migration-list-output> | phase3e-roi-density <migration-list-output> | dry-run <migration-list-output> <dry-run-output> | backup <backup-api-json> | waiver <migration-list-output>');
+      throw new Error('Usage: snapshot | history <migration-list-output> | applied <migration-list-output> | phase2e <migration-list-output> | phase2e-acl-fix <migration-list-output> | phase3d-cctv-cleanup <migration-list-output> | phase3d1-cctv-delete <migration-list-output> | phase3e-roi-density <migration-list-output> | phase3f-roi-analysis <migration-list-output> | dry-run <migration-list-output> <dry-run-output> | backup <backup-api-json> | waiver <migration-list-output>');
     }
   } catch (error) {
     console.error(error.message);

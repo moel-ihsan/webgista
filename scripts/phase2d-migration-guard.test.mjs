@@ -10,6 +10,7 @@ import {
   assertPhase3dCctvCleanupOnlyPending,
   assertPhase3d1CctvDeleteOnlyPending,
   assertPhase3eRoiDensityOnlyPending,
+  assertPhase3fRoiAnalysisOnlyPending,
   assertPhase2eOnlyPending,
   assertDryRunMatches,
   assertRecoveryAvailable,
@@ -19,6 +20,7 @@ import {
   developmentWaiver008,
   developmentWaiver009,
   developmentWaiver010,
+  developmentWaiver011,
   parseMigrationList,
   validateDevelopmentBackupWaiver,
   verifyContext,
@@ -168,6 +170,12 @@ test('allows ROI density migration only as the sole pending migration', () => {
   assert.throws(() => assertPhase3eRoiDensityOnlyPending(['20261106000200']), /only for ROI density configuration migration/);
 });
 
+test('allows ROI analysis migration only as the sole pending migration', () => {
+  assert.doesNotThrow(() => assertPhase3fRoiAnalysisOnlyPending(['20261106000200']));
+  assert.throws(() => assertPhase3fRoiAnalysisOnlyPending([]), /only for ROI analysis migration/);
+  assert.throws(() => assertPhase3fRoiAnalysisOnlyPending(['20261106000100', '20261106000200']), /only for ROI analysis migration/);
+});
+
 test('requires at least one completed backup with a valid, nonfuture timestamp', () => {
   const now = Date.parse('2026-11-05T00:00:00Z');
   assert.equal(assertRecoveryAvailable({ backups: [{ status: 'COMPLETED', inserted_at: '2026-11-04T20:00:00Z' }] }, now), 1);
@@ -191,8 +199,11 @@ test('accepts each one-time waiver only for its exact development migration set'
   assert.deepEqual(validateDevelopmentBackupWaiver({ ...context, waiver: developmentWaiver008, pendingVersions: ['20261105000400'] }), ['20261105000400']);
   assert.deepEqual(validateDevelopmentBackupWaiver({ ...context, waiver: developmentWaiver009, pendingVersions: ['20261105000500'] }), ['20261105000500']);
   assert.deepEqual(validateDevelopmentBackupWaiver({ ...context, waiver: developmentWaiver010, pendingVersions: ['20261106000100'] }), ['20261106000100']);
+  assert.deepEqual(validateDevelopmentBackupWaiver({ ...context, waiver: developmentWaiver011, pendingVersions: ['20261106000200'] }), ['20261106000200']);
   assert.throws(() => validateDevelopmentBackupWaiver({ ...context, waiver: developmentWaiver009, pendingVersions: ['20261106000100'] }), /exact approved/);
   assert.throws(() => validateDevelopmentBackupWaiver({ ...context, waiver: developmentWaiver010, pendingVersions: ['20261106000100', '20261105000500'] }), /exact approved/);
+  assert.throws(() => validateDevelopmentBackupWaiver({ ...context, waiver: developmentWaiver011, pendingVersions: ['20261106000100', '20261106000200'] }), /exact approved/);
+  assert.throws(() => validateDevelopmentBackupWaiver({ ...context, waiver: developmentWaiver011, pendingVersions: ['20261106000100'] }), /exact approved/);
   assert.throws(() => validateDevelopmentBackupWaiver({ ...context, applyMigrations: 'preview', pendingVersions: ['20261104000300'] }), /explicit apply/);
   assert.throws(() => validateDevelopmentBackupWaiver({ ...context, waiver: 'none', pendingVersions: ['20261104000300'] }), /explicit apply/);
   assert.throws(() => validateDevelopmentBackupWaiver({ ...context, projectRef: 'ponmlkjihgfedcbaqrst', pendingVersions: ['20261104000300'] }), /target/);

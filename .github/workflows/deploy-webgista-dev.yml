@@ -26,6 +26,12 @@ on:
           - accept-dev-data-loss-for-008
           - accept-dev-data-loss-for-009
           - accept-dev-data-loss-for-010
+          - accept-dev-data-loss-for-011
+      deploy_roi_analysis_function:
+        description: Deploy only the Phase 3F process-roi-analysis Edge Function after database verification
+        type: boolean
+        required: true
+        default: false
 
 permissions:
   contents: read
@@ -77,6 +83,10 @@ jobs:
           set -euo pipefail
           if [[ "$DEVELOPMENT_DATA_LOSS_WAIVER" != "none" && "$APPLY_MIGRATIONS" != "apply" ]]; then
             echo "The development data-loss waiver is only valid for an explicit apply run."
+            exit 1
+          fi
+          if [[ "${{ inputs.deploy_roi_analysis_function }}" == "true" && "$APPLY_MIGRATIONS" != "apply" && "$APPLY_MIGRATIONS" != "verify" ]]; then
+            echo "The Phase 3F function can only be deployed with a post-migration apply or verify run."
             exit 1
           fi
           if [[ -z "$SUPABASE_ACCESS_TOKEN" || -z "$SUPABASE_DB_URL" || -z "$SUPABASE_PROJECT_REF" ]]; then
@@ -237,6 +247,10 @@ jobs:
         if: ${{ inputs.apply_migrations == 'apply' && inputs.development_data_loss_waiver == 'accept-dev-data-loss-for-010' }}
         run: node scripts/phase2d-migration-guard.mjs phase3e-roi-density "$RUNNER_TEMP/phase2d-migrations.txt"
 
+      - name: Require ROI analysis migration as the sole pending migration when using its one-time waiver
+        if: ${{ inputs.apply_migrations == 'apply' && inputs.development_data_loss_waiver == 'accept-dev-data-loss-for-011' }}
+        run: node scripts/phase2d-migration-guard.mjs phase3f-roi-analysis "$RUNNER_TEMP/phase2d-migrations.txt"
+
       - name: Validate and record the explicit development-only backup waiver
         if: ${{ inputs.apply_migrations == 'apply' && inputs.development_data_loss_waiver != 'none' }}
         shell: bash
@@ -268,6 +282,8 @@ jobs:
             node scripts/phase2d-migration-guard.mjs phase3d1-cctv-delete "$RUNNER_TEMP/phase2d-migrations-before-apply.txt"
           elif [[ "$DEVELOPMENT_DATA_LOSS_WAIVER" == "accept-dev-data-loss-for-010" ]]; then
             node scripts/phase2d-migration-guard.mjs phase3e-roi-density "$RUNNER_TEMP/phase2d-migrations-before-apply.txt"
+          elif [[ "$DEVELOPMENT_DATA_LOSS_WAIVER" == "accept-dev-data-loss-for-011" ]]; then
+            node scripts/phase2d-migration-guard.mjs phase3f-roi-analysis "$RUNNER_TEMP/phase2d-migrations-before-apply.txt"
           elif [[ "$DEVELOPMENT_DATA_LOSS_WAIVER" == "none" ]]; then
             node scripts/phase2d-migration-guard.mjs phase3e-roi-density "$RUNNER_TEMP/phase2d-migrations-before-apply.txt"
           else
@@ -333,3 +349,27 @@ jobs:
             psql "$SUPABASE_DB_URL" --set=ON_ERROR_STOP=1 --single-transaction \
             --command='SET TRANSACTION READ ONLY' --file=/dev/stdin \
             < supabase/verification/phase_3e_roi_density_readiness.sql
+
+      - name: Verify Phase 3F analysis database contract (read-only)
+        if: ${{ inputs.apply_migrations == 'apply' || inputs.apply_migrations == 'verify' }}
+        run: |
+          docker run --rm -i --network host postgres:17-alpine \
+            psql "$SUPABASE_DB_URL" --set=ON_ERROR_STOP=1 --single-transaction \
+            --command='SET TRANSACTION READ ONLY' --file=/dev/stdin \
+            < supabase/verification/phase_3f_roi_analysis_preflight.sql
+
+      - name: Deploy only the Phase 3F ROI analysis Edge Function
+        if: ${{ inputs.deploy_roi_analysis_function && (inputs.apply_migrations == 'apply' || inputs.apply_migrations == 'verify') }}
+        run: supabase functions deploy process-roi-analysis --project-ref "$SUPABASE_PROJECT_REF"
+
+      - name: Confirm Phase 3F function is deployed
+        if: ${{ inputs.deploy_roi_analysis_function && (inputs.apply_migrations == 'apply' || inputs.apply_migrations == 'verify') }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          supabase functions list --project-ref "$SUPABASE_PROJECT_REF" > "$RUNNER_TEMP/functions.txt"
+          if ! grep -Fq 'process-roi-analysis' "$RUNNER_TEMP/functions.txt"; then
+            echo "The Phase 3F Edge Function was not found in the development project."
+            exit 1
+          fi
+          echo "Phase 3F Edge Function deployment is listed for the verified development project."
