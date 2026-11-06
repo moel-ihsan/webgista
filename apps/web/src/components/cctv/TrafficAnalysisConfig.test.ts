@@ -7,6 +7,8 @@ const roiHarness = vi.hoisted(() => ({
   save: vi.fn(async (_client: unknown, _cameraId: string, configuration: Record<string, unknown>) => ({
     configuration, configurationVersion: 3, updatedAt: '2026-11-06T00:00:00Z',
   })),
+  schedule: vi.fn(async () => ({ job_id: 'job-1', status: 'completed' })),
+  appConfig: { roiAnalysisEnabled: false },
 }))
 
 vi.mock('../../auth/session', () => ({ authSession: { state: { user: { id: 'admin-qa' } } } }))
@@ -15,6 +17,8 @@ vi.mock('../../data/cctvAnalysisConfig', () => ({
   getCctvAnalysisConfig: roiHarness.load,
   saveCctvAnalysisConfig: roiHarness.save,
 }))
+vi.mock('../../data/cctvRoiAnalysis', () => ({ scheduleCctvRoiAnalysis: roiHarness.schedule }))
+vi.mock('../../config/app', () => ({ appConfig: roiHarness.appConfig }))
 
 import { trafficDemoVideos } from '../../data/trafficDemo'
 import { ROI_PROCESSING_DEFAULTS } from '../../domain/roiDensity'
@@ -34,12 +38,19 @@ beforeEach(() => {
   roiHarness.load.mockReset()
   roiHarness.load.mockResolvedValue(null)
   roiHarness.save.mockClear()
+  roiHarness.schedule.mockReset()
+  roiHarness.schedule.mockResolvedValue({ job_id: 'job-1', status: 'completed' })
+  roiHarness.appConfig.roiAnalysisEnabled = false
 })
 
 function drawPointer(type: string, x: number, y: number): Event {
   const event = new Event(type, { bubbles: true })
   Object.assign(event, { clientX: x, clientY: y, pointerId: 1 })
   return event
+}
+
+async function flush(): Promise<void> {
+  for (let index = 0; index < 6; index += 1) { await Promise.resolve(); await nextTick() }
 }
 
 describe('TrafficAnalysisConfig', () => {
@@ -109,6 +120,40 @@ describe('TrafficAnalysisConfig', () => {
     expect(geometry[2]).toBeCloseTo(0.7)
     expect(geometry[3]).toBeCloseTo(0.7)
     expect(host.textContent).toContain('ROI saved (configuration v3)')
+  })
+
+  it('schedules analysis after saving without adding analysis inputs', async () => {
+    roiHarness.appConfig.roiAnalysisEnabled = true
+    host = document.createElement('div')
+    document.body.append(host)
+    app = createApp({ render: () => h(TrafficAnalysisConfig, { cameraId: 'qa-camera', video: trafficDemoVideos[0]!, editable: true }) })
+    app.mount(host)
+    host.querySelector('video')?.dispatchEvent(new Event('loadedmetadata'))
+    await flush()
+    ;[...host.querySelectorAll<HTMLButtonElement>('button')].find((button) => button.textContent?.includes('Save ROI'))!.click()
+    await new Promise(resolve => setTimeout(resolve, 0))
+    await nextTick()
+    expect(roiHarness.save).toHaveBeenCalledOnce()
+    expect(roiHarness.schedule).toHaveBeenCalledWith({}, 'qa-camera')
+    expect(host.textContent).toContain('Analysis completed')
+  })
+
+  it('keeps the saved ROI and reports scheduling failures separately', async () => {
+    roiHarness.appConfig.roiAnalysisEnabled = true
+    roiHarness.schedule.mockRejectedValue(new Error('ROI was saved, but analysis scheduling failed. Retry from Edit CCTV.'))
+    host = document.createElement('div')
+    document.body.append(host)
+    app = createApp({ render: () => h(TrafficAnalysisConfig, { cameraId: 'qa-camera', video: trafficDemoVideos[0]!, editable: true }) })
+    app.mount(host)
+    host.querySelector('video')?.dispatchEvent(new Event('loadedmetadata'))
+    await flush()
+    ;[...host.querySelectorAll<HTMLButtonElement>('button')].find((button) => button.textContent?.includes('Save ROI'))!.click()
+    await new Promise(resolve => setTimeout(resolve, 0))
+    await nextTick()
+    expect(roiHarness.save).toHaveBeenCalledOnce()
+    expect(host.querySelector('video')).not.toBeNull()
+    expect(host.textContent).toContain('ROI was saved, but analysis scheduling failed')
+    expect(host.querySelector('[role="alert"]')).toBeNull()
   })
 
   it('restores the saved normalized ROI when the editor loads again', async () => {

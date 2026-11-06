@@ -14,6 +14,7 @@ export const appConfig = Object.freeze({
   privateMediaEnabled: import.meta.env.VITE_SUPABASE_PRIVATE_MEDIA_ENABLED === 'true',
   profileFieldsEnabled: import.meta.env.VITE_SUPABASE_PROFILE_FIELDS_ENABLED === 'true',
   roiDensityEnabled: import.meta.env.VITE_SUPABASE_ROI_DENSITY_ENABLED === 'true',
+  roiAnalysisEnabled: import.meta.env.VITE_SUPABASE_ROI_ANALYSIS_ENABLED === 'true',
   agencyRemovalEnabled: import.meta.env.VITE_AGENCY_REMOVAL_ENABLED === 'true',
   map: {
     styles: mapStyles,

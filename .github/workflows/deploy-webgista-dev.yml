@@ -188,7 +188,6 @@ jobs:
           set -euo pipefail
           supabase migration list --remote="$SUPABASE_DB_URL" > "$RUNNER_TEMP/phase2d-migrations.txt" 2>&1
           node scripts/phase2d-migration-guard.mjs history "$RUNNER_TEMP/phase2d-migrations.txt"
-          node scripts/phase2d-migration-guard.mjs phase3e-roi-density "$RUNNER_TEMP/phase2d-migrations.txt"
 
       - name: Check targeted hosted schema preconditions (read-only)
         run: |

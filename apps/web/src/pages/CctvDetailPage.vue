@@ -9,6 +9,7 @@ import { getCctvDemoAssociation } from '../data/cctvDemoVideo'
 import { listTrafficObservations } from '../data/trafficObservations'
 import { privateImageUrl } from '../data/privateMedia'
 import { getCctvAnalysisConfig, type StoredRoiDensityConfig } from '../data/cctvAnalysisConfig'
+import { getCurrentCctvRoiAnalysis, type CurrentRoiAnalysis, type RoiAnalysisResult } from '../data/cctvRoiAnalysis'
 import { demoDetectionTotal, type TrafficDemoVideo } from '../data/trafficDemo'
 import { rectangleToPolygon, type RoiDensityConfig } from '../domain/roiDensity'
 import { roiDensityFrameAt } from '../domain/roiDensityResult'
@@ -26,6 +27,8 @@ const imageFailed = ref(false)
 const demoVideo = ref<TrafficDemoVideo | null>(null)
 const demoAnalysisConfig = ref<StoredRoiDensityConfig | null>(null)
 const demoConfigStatus = ref<'unchecked' | 'loading' | 'ready' | 'error'>('unchecked')
+const backendAnalysis = ref<CurrentRoiAnalysis | null>(null)
+const backendAnalysisStatus = ref<'idle' | 'loading' | 'pending' | 'processing' | 'ready' | 'failed' | 'stale' | 'error'>('idle')
 const videoAssociationReady = ref(false)
 const videoLoading = ref(false)
 const videoFailed = ref(false)
@@ -36,12 +39,18 @@ const demoVideoStage = ref<HTMLDivElement | null>(null)
 const fullscreenError = ref(false)
 let loadRevision = 0
 let imageRefreshTimer: ReturnType<typeof setInterval> | null = null
+let analysisPollTimer: ReturnType<typeof setTimeout> | null = null
+let analysisPollCount = 0
 
 const latest = computed(() => observations.value[0] ?? null)
 const categoryLabel = computed(() => camera.value?.category === 'analytic' ? 'Analytic' : 'Regular')
 const demoDetections = computed(() => demoVideo.value ? demoDetectionTotal(demoVideo.value.analysis) : 0)
-const demoDensityFrame = computed(() => demoVideo.value ? roiDensityFrameAt(demoVideo.value.roiDensity, videoTime.value) : null)
-const demoDensityWindow = computed(() => demoVideo.value?.roiDensity.windows.find((window) => videoTime.value >= window.window_started_at_seconds && videoTime.value < window.window_ended_at_seconds) ?? null)
+const demoDensityFrame = computed(() => !appConfig.roiAnalysisEnabled && demoVideo.value ? roiDensityFrameAt(demoVideo.value.roiDensity, videoTime.value) : null)
+const activeDensityWindow = computed<RoiAnalysisResult | null>(() => {
+  if (appConfig.roiAnalysisEnabled) return backendAnalysis.value?.results.find((window) => videoTime.value >= window.window_started_at_seconds && videoTime.value < window.window_ended_at_seconds) ?? null
+  return demoVideo.value?.roiDensity.windows.find((window) => videoTime.value >= window.window_started_at_seconds && videoTime.value < window.window_ended_at_seconds) ?? null
+})
+const demoDensityWindow = activeDensityWindow
 function configKey(config: RoiDensityConfig): string {
   return JSON.stringify([
     config.roi_type, config.roi_geometry, config.video_dimensions, config.observation_window_seconds,
@@ -51,6 +60,7 @@ function configKey(config: RoiDensityConfig): string {
   ])
 }
 const demoDensityStale = computed(() => {
+  if (appConfig.roiAnalysisEnabled) return backendAnalysisStatus.value === 'stale'
   if (!demoVideo.value || !appConfig.roiDensityEnabled) return false
   if (demoConfigStatus.value !== 'ready') return true
   if (demoAnalysisConfig.value === null) return true
@@ -112,6 +122,31 @@ function releaseDemoVideo(): void {
   video.load()
 }
 
+function stopAnalysisPolling(): void {
+  if (analysisPollTimer) clearTimeout(analysisPollTimer)
+  analysisPollTimer = null
+}
+
+async function refreshBackendAnalysis(revision: number, cameraId: string, sourceId: string, sourceHash: string, version: number): Promise<void> {
+  if (!supabaseClient || revision !== loadRevision || !appConfig.roiAnalysisEnabled) return
+  try {
+    const result = await getCurrentCctvRoiAnalysis(supabaseClient, cameraId, sourceId, sourceHash, version)
+    if (revision !== loadRevision) return
+    backendAnalysis.value = result
+    if (!result) backendAnalysisStatus.value = 'pending'
+    else if (result.status === 'completed') backendAnalysisStatus.value = 'ready'
+    else if (result.status === 'failed') backendAnalysisStatus.value = 'failed'
+    else if (result.status === 'superseded') backendAnalysisStatus.value = 'stale'
+    else backendAnalysisStatus.value = result.status
+    if ((!result || ['pending', 'processing'].includes(result.status)) && analysisPollCount < 20) {
+      analysisPollCount += 1
+      analysisPollTimer = setTimeout(() => { void refreshBackendAnalysis(revision, cameraId, sourceId, sourceHash, version) }, 2500)
+    }
+  } catch {
+    if (revision === loadRevision) backendAnalysisStatus.value = 'error'
+  }
+}
+
 function onDemoVideoError(): void {
   releaseDemoVideo()
   videoFailed.value = true
@@ -124,6 +159,7 @@ function onDemoVideoError(): void {
 
 watch([() => String(route.params.id ?? ''), () => authSession.state.status], ([id, authStatus]) => {
   const revision = ++loadRevision
+  stopAnalysisPolling()
   releaseDemoVideo()
   if (imageRefreshTimer) clearInterval(imageRefreshTimer)
   imageRefreshTimer = null
@@ -134,6 +170,9 @@ watch([() => String(route.params.id ?? ''), () => authSession.state.status], ([i
   demoVideo.value = null
   demoAnalysisConfig.value = null
   demoConfigStatus.value = 'unchecked'
+  backendAnalysis.value = null
+  backendAnalysisStatus.value = 'idle'
+  analysisPollCount = 0
   videoAssociationReady.value = authStatus !== 'authenticated'
   videoLoading.value = false
   videoFailed.value = false
@@ -174,6 +213,10 @@ watch([() => String(route.params.id ?? ''), () => authSession.state.status], ([i
                 if (revision === loadRevision) {
                   demoAnalysisConfig.value = configuration
                   demoConfigStatus.value = 'ready'
+                  if (appConfig.roiAnalysisEnabled && configuration) {
+                    backendAnalysisStatus.value = 'loading'
+                    void refreshBackendAnalysis(revision, id, video.analysis.source_video_identifier, video.analysis.source_video_sha256, configuration.configurationVersion)
+                  }
                 }
               }).catch(() => {
                 if (revision === loadRevision) demoConfigStatus.value = 'error'
@@ -224,6 +267,7 @@ watch([() => String(route.params.id ?? ''), () => authSession.state.status], ([i
 onBeforeUnmount(() => {
   loadRevision += 1
   if (imageRefreshTimer) clearInterval(imageRefreshTimer)
+  stopAnalysisPolling()
   releaseDemoVideo()
 })
 </script>
@@ -317,13 +361,19 @@ onBeforeUnmount(() => {
             <span v-if="demoConfigStatus === 'loading'" role="status">Loading the authorized saved ROI…</span>
             <span v-else-if="demoConfigStatus === 'error'" role="status">Saved ROI is unavailable to this account; camera-specific measurements are withheld.</span>
             <span v-else-if="!demoAnalysisConfig" role="status">No authorized camera ROI is available. Bundled demo geometry is not shown as this camera’s configuration.</span>
-            <span v-else-if="demoDensityStale" role="status">Analysis Stale — the saved ROI configuration does not match this result. Rerun the local offline analyzer for this camera and source video.</span>
+            <span v-else-if="appConfig.roiAnalysisEnabled && backendAnalysisStatus === 'loading'" role="status">Checking saved ROI analysis…</span>
+            <span v-else-if="appConfig.roiAnalysisEnabled && backendAnalysisStatus === 'pending'" role="status">Analysis Pending — {{ backendAnalysis?.failureReason || 'save the ROI to schedule cached detection reaggregation.' }}</span>
+            <span v-else-if="appConfig.roiAnalysisEnabled && backendAnalysisStatus === 'processing'" role="status">ROI analysis is processing.</span>
+            <span v-else-if="appConfig.roiAnalysisEnabled && backendAnalysisStatus === 'failed'" role="status">Analysis Failed — {{ backendAnalysis?.failureReason || 'retry by saving the ROI again.' }}</span>
+            <span v-else-if="appConfig.roiAnalysisEnabled && backendAnalysisStatus === 'error'" role="status">Analysis status is unavailable to this account.</span>
+            <span v-else-if="appConfig.roiAnalysisEnabled && backendAnalysisStatus === 'ready'" role="status">Analysis Ready — current results match the saved ROI and video source.</span>
+            <span v-else-if="demoDensityStale" role="status">Analysis Stale — the saved ROI configuration does not match this result. {{ appConfig.roiAnalysisEnabled ? 'Save the ROI to schedule reaggregation.' : 'Rerun the local offline analyzer for this camera and source video.' }}</span>
             <template v-else>
               <span v-if="demoDensityFrame">ROI Detection at {{ demoDensityFrame.timestamp_seconds.toFixed(1) }}s: {{ demoDensityFrame.vehicle_presence_total }} vehicles present in the sampled frame.</span>
               <template v-if="demoDensityWindow">
                 <span>Average Vehicles: {{ demoDensityWindow.average_vehicles_present?.toFixed(2) ?? 'unavailable' }} · Peak: {{ demoDensityWindow.peak_vehicles_present ?? 'unavailable' }} · Observation Duration: {{ demoDensityWindow.window_duration_seconds.toFixed(1) }} seconds.</span>
-                <span>Vehicle Classes — LV {{ demoDensityWindow.traffic_category_statistics.LV.average?.toFixed(2) ?? '—' }}, HV {{ demoDensityWindow.traffic_category_statistics.HV.average?.toFixed(2) ?? '—' }}, MC {{ demoDensityWindow.traffic_category_statistics.MC.average?.toFixed(2) ?? '—' }}.</span>
-                <span>ROI Coverage: {{ demoDensityWindow.roi_image_coverage_average !== null ? `${(demoDensityWindow.roi_image_coverage_average * 100).toFixed(1)}%` : 'unavailable' }} · Busy duration: {{ demoDensityWindow.busy_duration_seconds.toFixed(1) }}s · Measurement Status: {{ demoDensityWindow.status }} / {{ demoDensityWindow.classification_status.replaceAll('_', ' ') }}.</span>
+                <span>Vehicle Classes — LV {{ demoDensityWindow.traffic_category_statistics.LV.average?.toFixed(2) ?? '—' }}, HV {{ demoDensityWindow.traffic_category_statistics.HV.average?.toFixed(2) ?? '—' }}, MC {{ demoDensityWindow.traffic_category_statistics.MC.average?.toFixed(2) ?? '—' }}, bicycle {{ demoDensityWindow.traffic_category_statistics.bicycle.average?.toFixed(2) ?? '—' }}.</span>
+                <span>ROI Coverage: {{ demoDensityWindow.roi_image_coverage_average !== null ? `${(demoDensityWindow.roi_image_coverage_average * 100).toFixed(1)}%` : 'unavailable' }} · Busy duration: {{ demoDensityWindow.busy_duration_seconds.toFixed(1) }}s · Valid samples: {{ demoDensityWindow.data_quality.valid_samples }}/{{ demoDensityWindow.data_quality.expected_samples }} · Measurement Status: {{ demoDensityWindow.status }} / {{ demoDensityWindow.classification_status.replaceAll('_', ' ') }}.</span>
                 <span>Traffic Condition: {{ demoDensityWindow.condition ? demoDensityWindow.condition : `No Data — ${demoDensityWindow.condition_reason}` }}</span>
               </template>
             </template>

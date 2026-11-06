@@ -65,3 +65,6 @@ enable_confirmations = false
 template = "Your code is {{ .Code }}"
 max_frequency = "1m"
 
+[functions.process-roi-analysis]
+verify_jwt = true
+

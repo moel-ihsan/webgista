@@ -36,6 +36,9 @@ jobs:
       - name: Test development deployment migration guard
         run: node --test scripts/phase2d-migration-guard.test.mjs
 
+      - name: Test cached ROI reaggregation
+        run: node --test supabase/functions/_shared/roi_reaggregate.test.mjs
+
       - name: Install Supabase CLI
         uses: supabase/setup-cli@v3
         with:
@@ -80,6 +83,16 @@ jobs:
 
       - name: Run Phase 3E ROI density configuration security tests
         run: supabase test db supabase/tests/phase_3e_roi_density_config.test.sql
+
+      - name: Run Phase 3F ROI analysis job and result security tests
+        run: supabase test db supabase/tests/phase_3f_roi_analysis.test.sql
+
+      - name: Verify Phase 3F database contract on the disposable database
+        run: |
+          docker exec -i supabase_db_webgista-v2 psql -U postgres -d postgres \
+            --set=ON_ERROR_STOP=1 --single-transaction \
+            --command='SET TRANSACTION READ ONLY' --file=/dev/stdin \
+            < supabase/verification/phase_3f_roi_analysis_preflight.sql
 
       - name: Verify ROI density configuration preflight on the disposable database
         run: |

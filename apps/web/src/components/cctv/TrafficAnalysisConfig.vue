@@ -4,6 +4,8 @@ import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { authSession } from '../../auth/session'
 import { supabaseClient } from '../../lib/supabase'
 import { getCctvAnalysisConfig, saveCctvAnalysisConfig } from '../../data/cctvAnalysisConfig'
+import { scheduleCctvRoiAnalysis } from '../../data/cctvRoiAnalysis'
+import { appConfig } from '../../config/app'
 import type { TrafficDemoVideo } from '../../data/trafficDemo'
 import { rectangleToPolygon, ROI_PROCESSING_DEFAULTS, validateRoiDensityConfig, validateRoiPolygon, type RoiDensityConfig, type RoiPoint } from '../../domain/roiDensity'
 
@@ -249,7 +251,17 @@ async function save(): Promise<void> {
   try {
     const stored = await saveCctvAnalysisConfig(supabaseClient, props.cameraId, config.value)
     savedVersion.value = stored.configurationVersion
-    status.value = `ROI saved (configuration v${stored.configurationVersion}). Existing analysis results are stale until reprocessed.`
+    status.value = appConfig.roiAnalysisEnabled
+      ? `ROI saved (configuration v${stored.configurationVersion}). Analysis scheduled.`
+      : `ROI saved (configuration v${stored.configurationVersion}). Automatic analysis is waiting for backend deployment.`
+    if (appConfig.roiAnalysisEnabled) {
+      const version = stored.configurationVersion
+      void scheduleCctvRoiAnalysis(supabaseClient, props.cameraId).then((job) => {
+        if (savedVersion.value === version) status.value = `ROI saved (configuration v${version}). Analysis ${job.status}${job.reason ? ` — ${job.reason}` : ''}.`
+      }).catch((cause) => {
+        if (savedVersion.value === version) status.value = cause instanceof Error ? cause.message : 'ROI was saved, but analysis scheduling failed.'
+      })
+    }
   } catch (cause) {
     error.value = cause instanceof Error ? cause.message : 'ROI configuration could not be saved.'
   } finally {

@@ -85,6 +85,17 @@ test('rejects a migration 006 hash mismatch', async () => {
   }
 });
 
+test('rejects a Phase 3F migration hash mismatch', async () => {
+  const temp = await mkdtemp(path.join(os.tmpdir(), 'webgista-migration-guard-'));
+  try {
+    const expected = new Map([['20261106000200', '0'.repeat(64)]]);
+    await writeFile(path.join(temp, '20261106000200_roi_analysis.sql'), 'create table analysis;');
+    await assert.rejects(verifyMigrationHashes(temp, expected), /SHA-256/);
+  } finally {
+    await rm(temp, { recursive: true, force: true });
+  }
+});
+
 test('parses complete migration-list output and fails closed for inspection errors or unknown formats', () => {
   const parsed = parseMigrationList(listing(versions, versions.slice(0, 4)));
   assert.deepEqual(parsed.local, versions);
@@ -96,13 +107,14 @@ test('parses complete migration-list output and fails closed for inspection erro
 });
 
 test('accepts only a chronological suffix of the reviewed migrations', () => {
-  assert.deepEqual(assessMigrationHistory({ localVersions: versions, remoteVersions: versions.slice(0, 4) }), ['20261104000300', '20261104000400', '20261105000100', '20261105000200', '20261105000400', '20261105000500', '20261106000100']);
-  assert.deepEqual(assessMigrationHistory({ localVersions: versions, remoteVersions: versions.slice(0, 5) }), ['20261104000400', '20261105000100', '20261105000200', '20261105000400', '20261105000500', '20261106000100']);
-  assert.deepEqual(assessMigrationHistory({ localVersions: versions, remoteVersions: versions.slice(0, 6) }), ['20261105000100', '20261105000200', '20261105000400', '20261105000500', '20261106000100']);
-  assert.deepEqual(assessMigrationHistory({ localVersions: versions, remoteVersions: versions.slice(0, 7) }), ['20261105000200', '20261105000400', '20261105000500', '20261106000100']);
-  assert.deepEqual(assessMigrationHistory({ localVersions: versions, remoteVersions: versions.slice(0, 8) }), ['20261105000400', '20261105000500', '20261106000100']);
-  assert.deepEqual(assessMigrationHistory({ localVersions: versions, remoteVersions: versions.slice(0, 9) }), ['20261105000500', '20261106000100']);
-  assert.deepEqual(assessMigrationHistory({ localVersions: versions, remoteVersions: versions.slice(0, 10) }), ['20261106000100']);
+  assert.deepEqual(assessMigrationHistory({ localVersions: versions, remoteVersions: versions.slice(0, 4) }), ['20261104000300', '20261104000400', '20261105000100', '20261105000200', '20261105000400', '20261105000500', '20261106000100', '20261106000200']);
+  assert.deepEqual(assessMigrationHistory({ localVersions: versions, remoteVersions: versions.slice(0, 5) }), ['20261104000400', '20261105000100', '20261105000200', '20261105000400', '20261105000500', '20261106000100', '20261106000200']);
+  assert.deepEqual(assessMigrationHistory({ localVersions: versions, remoteVersions: versions.slice(0, 6) }), ['20261105000100', '20261105000200', '20261105000400', '20261105000500', '20261106000100', '20261106000200']);
+  assert.deepEqual(assessMigrationHistory({ localVersions: versions, remoteVersions: versions.slice(0, 7) }), ['20261105000200', '20261105000400', '20261105000500', '20261106000100', '20261106000200']);
+  assert.deepEqual(assessMigrationHistory({ localVersions: versions, remoteVersions: versions.slice(0, 8) }), ['20261105000400', '20261105000500', '20261106000100', '20261106000200']);
+  assert.deepEqual(assessMigrationHistory({ localVersions: versions, remoteVersions: versions.slice(0, 9) }), ['20261105000500', '20261106000100', '20261106000200']);
+  assert.deepEqual(assessMigrationHistory({ localVersions: versions, remoteVersions: versions.slice(0, 10) }), ['20261106000100', '20261106000200']);
+  assert.deepEqual(assessMigrationHistory({ localVersions: versions, remoteVersions: versions.slice(0, 11) }), ['20261106000200']);
   assert.deepEqual(assessMigrationHistory({ localVersions: versions, remoteVersions: versions }), []);
   assert.throws(() => assessMigrationHistory({ localVersions: [...versions, '20261107000100'], remoteVersions: versions.slice(0, 4) }), /Unapproved pending/);
   assert.throws(() => assessMigrationHistory({ localVersions: versions, remoteVersions: [...versions, '20261107000100'] }), /absent locally/);
@@ -153,6 +165,7 @@ test('allows ROI density migration only as the sole pending migration', () => {
   assert.doesNotThrow(() => assertPhase3eRoiDensityOnlyPending(['20261106000100']));
   assert.throws(() => assertPhase3eRoiDensityOnlyPending([]), /only for ROI density configuration migration/);
   assert.throws(() => assertPhase3eRoiDensityOnlyPending(['20261105000500', '20261106000100']), /only for ROI density configuration migration/);
+  assert.throws(() => assertPhase3eRoiDensityOnlyPending(['20261106000200']), /only for ROI density configuration migration/);
 });
 
 test('requires at least one completed backup with a valid, nonfuture timestamp', () => {
