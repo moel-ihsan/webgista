@@ -1,6 +1,7 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
+import type { SupabaseClient } from '@supabase/supabase-js'
 
-import { classifyV1RoiWindow, latestV1RoiConditions, mergeExperimentalRoiConditions, v1RoiRatio } from './roiV1MarkerCondition'
+import { classifyV1RoiWindow, latestV1RoiConditions, listLatestV1RoiConditions, mergeExperimentalRoiConditions, v1RoiRatio } from './roiV1MarkerCondition'
 
 function windowWithRatio(ratio: number) {
   return {
@@ -57,5 +58,33 @@ describe('V1-compatible ROI marker estimate', () => {
     expect(mergeExperimentalRoiConditions(manual, currentRoi).get('camera-1')).toEqual(currentRoi.get('camera-1'))
     expect(manual.get('camera-1')).toEqual({ condition: 'great', source: 'manual' })
     expect(mergeExperimentalRoiConditions(manual, new Map([['camera-1', { condition: null, source: 'experimental_v1_estimate' as const }]])).get('camera-1')?.condition).toBeNull()
+  })
+
+  it('loads results using separate RLS-scoped job and result reads', async () => {
+    const job = {
+      id: 'job-3', cctv_id: 'camera-1', source_video_identifier: 'traffic_sample_02',
+      source_video_sha256: '88f571acbd0f502f82c3e0f02a8f977ecf4a23f56debe68533f6026050a490ca',
+      configuration_version: 3, analysis_method_version: 'roi_density_v1', status: 'completed', finished_at: '2026-11-06T10:00:00Z',
+    }
+    const rows: Record<string, unknown[]> = {
+      cctv_private_config: [{ cctv_id: 'camera-1', source_kind: 'stored_clip', source_uri: '/traffic-demo/traffic_sample_02_annotated.mp4' }],
+      cctv_analysis_config: [{ cctv_id: 'camera-1', configuration_version: 3 }],
+      cctv_roi_analysis_jobs: [job],
+      cctv_roi_analysis_results: [{ job_id: 'job-3', window_ended_at_seconds: 20, summary: { ...windowWithRatio(0.4), traffic_category_statistics: { LV: { average: 3.2 }, HV: { average: 0.2 }, MC: { average: 3.4 } } } }],
+    }
+    const from = vi.fn((table: string) => {
+      const query = {
+        select: vi.fn(() => query), in: vi.fn(() => query), eq: vi.fn(() => query), order: vi.fn(() => query),
+        limit: vi.fn(() => query), abortSignal: vi.fn(() => query),
+        then: (resolve: (value: unknown) => unknown, reject?: (reason: unknown) => unknown) => Promise.resolve({ data: rows[table], error: null }).then(resolve, reject),
+      }
+      return query
+    })
+    const client = { from } as unknown as SupabaseClient
+
+    await expect(listLatestV1RoiConditions(client, ['camera-1'])).resolves.toEqual(new Map([
+      ['camera-1', { condition: 'great', source: 'experimental_v1_estimate' }],
+    ]))
+    expect(from).toHaveBeenCalledWith('cctv_roi_analysis_results')
   })
 })

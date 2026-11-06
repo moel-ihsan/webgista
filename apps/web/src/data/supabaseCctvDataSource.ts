@@ -6,6 +6,7 @@ import { privateImageUrl } from './privateMedia'
 import { appConfig } from '../config/app'
 import { latestTrafficConditionSnapshots, listLatestTrafficObservations } from './trafficObservations'
 import { listLatestV1RoiConditions, mergeExperimentalRoiConditions, type MarkerConditionSnapshot } from './roiV1MarkerCondition'
+import { enforceLiveDemoNoData } from './liveDemoStreams'
 
 const PUBLIC_FIELDS = 'id,name,address,category,agency_id,agency_name,longitude,latitude,snapshot_path'
 const AUTHENTICATED_FIELDS = 'id,name,address,category,agency_id,longitude,latitude,snapshot_path,is_active,agency:agencies(id,name)'
@@ -49,7 +50,7 @@ export function mapCctvLocation(value: unknown): CctvLocation | null {
     (category !== 'regular' && category !== 'analytic') || row.is_active === false
   ) return null
 
-  return {
+  return enforceLiveDemoNoData({
     id,
     legacyId: null,
     agency,
@@ -61,7 +62,7 @@ export function mapCctvLocation(value: unknown): CctvLocation | null {
     snapshotUrl: text(row.snapshot_path),
     publicStreamUrl: null,
     isActive: true,
-  }
+  })
 }
 
 export function createSupabaseCctvDataSource(client: SupabaseClient): CctvDataSource {
@@ -101,9 +102,9 @@ export function createSupabaseCctvDataSource(client: SupabaseClient): CctvDataSo
             ...location,
             trafficCondition: conditions.get(location.id)?.condition ?? null,
             trafficConditionSource: conditions.get(location.id)?.source ?? null,
-          }))
+          })).map(enforceLiveDemoNoData)
         } catch {
-          locations = locations.map((location) => ({ ...location, trafficCondition: null, trafficConditionSource: null }))
+          locations = locations.map((location) => enforceLiveDemoNoData({ ...location, trafficCondition: null, trafficConditionSource: null }))
         }
       }
       const withImages = appConfig.privateMediaEnabled

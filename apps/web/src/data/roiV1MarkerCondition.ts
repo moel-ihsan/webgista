@@ -119,7 +119,7 @@ export async function listLatestV1RoiConditions(
   const associatedCameraIds = [...new Set((associations ?? []).flatMap((row) => typeof row.cctv_id === 'string' ? [row.cctv_id] : []))]
   if (associatedCameraIds.length === 0) return new Map()
   let configQuery = client.from('cctv_analysis_config').select('cctv_id,configuration_version').in('cctv_id', associatedCameraIds)
-  let jobQuery = client.from('cctv_roi_analysis_jobs').select('id,cctv_id,source_video_identifier,source_video_sha256,configuration_version,analysis_method_version,status,finished_at,cctv_roi_analysis_results(job_id,window_ended_at_seconds,summary)')
+  let jobQuery = client.from('cctv_roi_analysis_jobs').select('id,cctv_id,source_video_identifier,source_video_sha256,configuration_version,analysis_method_version,status,finished_at')
     .in('cctv_id', associatedCameraIds).in('source_video_identifier', sourceIds).eq('status', 'completed')
     .eq('analysis_method_version', 'roi_density_v1').order('finished_at', { ascending: false }).limit(500)
   if (signal) {
@@ -129,5 +129,22 @@ export async function listLatestV1RoiConditions(
   const [configResult, jobResult] = await Promise.all([configQuery, jobQuery])
   if (signal?.aborted) return new Map()
   if (configResult.error || jobResult.error) throw new Error('ROI marker estimates could not be loaded.')
-  return latestV1RoiConditions(configResult.data ?? [], associations ?? [], jobResult.data ?? [])
+  const jobs = jobResult.data ?? []
+  if (jobs.length === 0) return new Map()
+  let resultsQuery = client.from('cctv_roi_analysis_results').select('job_id,window_ended_at_seconds,summary')
+    .in('job_id', jobs.map((job) => job.id))
+  if (signal) resultsQuery = resultsQuery.abortSignal(signal)
+  const resultResult = await resultsQuery
+  if (signal?.aborted) return new Map()
+  if (resultResult.error) throw new Error('ROI marker estimates could not be loaded.')
+  const resultsByJob = new Map<string, unknown[]>()
+  for (const result of resultResult.data ?? []) {
+    const rows = resultsByJob.get(result.job_id) ?? []
+    rows.push(result)
+    resultsByJob.set(result.job_id, rows)
+  }
+  return latestV1RoiConditions(jobs.map((job) => ({
+    ...job,
+    cctv_roi_analysis_results: resultsByJob.get(job.id) ?? [],
+  })), configResult.data ?? [], associations ?? [])
 }

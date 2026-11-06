@@ -89,6 +89,26 @@ describe('CCTV detail page', () => {
     expect(host?.querySelector('.cctv-detail-actions a')?.getAttribute('href')).toBe('/map?cctv=camera-1')
   })
 
+  it('renders an allowlisted live demo stream with an explicit location disclaimer', async () => {
+    getCctvDemoAssociation.mockResolvedValue({
+      video: null,
+      editable: false,
+      liveStream: {
+        cameraId: 'camera-1', videoId: 'UTR-nG4SK7E', title: 'Karang Tunggal', city: 'Yogyakarta',
+        sourceUrl: 'https://www.youtube.com/watch?v=UTR-nG4SK7E',
+        embedUrl: 'https://www.youtube-nocookie.com/embed/UTR-nG4SK7E?autoplay=1&mute=1&playsinline=1&controls=1',
+      },
+    })
+    await mountPage()
+
+    const frame = host?.querySelector<HTMLIFrameElement>('.cctv-detail-live-stage iframe')
+    expect(frame?.src).toContain('/embed/UTR-nG4SK7E?autoplay=1')
+    expect(frame?.allow).toContain('autoplay')
+    expect(host?.textContent).toContain('LIVE STREAM DEMO — Yogyakarta')
+    expect(host?.textContent).toContain('NOT THIS CAMERA’S MAPPED LOCATION')
+    expect(host?.querySelector('.cctv-detail-cv')).toBeNull()
+  })
+
   it('shows No Data and an honest video fallback when no saved observation or image is available', async () => {
     getCctvDetail.mockResolvedValue({
       id: 'camera-1', name: 'Analytic Camera', address: 'Banda Aceh', category: 'analytic',

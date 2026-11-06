@@ -45,9 +45,9 @@ describe('authorized demo-video association', () => {
 
   it('returns only the camera id, does not select or reveal a private URI, and protects unknown configs', async () => {
     const absent = cameraConfig(null)
-    await expect(getCctvDemoAssociation(absent.client, 'camera-1')).resolves.toEqual({ video: null, editable: true })
+    await expect(getCctvDemoAssociation(absent.client, 'camera-1')).resolves.toEqual({ video: null, liveStream: null, editable: true })
     const privateConfig = cameraConfig({ cctv_id: 'camera-1', source_kind: 'private_stream', source_uri: 'must-not-leak' })
-    await expect(getCctvDemoAssociation(privateConfig.client, 'camera-1')).resolves.toEqual({ video: null, editable: false })
+    await expect(getCctvDemoAssociation(privateConfig.client, 'camera-1')).resolves.toEqual({ video: null, liveStream: null, editable: false })
     expect(privateConfig.selectCalls).toEqual(['cctv_id', 'cctv_id', 'cctv_id'])
     expect(privateConfig.selectCalls.join(',')).not.toMatch(/source_uri|credential/i)
   })
@@ -57,6 +57,14 @@ describe('authorized demo-video association', () => {
     const mock = cameraConfig({ cctv_id: 'camera-2', source_kind: 'stored_clip', source_uri: sample.videoUrl })
     await expect(getCctvDemoAssociation(mock.client, 'camera-2')).resolves.toMatchObject({ video: { id: sample.id }, editable: true })
     expect(mock.selectCalls.every((fields) => fields === 'cctv_id')).toBe(true)
+  })
+
+  it('uses the fixed public stream override without reading or changing private video configuration', async () => {
+    const mock = cameraConfig({ cctv_id: 'dec221d0-87ae-4194-a3ab-bf60eb4d041f', source_kind: 'stored_clip', source_uri: trafficDemoVideos[1]!.videoUrl })
+    await expect(getCctvDemoAssociation(mock.client, 'dec221d0-87ae-4194-a3ab-bf60eb4d041f')).resolves.toMatchObject({
+      video: null, liveStream: { videoId: 'BdPvBNLy5kc' }, editable: false,
+    })
+    expect(mock.from).not.toHaveBeenCalled()
   })
 
   it('stores only a selected demo asset with its provenance and leaves actor identity to the database trigger', async () => {

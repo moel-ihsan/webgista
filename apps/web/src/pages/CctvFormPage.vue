@@ -6,6 +6,7 @@ import { authSession } from '../auth/session'
 import TrafficMap from '../components/map/TrafficMap.vue'
 import TrafficAnalysisConfig from '../components/cctv/TrafficAnalysisConfig.vue'
 import { getCctvDemoAssociation, saveCctvDemoVideo, type TrafficDemoId } from '../data/cctvDemoVideo'
+import type { LiveDemoStream } from '../data/liveDemoStreams'
 import { trafficDemoVideos } from '../data/trafficDemo'
 import { createCctvLocation, getCctvLocation, getCctvSnapshotUrl, listCctvAgencies, replaceCctvSnapshot, updateCctvLocation, validateCctvLocationInput, type CctvAgencyOption, type CctvLocationInput } from '../data/cctvManagement'
 import { validateImage } from '../data/privateMedia'
@@ -33,6 +34,7 @@ const snapshotPath = ref<string | null>(null)
 const demoVideoId = ref<TrafficDemoId | null>(null)
 const originalDemoVideoId = ref<TrafficDemoId | null>(null)
 const demoVideoEditable = ref(true)
+const liveDemoStream = ref<LiveDemoStream | null>(null)
 const createdId = ref<string | null>(null)
 const form = reactive({ name: '', address: '', category: 'regular' as 'regular' | 'analytic', agencyId: '', longitude: '', latitude: '' })
 const allowedAgencyIds = computed(() => agencies.value.map(({ id }) => id))
@@ -134,6 +136,7 @@ async function loadForm(): Promise<void> {
       snapshotPath.value = location.snapshotPath
       savedImageUrl.value = appConfig.privateMediaEnabled ? await getCctvSnapshotUrl(supabaseClient, location.snapshotPath).catch(() => null) : null
       const videoAssociation = await getCctvDemoAssociation(supabaseClient, editingId)
+      liveDemoStream.value = videoAssociation.liveStream
       demoVideoId.value = videoAssociation.video?.id ?? null
       originalDemoVideoId.value = demoVideoId.value
       demoVideoEditable.value = videoAssociation.editable
@@ -285,7 +288,10 @@ onBeforeUnmount(() => {
         <img v-if="imagePreview || savedImageUrl" class="cctv-image-preview" :src="imagePreview || savedImageUrl || ''" alt="CCTV image preview">
         <input id="cctv-image" class="legacy-input" type="file" accept="image/jpeg,image/png,image/webp" :disabled="saving || !appConfig.privateMediaEnabled" aria-describedby="cctv-image-note" @change="chooseImage">
         <p id="cctv-image-note" class="cctv-form-note">{{ appConfig.privateMediaEnabled ? 'Private JPEG, PNG, or WebP image; maximum 5 MB. Only authorized agency managers can access it.' : 'Image upload is unavailable until the private Storage migration is approved and applied.' }}</p>
-        <template v-if="form.category === 'analytic'">
+        <template v-if="form.category === 'analytic' && liveDemoStream">
+          <p class="cctv-form-note">LIVE STREAM DEMO — {{ liveDemoStream.city }} · {{ liveDemoStream.title }}. This public stream is shown for demonstration only; it is not this camera’s live feed or mapped location. <a :href="liveDemoStream.sourceUrl" target="_blank" rel="noreferrer">Open official YouTube stream</a>.</p>
+        </template>
+        <template v-else-if="form.category === 'analytic'">
           <label for="cctv-demo-video">Analytic / Video Source</label>
           <select id="cctv-demo-video" v-model="demoVideoId" class="legacy-select" :disabled="saving || !demoVideoEditable">
             <option :value="null">No video — use uploaded image</option>
@@ -298,7 +304,7 @@ onBeforeUnmount(() => {
           </p>
         </template>
         <TrafficAnalysisConfig
-          v-if="editingId && appConfig.roiDensityEnabled"
+          v-if="editingId && appConfig.roiDensityEnabled && !liveDemoStream"
           :camera-id="editingId"
           :video="form.category === 'analytic' ? selectedDemoVideo : null"
           :editable="demoVideoEditable && agencies.some(({ id }) => id === form.agencyId)"

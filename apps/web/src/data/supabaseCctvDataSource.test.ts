@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
 import type { SupabaseClient } from '@supabase/supabase-js'
 
-import { createSupabaseCctvDataSource } from './supabaseCctvDataSource'
+import { createSupabaseCctvDataSource, mapCctvLocation } from './supabaseCctvDataSource'
 
 const camera = {
   id: 'camera-1',
@@ -35,6 +35,16 @@ function clientMock(session: unknown, result: { data: unknown; error: unknown })
 }
 
 describe('Supabase CCTV data source', () => {
+  it('overrides an old manual condition for the live demo camera with No Data', () => {
+    const location = mapCctvLocation({
+      ...camera,
+      id: 'dec221d0-87ae-4194-a3ab-bf60eb4d041f',
+      trafficCondition: 'terrible',
+      trafficConditionSource: 'manual',
+    })
+    expect(location).toMatchObject({ trafficCondition: null, trafficConditionSource: 'live_demo_unanalyzed' })
+  })
+
   it('reads anonymous cameras only from the public projection and maps safe fields', async () => {
     const mock = clientMock(null, { data: [camera], error: null })
     const locations = await createSupabaseCctvDataSource(mock.client).listLocations(new AbortController().signal)

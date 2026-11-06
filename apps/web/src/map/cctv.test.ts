@@ -9,6 +9,7 @@ import {
   createCctvPopupContent,
   focusCctvLocation,
   mountPopupDemoVideo,
+  mountPopupLiveDemoStream,
   searchCctvLocations,
   toCctvFeatureCollection,
 } from './cctv'
@@ -22,6 +23,7 @@ import {
   updateCctvSource,
 } from './cctvLayers'
 import { trafficDemoVideos } from '../data/trafficDemo'
+import { liveDemoStreamForCamera } from '../data/liveDemoStreams'
 
 const camera: CctvLocation = {
   id: 'camera-1',
@@ -93,6 +95,18 @@ describe('CCTV map data and interactions', () => {
       { label: 'Traffic condition', value: 'Poor' },
       { label: 'Condition source', value: 'Manual observation' },
     ]))
+  })
+
+  it('labels a live demo camera as No Data, independent of saved manual observations', () => {
+    const streamCamera: CctvLocation = {
+      ...camera,
+      id: 'dec221d0-87ae-4194-a3ab-bf60eb4d041f',
+      trafficCondition: null,
+      trafficConditionSource: 'live_demo_unanalyzed',
+    }
+    expect(toCctvFeatureCollection([streamCamera]).features[0]?.properties.condition).toBe('No Data')
+    expect(cctvPopupDetails(streamCamera)).toContainEqual({ label: 'Traffic condition', value: 'No Data' })
+    expect(cctvPopupDetails(streamCamera)).toContainEqual({ label: 'Condition source', value: 'Live stream demo — no traffic measurement' })
   })
 
   it('searches names, addresses, and agencies case-insensitively with partial matches', () => {
@@ -167,6 +181,21 @@ describe('CCTV map data and interactions', () => {
     expect(button?.textContent).toBe('Play demo video')
     cleanup()
     vi.restoreAllMocks()
+  })
+
+  it('mounts the fixed YouTube live embed only in the active popup and stops it on close', () => {
+    const stream = liveDemoStreamForCamera('a60eb814-12dc-42df-b1f8-14234631dbeb')!
+    const popup = createCctvPopupContent(camera)
+    const cleanup = mountPopupLiveDemoStream(popup, camera, stream)
+    const iframe = popup.querySelector<HTMLIFrameElement>('iframe')
+    expect(iframe?.src).toBe(stream.embedUrl)
+    expect(iframe?.allow).toContain('autoplay')
+    expect(iframe?.title).toContain('Yogyakarta')
+    expect(popup.textContent).toContain('LIVE STREAM DEMO')
+    expect(popup.textContent).toContain('not the mapped camera location')
+    cleanup()
+    expect(iframe?.getAttribute('src')).toBe('about:blank')
+    expect(popup.querySelector('iframe')).toBeNull()
   })
 
   it('focuses a selected camera using its coordinates and leaves room beside the open drawer', () => {

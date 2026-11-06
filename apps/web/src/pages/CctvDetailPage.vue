@@ -6,6 +6,7 @@ import { authSession } from '../auth/session'
 import { appConfig } from '../config/app'
 import { getCctvDetail, type CctvDetail } from '../data/cctvDetail'
 import { getCctvDemoAssociation } from '../data/cctvDemoVideo'
+import { liveDemoStreamForCamera, type LiveDemoStream } from '../data/liveDemoStreams'
 import { listTrafficObservations } from '../data/trafficObservations'
 import { privateImageUrl } from '../data/privateMedia'
 import { getCctvAnalysisConfig, type StoredRoiDensityConfig } from '../data/cctvAnalysisConfig'
@@ -26,6 +27,8 @@ const observationStatus = ref<'loading' | 'ready' | 'unavailable' | 'error'>('lo
 const imageUrl = ref<string | null>(null)
 const imageFailed = ref(false)
 const demoVideo = ref<TrafficDemoVideo | null>(null)
+const liveDemoStream = ref<LiveDemoStream | null>(null)
+const liveFrameFailed = ref(false)
 const demoAnalysisConfig = ref<StoredRoiDensityConfig | null>(null)
 const demoConfigStatus = ref<'unchecked' | 'loading' | 'ready' | 'error'>('unchecked')
 const backendAnalysis = ref<CurrentRoiAnalysis | null>(null)
@@ -173,6 +176,8 @@ watch([() => String(route.params.id ?? ''), () => authSession.state.status], ([i
   imageUrl.value = null
   imageFailed.value = false
   demoVideo.value = null
+  liveDemoStream.value = null
+  liveFrameFailed.value = false
   demoAnalysisConfig.value = null
   demoConfigStatus.value = 'unchecked'
   backendAnalysis.value = null
@@ -205,11 +210,14 @@ watch([() => String(route.params.id ?? ''), () => authSession.state.status], ([i
       }
       camera.value = result
       pageStatus.value = 'ready'
+      liveDemoStream.value = liveDemoStreamForCamera(id)
+      videoAssociationReady.value = liveDemoStream.value !== null || authStatus !== 'authenticated'
 
       if (authStatus === 'authenticated') {
-        void getCctvDemoAssociation(client, id).then(({ video }) => {
+        void getCctvDemoAssociation(client, id).then(({ video, liveStream }) => {
           if (revision === loadRevision) {
             demoVideo.value = video
+            liveDemoStream.value = liveStream ?? liveDemoStream.value
             videoAssociationReady.value = true
             videoLoading.value = video !== null
             if (video && appConfig.roiDensityEnabled) {
@@ -299,7 +307,21 @@ onBeforeUnmount(() => {
 
       <div class="cctv-detail-layout">
         <section class="cctv-detail-media" :aria-label="`${camera.name} camera media`">
-          <template v-if="demoVideo && !videoFailed">
+          <template v-if="liveDemoStream && !liveFrameFailed">
+            <div class="cctv-detail-live-stage">
+              <iframe
+                :src="liveDemoStream.embedUrl"
+                :title="`Live traffic demo from ${liveDemoStream.city}: ${liveDemoStream.title}`"
+                allow="autoplay; encrypted-media; picture-in-picture; fullscreen"
+                allowfullscreen
+                referrerpolicy="strict-origin-when-cross-origin"
+                @error="liveFrameFailed = true"
+              />
+            </div>
+            <p class="cctv-detail-demo-label">LIVE STREAM DEMO — {{ liveDemoStream.city }} · NOT THIS CAMERA’S MAPPED LOCATION</p>
+            <p class="cctv-detail-media-note">Source: <a :href="liveDemoStream.sourceUrl" target="_blank" rel="noreferrer">{{ liveDemoStream.title }} — official YouTube stream</a>. This public stream is not analyzed by the CCTV ROI pipeline.</p>
+          </template>
+          <template v-else-if="demoVideo && !videoFailed">
             <div ref="demoVideoStage" class="cctv-detail-video-stage" :style="{ aspectRatio: `${demoVideo.analysis.video_dimensions.width} / ${demoVideo.analysis.video_dimensions.height}` }">
               <div class="cctv-detail-video-content" :style="{ aspectRatio: `${demoVideo.analysis.video_dimensions.width} / ${demoVideo.analysis.video_dimensions.height}`, '--video-ratio': demoVideo.analysis.video_dimensions.width / demoVideo.analysis.video_dimensions.height }">
                 <video
@@ -333,6 +355,7 @@ onBeforeUnmount(() => {
           </template>
           <template v-else-if="videoAssociationReady && imageUrl && !imageFailed">
             <img :src="imageUrl" :alt="`${camera.name} CCTV`" @error="imageFailed = true">
+            <p v-if="liveFrameFailed" class="cctv-detail-media-note" role="status">The live YouTube embed is unavailable. <a v-if="liveDemoStream" :href="liveDemoStream.sourceUrl" target="_blank" rel="noreferrer">Open the source stream</a>. Showing the uploaded CCTV image.</p>
             <p v-if="videoFailed" class="cctv-detail-media-note" role="status">Demo video unavailable. Showing the uploaded CCTV image.</p>
           </template>
           <div v-else class="cctv-detail-fallback" role="status">
@@ -426,6 +449,8 @@ onBeforeUnmount(() => {
 .cctv-detail-media { position: relative; display: flex; flex-direction: column; justify-content: center; min-height: 550px; overflow: hidden; border-radius: 10px; background: var(--color-secondary); box-shadow: var(--shadow); }
 .cctv-detail-media > img { display: block; width: 100%; height: 550px; object-fit: cover; }
 .cctv-detail-video-stage { position: relative; display: grid; width: 100%; overflow: hidden; place-items: center; background: #101311; }
+.cctv-detail-live-stage { width: 100%; aspect-ratio: 16 / 9; background: #101311; }
+.cctv-detail-live-stage iframe { display: block; width: 100%; height: 100%; border: 0; }
 .cctv-detail-video-content { position: relative; width: 100%; overflow: hidden; }
 .cctv-detail-video-stage:fullscreen { width: 100vw; height: 100vh; aspect-ratio: auto !important; }
 .cctv-detail-video-stage:fullscreen .cctv-detail-video-content { width: min(100vw, calc(100vh * var(--video-ratio))); height: min(100vh, calc(100vw / var(--video-ratio))); }

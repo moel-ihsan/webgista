@@ -1245,6 +1245,7 @@ strong {
 
 .cctv-map-popup__media { position: relative; }
 .cctv-map-popup__video { display: block; width: 100%; max-height: 160px; object-fit: cover; background: #101311; }
+.cctv-map-popup__live-frame { display: block; width: 100%; aspect-ratio: 16 / 9; max-height: 160px; border: 0; background: #101311; }
 .cctv-map-popup__demo-label { margin: 4px 0; font-size: .68rem; }
 .cctv-map-popup__play { position: absolute; inset: 50% auto auto 50%; transform: translate(-50%, -50%); }
 

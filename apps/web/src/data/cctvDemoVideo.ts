@@ -1,11 +1,13 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 
 import { trafficDemoVideos, type TrafficDemoVideo } from './trafficDemo'
+import { liveDemoStreamForCamera, type LiveDemoStream } from './liveDemoStreams'
 
 export type TrafficDemoId = TrafficDemoVideo['id']
 
 export interface CctvDemoAssociation {
   video: TrafficDemoVideo | null
+  liveStream: LiveDemoStream | null
   editable: boolean
 }
 
@@ -25,11 +27,13 @@ async function knownDemoForCamera(client: SupabaseClient, cameraId: string): Pro
 }
 
 export async function getCctvDemoAssociation(client: SupabaseClient, cameraId: string): Promise<CctvDemoAssociation> {
+  const liveStream = liveDemoStreamForCamera(cameraId)
+  if (liveStream) return { video: null, liveStream, editable: false }
   const { data, error } = await client.from('cctv_private_config').select('cctv_id').eq('cctv_id', cameraId).maybeSingle()
   if (error) throw new Error('The authorized video association could not be loaded.')
-  if (!data) return { video: null, editable: true }
+  if (!data) return { video: null, liveStream: null, editable: true }
   const video = await knownDemoForCamera(client, cameraId)
-  return { video, editable: video !== null }
+  return { video, liveStream: null, editable: video !== null }
 }
 
 export async function saveCctvDemoVideo(

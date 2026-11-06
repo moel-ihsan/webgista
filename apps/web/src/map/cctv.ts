@@ -1,5 +1,6 @@
 import type { CctvLocation } from '../domain/cctv'
 import type { TrafficDemoVideo } from '../data/trafficDemo'
+import type { LiveDemoStream } from '../data/liveDemoStreams'
 
 export interface CctvFeatureProperties {
   cctvId: string
@@ -60,6 +61,7 @@ export function cctvPopupDetails(location: CctvLocation): readonly { label: stri
     label: 'Condition source',
     value: location.trafficConditionSource === 'manual' ? 'Manual observation'
       : location.trafficConditionSource === 'experimental_v1_estimate' ? 'Experimental V1-style estimate — demo video'
+          : location.trafficConditionSource === 'live_demo_unanalyzed' ? 'Live stream demo — no traffic measurement'
         : 'Traffic observation',
   })
   return details
@@ -198,6 +200,70 @@ export function mountPopupDemoVideo(content: HTMLElement, location: CctvLocation
     video.pause()
     video.removeAttribute('src')
     video.load()
+  }
+}
+
+export function mountPopupLiveDemoStream(content: HTMLElement, location: CctvLocation, stream: LiveDemoStream): () => void {
+  const media = content.querySelector('.cctv-map-popup__media')
+  if (!media) return () => undefined
+
+  setPopupVideoStatus(content, `Live demo stream: ${stream.title}`)
+  const label = document.createElement('p')
+  label.className = 'cctv-map-popup__demo-label'
+  label.textContent = `LIVE STREAM DEMO — ${stream.city} · not the mapped camera location.`
+  const source = document.createElement('a')
+  source.href = stream.sourceUrl
+  source.target = '_blank'
+  source.rel = 'noreferrer'
+  source.textContent = 'Open YouTube source'
+  label.append(document.createTextNode(' '), source)
+
+  const stop = document.createElement('button')
+  stop.type = 'button'
+  stop.className = 'cctv-map-popup__play'
+  stop.textContent = 'Play live demo stream'
+  const loadFrame = () => {
+    const frame = document.createElement('iframe')
+    frame.className = 'cctv-map-popup__live-frame'
+    frame.src = stream.embedUrl
+    frame.title = `Live traffic demo from ${stream.city}: ${stream.title}`
+    frame.allow = 'autoplay; encrypted-media; picture-in-picture; fullscreen'
+    frame.allowFullscreen = true
+    frame.referrerPolicy = 'strict-origin-when-cross-origin'
+    frame.loading = 'eager'
+    frame.addEventListener('error', () => {
+      frame.remove()
+      setPopupVideoStatus(content, 'Live demo stream unavailable')
+      if (location.snapshotUrl) {
+        const image = document.createElement('img')
+        image.className = 'cctv-map-popup__image'
+        image.src = location.snapshotUrl
+        image.alt = `${location.name} camera image`
+        media.replaceChildren(image, label)
+      } else {
+        const message = document.createElement('p')
+        message.className = 'cctv-map-popup__media-note'
+        message.textContent = 'Live demo stream unavailable. Camera image unavailable.'
+        media.replaceChildren(message, label)
+      }
+    }, { once: true })
+    media.replaceChildren(frame, label)
+  }
+
+  const saveData = (navigator as Navigator & { connection?: { saveData?: boolean } }).connection?.saveData
+  const reducedMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false
+  if (saveData || reducedMotion) {
+    media.replaceChildren(label, stop)
+    stop.addEventListener('click', loadFrame, { once: true })
+  } else loadFrame()
+
+  return () => {
+    const frame = media.querySelector('iframe')
+    if (frame) {
+      frame.src = 'about:blank'
+      frame.remove()
+    }
+    stop.removeEventListener('click', loadFrame)
   }
 }
 
