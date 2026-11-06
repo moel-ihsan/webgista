@@ -42,7 +42,7 @@ export type TrafficCalculation =
       config: TrafficCapacityConfig
     }
 
-const MINIMUM_OBSERVATION_SECONDS = 30
+const MINIMUM_OBSERVATION_SECONDS = 10
 
 export function classifyVolumeCapacityRatio(value: number): TrafficCondition | null {
   if (!Number.isFinite(value) || value < 0) return null
@@ -62,7 +62,7 @@ export function calculateTrafficCondition(
   if (measurement.provenance !== 'operational_cctv') return { available: false, reason: 'Demo-video analysis is not an operational CCTV measurement.' }
   if (measurement.countingMethod !== 'tracked_line_crossings') return { available: false, reason: 'Only line-crossing counts measure flow; frame detections do not.' }
   if (!measurement.trackingValidated || !measurement.validationReference?.trim()) return { available: false, reason: 'Vehicle tracking has not been validated against a referenced count.' }
-  if (!Number.isFinite(durationSeconds) || durationSeconds < MINIMUM_OBSERVATION_SECONDS) return { available: false, reason: 'A valid observation must cover at least 30 seconds.' }
+  if (!Number.isFinite(durationSeconds) || durationSeconds < MINIMUM_OBSERVATION_SECONDS) return { available: false, reason: 'A valid flow observation must cover at least 10 seconds.' }
   if (Object.values(counts).some((count) => !Number.isSafeInteger(count) || count < 0)) return { available: false, reason: 'Vehicle counts must be non-negative whole numbers.' }
   if (counts.bicycle > 0 && config.pce.bicycle === null) return { available: false, reason: 'No bicycle passenger-car equivalence is configured for this road.' }
 

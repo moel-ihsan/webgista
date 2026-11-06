@@ -309,7 +309,8 @@ onBeforeUnmount(() => {
               <span v-if="demoDensityFrame">Bundled demo ROI presence at current sampled frame: {{ demoDensityFrame.vehicle_presence_total }} detections · image coverage {{ ((demoDensityFrame.roi_image_coverage ?? 0) * 100).toFixed(1) }}%.</span>
               <template v-if="demoDensityWindow">
                 <span>10-second ROI window {{ demoDensityWindow.window_started_at_seconds }}–{{ demoDensityWindow.window_ended_at_seconds }}s ({{ demoDensityWindow.status }}): average presence {{ demoDensityWindow.average_vehicles_present?.toFixed(2) ?? 'unavailable' }}, peak {{ demoDensityWindow.peak_vehicles_present ?? 'unavailable' }}.</span>
-                <span>Busy {{ demoDensityWindow.busy_duration_seconds.toFixed(1) }}s; valid coverage {{ (demoDensityWindow.data_quality.valid_observation_coverage * 100).toFixed(1) }}%; estimate state {{ demoDensityWindow.classification_status.replaceAll('_', ' ') }}{{ demoDensityWindow.condition ? ` (${demoDensityWindow.condition})` : '' }}.</span>
+                <span>Busy {{ demoDensityWindow.busy_duration_seconds.toFixed(1) }}s; valid coverage {{ (demoDensityWindow.data_quality.valid_observation_coverage * 100).toFixed(1) }}%.</span>
+                <span>MKJI V/C: {{ demoDensityWindow.condition ? demoDensityWindow.condition : `No Data — ${demoDensityWindow.condition_reason}` }}</span>
                 <span>Average presence by class — LV {{ demoDensityWindow.traffic_category_statistics.LV.average?.toFixed(2) ?? '—' }}, HV {{ demoDensityWindow.traffic_category_statistics.HV.average?.toFixed(2) ?? '—' }}, MC {{ demoDensityWindow.traffic_category_statistics.MC.average?.toFixed(2) ?? '—' }}, bicycle {{ demoDensityWindow.traffic_category_statistics.bicycle.average?.toFixed(2) ?? '—' }}.</span>
               </template>
               <span v-if="!demoAnalysisConfig && appConfig.roiDensityEnabled">No camera-specific ROI is saved; values use the demo's bundled ROI only.</span>

@@ -43,10 +43,9 @@
     "minimum_detection_confidence": 0.35,
     "included_classes": [
       "car",
-      "bus",
-      "truck",
       "motorcycle",
-      "bicycle"
+      "bus",
+      "truck"
     ],
     "busy_threshold_vehicles": 0,
     "minimum_valid_coverage": 0.8,
@@ -65,7 +64,8 @@
   "minimum_detection_confidence": 0.35,
   "calibration_status": "uncalibrated",
   "density_thresholds": null,
-  "threshold_metric": "time-weighted average concurrent detections in ROI (vehicles present)",
+  "traffic_condition_method": "mkji_vc",
+  "threshold_metric": "ROI vehicle presence is descriptive only and is not used to classify traffic condition",
   "sampled_frame_metrics": [
     {
       "timestamp_seconds": 0.0,
@@ -1407,7 +1407,8 @@
       "window_duration_seconds": 10.0,
       "status": "complete",
       "condition": null,
-      "classification_status": "uncalibrated",
+      "classification_status": "no_data",
+      "condition_reason": "No validated vehicle-flow measurement and camera-specific road capacity are available for MKJI V/C.",
       "average_vehicles_present": 2.6875,
       "peak_vehicles_present": 5,
       "class_statistics": {
@@ -1469,7 +1470,8 @@
       "window_duration_seconds": 10.0,
       "status": "complete",
       "condition": null,
-      "classification_status": "uncalibrated",
+      "classification_status": "no_data",
+      "condition_reason": "No validated vehicle-flow measurement and camera-specific road capacity are available for MKJI V/C.",
       "average_vehicles_present": 3.6257,
       "peak_vehicles_present": 6,
       "class_statistics": {
@@ -1532,6 +1534,7 @@
       "status": "partial",
       "condition": null,
       "classification_status": "insufficient_duration",
+      "condition_reason": "The interval is shorter than the required 10 seconds.",
       "average_vehicles_present": 3.3469,
       "peak_vehicles_present": 5,
       "class_statistics": {

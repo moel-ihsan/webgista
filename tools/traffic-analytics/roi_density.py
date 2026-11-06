@@ -4,7 +4,23 @@ from math import isfinite
 import numpy as np
 
 CLASSES = ('car', 'bus', 'truck', 'motorcycle', 'bicycle')
-LABELS = ('great', 'good', 'average', 'poor', 'bad', 'terrible')
+PROCESSING_DEFAULTS = {
+    'observation_window_seconds': 10,
+    'refresh_seconds': 10,
+    'sampled_fps': 5,
+    'minimum_detection_confidence': 0.35,
+    'included_classes': ['car', 'motorcycle', 'bus', 'truck'],
+    'busy_threshold_vehicles': 0,
+    'minimum_valid_coverage': 0.8,
+    'density_thresholds': None,
+    'calibration_status': 'uncalibrated',
+    'calibration_note': '',
+}
+
+
+def apply_processing_defaults(config):
+    """Keep editable storage limited to ROI geometry; processing policy is backend-owned."""
+    return {**config, **PROCESSING_DEFAULTS}
 
 
 def rectangle_points(rectangle):
@@ -135,17 +151,6 @@ def bottom_center_in_roi(detection, polygon):
     return point_in_polygon(((x1 + x2) / 2, y2), polygon)
 
 
-def classify_density(value, thresholds):
-    if not isinstance(value, (int, float)) or not isfinite(value) or value < 0:
-        return None
-    if thresholds is None or len(thresholds) != 5:
-        return None
-    for index, threshold in enumerate(thresholds):
-        if value < threshold:
-            return LABELS[index]
-    return LABELS[-1]
-
-
 def roi_image_coverage(width, height, polygon, detections, included_classes, confidence_threshold):
     """Raster estimate of bbox-union pixels clipped to the ROI, not road occupancy."""
     scale = min(1.0, 320 / width, 180 / height)
@@ -257,10 +262,11 @@ def aggregate_windows(samples, duration_seconds, config, source):
         windows.append({
             'window_started_at_seconds': round(start, 3), 'window_ended_at_seconds': round(end, 3),
             'window_duration_seconds': round(end - start, 3), 'status': 'complete' if complete else 'partial',
-            'condition': classify_density(average_total, config['density_thresholds']) if valid and config['calibration_status'] != 'uncalibrated' else None,
-            'classification_status': 'experimental_estimate' if valid and config['calibration_status'] == 'experimental' and config['density_thresholds'] else
-                'calibrated_estimate' if valid and config['calibration_status'] == 'calibrated' and config['density_thresholds'] else
-                'uncalibrated' if valid else 'insufficient_duration' if not complete else 'insufficient_coverage',
+            'condition': None,
+            'classification_status': 'no_data' if valid else 'insufficient_duration' if not complete else 'insufficient_coverage',
+            'condition_reason': 'No validated vehicle-flow measurement and camera-specific road capacity are available for MKJI V/C.' if valid else
+                'The interval is shorter than the required 10 seconds.' if not complete else
+                'Valid sampled-frame coverage is below the required minimum.',
             'average_vehicles_present': round(average_total, 4) if average_total is not None else None,
             'peak_vehicles_present': peak_total if valid_samples else None,
             'class_statistics': {vehicle_class: {'average': round(average[vehicle_class], 4) if average[vehicle_class] is not None else None, 'peak': peak[vehicle_class]} for vehicle_class in CLASSES},
@@ -293,7 +299,8 @@ def aggregate_windows(samples, duration_seconds, config, source):
         'refresh_seconds': config['refresh_seconds'], 'sampled_fps': config['sampled_fps'],
         'minimum_detection_confidence': config['minimum_detection_confidence'],
         'calibration_status': config['calibration_status'], 'density_thresholds': config['density_thresholds'],
-        'threshold_metric': 'time-weighted average concurrent detections in ROI (vehicles present)',
+        'traffic_condition_method': 'mkji_vc',
+        'threshold_metric': 'ROI vehicle presence is descriptive only and is not used to classify traffic condition',
         'sampled_frame_metrics': [
             {
                 'timestamp_seconds': round(sample['timestamp_seconds'], 3),

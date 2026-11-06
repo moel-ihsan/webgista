@@ -4622,7 +4622,7 @@
   },
   "vehicle_count_semantics": "Detection instances repeat across frames. Track IDs and line-crossing events are experimental and unvalidated; only manually ground-truth-matched events may be described as validated counts.",
   "condition": null,
-  "condition_note": "No valid estimate: the demo clip is under 30 seconds and lacks ground-truth-validated counts and road-capacity configuration.",
+  "condition_note": "No operational estimate: demo footage is not a live CCTV source, crossing counts are not ground-truth validated, and road-specific capacity is not configured.",
   "frames": [
     {
       "frame_index": 0,

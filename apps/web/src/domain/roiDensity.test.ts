@@ -1,12 +1,12 @@
 import { describe, expect, it } from 'vitest'
 
-import { rectangleToPolygon, validateRoiDensityConfig, validateRoiPolygon, type RoiDensityConfig } from './roiDensity'
+import { rectangleToPolygon, ROI_PROCESSING_DEFAULTS, validateRoiDensityConfig, validateRoiPolygon, type RoiDensityConfig } from './roiDensity'
 
 function config(overrides: Partial<RoiDensityConfig> = {}): RoiDensityConfig {
   return {
     schema_version: 'webgista.roi-density-config.v1', source_video_identifier: 'video-01', roi_type: 'rectangle', roi_geometry: [0.2, 0.2, 0.6, 0.5],
     video_dimensions: { width: 1280, height: 720 }, observation_window_seconds: 10, refresh_seconds: 10,
-    sampled_fps: 5, minimum_detection_confidence: 0.35, included_classes: ['car', 'bus', 'truck', 'motorcycle', 'bicycle'],
+    sampled_fps: 5, minimum_detection_confidence: 0.35, included_classes: ['car', 'bus', 'truck', 'motorcycle'],
     busy_threshold_vehicles: 4, minimum_valid_coverage: 0.8, density_thresholds: null,
     calibration_status: 'uncalibrated', calibration_note: '', ...overrides,
   }
@@ -35,10 +35,17 @@ describe('ROI density configuration', () => {
   })
 
   it('keeps the ten-second monitoring defaults and rejects invalid refresh values', () => {
+    expect(ROI_PROCESSING_DEFAULTS).toMatchObject({ observation_window_seconds: 10, refresh_seconds: 10, sampled_fps: 5 })
     expect(validateRoiDensityConfig(config())).toBeNull()
     expect(validateRoiDensityConfig(config({ source_video_identifier: '' }))).toMatch(/source video identifier/)
     expect(validateRoiDensityConfig(config({ observation_window_seconds: 0 }))).toMatch(/Window or sampling/)
     expect(validateRoiDensityConfig(config({ refresh_seconds: 10.5 }))).toMatch(/Window or sampling/)
     expect(validateRoiDensityConfig(config({ observation_window_seconds: 10, refresh_seconds: 11 }))).toMatch(/cannot exceed/)
+  })
+
+  it('limits backend-supported vehicle classes and keeps density thresholds uncalibrated', () => {
+    expect(validateRoiDensityConfig(config({ included_classes: ['car', 'motorcycle', 'bus', 'truck'] }))).toBeNull()
+    expect(validateRoiDensityConfig(config({ included_classes: ['bicycle'] }))).toMatch(/supported vehicle classes/)
+    expect(ROI_PROCESSING_DEFAULTS).toMatchObject({ density_thresholds: null, calibration_status: 'uncalibrated' })
   })
 })

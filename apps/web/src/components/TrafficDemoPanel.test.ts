@@ -29,7 +29,8 @@ describe('TrafficDemoPanel', () => {
     expect(host.textContent).toContain('DEMO · NOT LIVE CCTV')
     expect(host.textContent).toContain('10-second ROI Density')
     expect(host.textContent).toContain('Window 1 · 0–10.0 s · complete')
-    expect(host.textContent).toContain('classification uncalibrated')
+    expect(host.textContent).toContain('MKJI V/C: No Data')
+    expect(host.textContent).toContain('vehicle-flow measurement')
 
     select.value = 'traffic-sample-02'
     select.dispatchEvent(new Event('change'))

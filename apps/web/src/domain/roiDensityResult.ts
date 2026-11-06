@@ -2,9 +2,7 @@ import type { RoiDensityConfig } from './roiDensity'
 
 export type RoiDensityResultStatus = 'complete' | 'partial'
 export type RoiDensityClassificationStatus =
-  | 'calibrated_estimate'
-  | 'experimental_estimate'
-  | 'uncalibrated'
+  | 'no_data'
   | 'insufficient_duration'
   | 'insufficient_coverage'
 
@@ -15,6 +13,7 @@ export interface RoiDensityWindow {
   status: RoiDensityResultStatus
   condition: 'great' | 'good' | 'average' | 'poor' | 'bad' | 'terrible' | null
   classification_status: RoiDensityClassificationStatus
+  condition_reason: string
   average_vehicles_present: number | null
   peak_vehicles_present: number | null
   class_statistics: Record<'car' | 'bus' | 'truck' | 'motorcycle' | 'bicycle', { average: number | null; peak: number }>
@@ -36,6 +35,7 @@ export interface RoiDensityWindow {
 export interface RoiDensityResult {
   schema_version: 'webgista.roi-density-result.v1'
   analysis_method: 'roi_density_v1'
+  traffic_condition_method: 'mkji_vc'
   provenance: {
     camera_id?: string
     source_video_identifier: string

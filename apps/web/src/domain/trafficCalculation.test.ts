@@ -13,7 +13,7 @@ const config: TrafficCapacityConfig = {
 const measurement = (overrides: Partial<TrafficFlowMeasurement> = {}): TrafficFlowMeasurement => ({
   provenance: 'operational_cctv',
   counts: { lightVehicle: 0, heavyVehicle: 0, motorcycle: 0, bicycle: 0 },
-  durationSeconds: 30,
+  durationSeconds: 10,
   countingMethod: 'tracked_line_crossings',
   trackingValidated: true,
   validationReference: 'count-sheet-v1',
@@ -31,6 +31,13 @@ describe('traffic volume/capacity method', () => {
   it('treats a valid zero count as Great and applies flow and capacity units', () => {
     const result = calculateTrafficCondition(measurement(), config)
     expect(result).toMatchObject({ available: true, condition: 'great', weightedVehicleUnits: 0, volumeSmpPerHour: 0, capacitySmpPerHour: 1485 })
+  })
+
+  it('calculates flow from validated crossings in one ten-second observation window', () => {
+    const result = calculateTrafficCondition(measurement({
+      counts: { lightVehicle: 1, heavyVehicle: 0, motorcycle: 0, bicycle: 0 },
+    }), config)
+    expect(result).toMatchObject({ available: true, volumeSmpPerHour: 360, capacitySmpPerHour: 1485 })
   })
 
   it('normalizes only validated crossings and preserves count provenance', () => {
@@ -51,7 +58,7 @@ describe('traffic volume/capacity method', () => {
   it.each([
     [measurement({ countingMethod: 'frame_detections' }), config, 'Only line-crossing counts measure flow'],
     [measurement({ trackingValidated: false }), config, 'not been validated'],
-    [measurement({ durationSeconds: 23 }), config, 'at least 30 seconds'],
+    [measurement({ durationSeconds: 9.9 }), config, 'at least 10 seconds'],
     [measurement({ counts: { lightVehicle: -1, heavyVehicle: 0, motorcycle: 0, bicycle: 0 } }), config, 'non-negative'],
     [measurement({ counts: { lightVehicle: 0, heavyVehicle: 0, motorcycle: 0, bicycle: 1 } }), config, 'bicycle'],
     [measurement(), { ...config, baseCapacitySmpPerHour: 0 }, 'configuration'],

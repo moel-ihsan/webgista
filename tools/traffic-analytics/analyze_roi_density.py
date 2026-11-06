@@ -2,12 +2,56 @@
 """Aggregate previously sampled YOLOX detections into 10-second ROI presence windows."""
 import argparse
 import json
+import os
+from urllib.error import HTTPError, URLError
 from pathlib import Path
+from urllib.parse import urlencode
+from urllib.request import Request, urlopen
+from uuid import UUID
 
-from roi_density import aggregate_windows, bottom_center_in_roi, roi_image_coverage, validate_config
+from roi_density import apply_processing_defaults, aggregate_windows, bottom_center_in_roi, roi_image_coverage, validate_config
+
+
+def load_authorized_config(camera_id, environment=None):
+    """Read one ROI using a user's JWT so Postgres RLS remains the authority."""
+    camera_id = str(UUID(camera_id))
+    env = environment or os.environ
+    project_url = env.get('WEBGISTA_SUPABASE_URL', '').rstrip('/')
+    anon_key = env.get('WEBGISTA_SUPABASE_ANON_KEY', '')
+    user_token = env.get('WEBGISTA_USER_ACCESS_TOKEN', '')
+    if not project_url or not anon_key or not user_token:
+        raise ValueError('Set WEBGISTA_SUPABASE_URL, WEBGISTA_SUPABASE_ANON_KEY, and an authorized WEBGISTA_USER_ACCESS_TOKEN.')
+    query = urlencode({
+        'select': 'configuration,configuration_version',
+        'cctv_id': 'eq.' + camera_id,
+    })
+    request = Request(
+        project_url + '/rest/v1/cctv_analysis_config?' + query,
+        headers={
+            'apikey': anon_key,
+            'Authorization': 'Bearer ' + user_token,
+            'Accept': 'application/json',
+        },
+    )
+    try:
+        with urlopen(request, timeout=15) as response:
+            rows = json.loads(response.read())
+    except HTTPError as error:
+        raise ValueError('Supabase denied or could not complete the authorized ROI read (HTTP {}).'.format(error.code)) from None
+    except URLError:
+        raise ValueError('Supabase ROI configuration could not be reached.') from None
+    if not isinstance(rows, list) or len(rows) != 1 or not isinstance(rows[0], dict):
+        raise ValueError('No single ROI configuration is available to this user for that CCTV.')
+    row = rows[0]
+    config = row.get('configuration')
+    version = row.get('configuration_version')
+    if not isinstance(config, dict) or not isinstance(version, int) or version < 1:
+        raise ValueError('The authorized ROI configuration is malformed.')
+    return {**config, 'camera_id': camera_id, 'configuration_version': version}
 
 
 def analyze_detection_document(document, config):
+    config = apply_processing_defaults(config)
     polygon = validate_config(config)
     dimensions = config['video_dimensions']
     if config['source_video_identifier'] != document.get('source_video_identifier'):
@@ -72,12 +116,16 @@ def analyze_detection_document(document, config):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--analysis-json', type=Path, required=True, help='Existing YOLOX sampled-frame analysis JSON')
-    parser.add_argument('--config', type=Path, required=True, help='Authorized ROI density configuration JSON')
+    source = parser.add_mutually_exclusive_group(required=True)
+    source.add_argument('--config', type=Path, help='ROI configuration JSON for offline/demo processing')
+    source.add_argument('--camera-id', help='Read this camera ROI through Supabase PostgREST using an authorized user JWT')
     parser.add_argument('--output', type=Path, required=True)
     args = parser.parse_args()
     try:
         document = json.loads(args.analysis_json.read_text())
-        config = json.loads(args.config.read_text())
+        config = json.loads(args.config.read_text()) if args.config else None
+        if args.camera_id:
+            config = load_authorized_config(args.camera_id)
         result = analyze_detection_document(document, config)
     except (OSError, json.JSONDecodeError, KeyError, TypeError, ValueError) as error:
         parser.error(str(error))

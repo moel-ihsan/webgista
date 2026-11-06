@@ -1,9 +1,11 @@
 import json
 from pathlib import Path
 import unittest
+from urllib.error import HTTPError
+from unittest.mock import patch
 
-from analyze_roi_density import analyze_detection_document
-from roi_density import aggregate_windows, classify_density, point_in_polygon, roi_image_coverage, validate_config
+from analyze_roi_density import analyze_detection_document, load_authorized_config
+from roi_density import PROCESSING_DEFAULTS, aggregate_windows, point_in_polygon, roi_image_coverage, validate_config
 
 
 def config(**changes):
@@ -12,7 +14,7 @@ def config(**changes):
         'roi_geometry': [0.25, 0.25, 0.5, 0.5], 'video_dimensions': {'width': 100, 'height': 100},
         'observation_window_seconds': 10, 'refresh_seconds': 10, 'sampled_fps': 5,
         'minimum_detection_confidence': 0.35,
-        'included_classes': ['car', 'bus', 'truck', 'motorcycle', 'bicycle'],
+        'included_classes': ['car', 'bus', 'truck', 'motorcycle'],
         'busy_threshold_vehicles': 3, 'minimum_valid_coverage': 0.8,
         'density_thresholds': None, 'calibration_status': 'uncalibrated',
         'calibration_note': '', 'configuration_version': 1,
@@ -30,6 +32,43 @@ def sample(time, count=0):
 
 
 class RoiDensityTest(unittest.TestCase):
+    def test_supabase_config_read_uses_user_jwt_and_returns_saved_version(self):
+        class Response:
+            def __enter__(self):
+                return self
+
+            def __exit__(self, *_args):
+                return False
+
+            def read(self):
+                return json.dumps([{'configuration': config(), 'configuration_version': 7}]).encode()
+
+        with patch('analyze_roi_density.urlopen', return_value=Response()) as open_url:
+            stored = load_authorized_config('a60eb814-12dc-42df-b1f8-14234631dbeb', {
+                'WEBGISTA_SUPABASE_URL': 'https://dev.example.supabase.co/',
+                'WEBGISTA_SUPABASE_ANON_KEY': 'publishable-key',
+                'WEBGISTA_USER_ACCESS_TOKEN': 'user-jwt',
+            })
+        request = open_url.call_args.args[0]
+        self.assertEqual(request.headers['Authorization'], 'Bearer user-jwt')
+        self.assertIn('cctv_id=eq.a60eb814-12dc-42df-b1f8-14234631dbeb', request.full_url)
+        self.assertEqual(stored['configuration_version'], 7)
+        self.assertEqual(stored['camera_id'], 'a60eb814-12dc-42df-b1f8-14234631dbeb')
+
+    def test_supabase_config_read_requires_an_authorized_user_token_without_logging_it(self):
+        with self.assertRaisesRegex(ValueError, 'authorized WEBGISTA_USER_ACCESS_TOKEN'):
+            load_authorized_config('a60eb814-12dc-42df-b1f8-14234631dbeb', {})
+
+    def test_supabase_authorization_failure_does_not_echo_credentials(self):
+        with patch('analyze_roi_density.urlopen', side_effect=HTTPError('https://example.test', 401, 'unauthorized', {}, None)):
+            with self.assertRaisesRegex(ValueError, 'HTTP 401') as error:
+                load_authorized_config('a60eb814-12dc-42df-b1f8-14234631dbeb', {
+                    'WEBGISTA_SUPABASE_URL': 'https://dev.example.supabase.co',
+                    'WEBGISTA_SUPABASE_ANON_KEY': 'publishable-key',
+                    'WEBGISTA_USER_ACCESS_TOKEN': 'private-user-jwt',
+                })
+        self.assertNotIn('private-user-jwt', str(error.exception))
+
     def test_committed_demo_density_outputs_reproduce_from_sources_and_configs(self):
         root = Path(__file__).resolve().parents[2]
         for sample_id in ('traffic_sample_01', 'traffic_sample_02'):
@@ -50,12 +89,6 @@ class RoiDensityTest(unittest.TestCase):
                 validate_config({**polygon_config, 'roi_geometry': points})
         with self.assertRaises(ValueError):
             validate_config(config(roi_geometry=[0.8, 0.8, 0.4, 0.4]))
-
-    def test_classification_has_six_ordered_camera_specific_bins(self):
-        thresholds = [0.6, 0.7, 0.8, 0.9, 1.0]
-        self.assertEqual([classify_density(value, thresholds) for value in [0, .6, .7, .8, .9, 1]],
-                         ['great', 'good', 'average', 'poor', 'bad', 'terrible'])
-        self.assertIsNone(classify_density(1, None))
 
     def test_detection_presence_filters_class_confidence_and_bottom_center(self):
         detections = [
@@ -130,13 +163,14 @@ class RoiDensityTest(unittest.TestCase):
         coverage = roi_image_coverage(100, 100, [[0, 0], [1, 0], [1, 1], [0, 1]], [box, box], ['car'], .35)
         self.assertAlmostEqual(coverage, .25, delta=.01)
 
-    def test_zero_traffic_is_valid_when_the_entire_window_is_observed(self):
+    def test_zero_presence_is_valid_but_does_not_fabricate_mkji_condition(self):
         thresholds = [1, 2, 3, 4, 5]
         rows = [sample(index / 5) for index in range(50)]
         result = aggregate_windows(rows, 10, config(density_thresholds=thresholds, calibration_status='experimental'), {})['windows'][0]
         self.assertEqual(result['average_vehicles_present'], 0)
-        self.assertEqual(result['condition'], 'great')
-        self.assertEqual(result['classification_status'], 'experimental_estimate')
+        self.assertIsNone(result['condition'])
+        self.assertEqual(result['classification_status'], 'no_data')
+        self.assertIn('vehicle-flow', result['condition_reason'])
 
     def test_configuration_rejects_bad_thresholds_and_false_calibrated_state(self):
         with self.assertRaises(ValueError):
@@ -144,7 +178,7 @@ class RoiDensityTest(unittest.TestCase):
         with self.assertRaises(ValueError):
             validate_config(config(density_thresholds=[1, 2, 3, 4, 5], calibration_status='calibrated', calibration_note='too short'))
 
-    def test_derived_analysis_keeps_demo_provenance_and_model(self):
+    def test_derived_analysis_keeps_demo_provenance_and_never_classifies_presence_as_mkji(self):
         document = {
             'record_kind': 'demo_video_analysis', 'is_live_cctv': False,
             'source_video_identifier': 'demo01', 'source_video_sha256': 'sha',
@@ -152,10 +186,25 @@ class RoiDensityTest(unittest.TestCase):
             'model': {'name': 'YOLOX-S'}, 'schema_version': 'webgista.traffic-analysis.v2',
             'frames': [{'offset_seconds': index / 5, 'detections': [{'class': 'car', 'confidence': .9, 'bbox_xyxy': [40, 20, 60, 49]}]} for index in range(50)],
         }
-        result = analyze_detection_document(document, config(density_thresholds=[.5, 1.5, 2, 3, 4], calibration_status='experimental'))
+        result = analyze_detection_document(document, config(
+            observation_window_seconds=60, refresh_seconds=30, sampled_fps=2,
+            included_classes=['bicycle'], density_thresholds=[.5, 1.5, 2, 3, 4], calibration_status='experimental',
+        ))
         self.assertFalse(result['provenance']['is_live_cctv'])
         self.assertEqual(result['provenance']['model']['name'], 'YOLOX-S')
-        self.assertEqual(result['windows'][0]['condition'], 'good')
+        self.assertEqual(result['observation_window_seconds'], 10)
+        self.assertEqual(result['refresh_seconds'], 10)
+        self.assertEqual(result['sampled_fps'], 5)
+        self.assertEqual(result['configuration_snapshot']['included_classes'], ['car', 'motorcycle', 'bus', 'truck'])
+        self.assertEqual(result['windows'][0]['status'], 'complete')
+        self.assertIsNone(result['windows'][0]['condition'])
+        self.assertEqual(result['windows'][0]['classification_status'], 'no_data')
+
+    def test_processing_defaults_are_backend_owned(self):
+        self.assertEqual(PROCESSING_DEFAULTS['observation_window_seconds'], 10)
+        self.assertEqual(PROCESSING_DEFAULTS['refresh_seconds'], 10)
+        self.assertEqual(PROCESSING_DEFAULTS['sampled_fps'], 5)
+        self.assertEqual(PROCESSING_DEFAULTS['included_classes'], ['car', 'motorcycle', 'bus', 'truck'])
 
     def test_camera_export_binds_source_and_preserves_saved_configuration_version(self):
         document = {

@@ -8,7 +8,7 @@
   "refresh_seconds": 10,
   "sampled_fps": 5,
   "minimum_detection_confidence": 0.35,
-  "included_classes": ["car", "bus", "truck", "motorcycle", "bicycle"],
+  "included_classes": ["car", "motorcycle", "bus", "truck"],
   "busy_threshold_vehicles": 0,
   "minimum_valid_coverage": 0.8,
   "density_thresholds": null,

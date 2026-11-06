@@ -84,7 +84,7 @@ function crossingDescription(event: NonNullable<DemoAnalysis['crossing_events']>
       <h3>10-second ROI Density · EXPERIMENTAL — DEMO VIDEO</h3>
       <p>Time-weighted concurrent vehicle detections inside the outlined image area. This is visual presence, not unique vehicles, traffic flow, V/C, or live CCTV. YOLOX detections were reused from the offline sampled analysis; no inference runs in the browser.</p>
       <p v-if="densityFrame">At {{ densityFrame.timestamp_seconds.toFixed(1) }} s: {{ densityFrame.vehicle_presence_total }} supported vehicle detections in ROI · image coverage {{ ((densityFrame.roi_image_coverage ?? 0) * 100).toFixed(1) }}%.</p>
-      <p v-if="densityWindow">Current interval {{ densityWindow.window_started_at_seconds.toFixed(0) }}–{{ densityWindow.window_ended_at_seconds.toFixed(1) }} s · {{ densityWindow.status }} · classification {{ densityWindow.classification_status.replaceAll('_', ' ') }}{{ densityWindow.condition ? `: ${densityWindow.condition}` : '' }}.</p>
+      <p v-if="densityWindow">Current interval {{ densityWindow.window_started_at_seconds.toFixed(0) }}–{{ densityWindow.window_ended_at_seconds.toFixed(1) }} s · {{ densityWindow.status }} · MKJI V/C: {{ densityWindow.condition ? densityWindow.condition : `No Data — ${densityWindow.condition_reason}` }}.</p>
       <div class="traffic-demo__density-windows">
         <article v-for="(window, index) in density.windows" :key="window.window_started_at_seconds" class="traffic-demo__density-window">
           <strong>Window {{ index + 1 }} · {{ window.window_started_at_seconds.toFixed(0) }}–{{ window.window_ended_at_seconds.toFixed(1) }} s · {{ window.status }}</strong>
@@ -93,7 +93,7 @@ function crossingDescription(event: NonNullable<DemoAnalysis['crossing_events']>
           <span>Valid samples: {{ window.data_quality.valid_samples }}/{{ window.data_quality.expected_samples }} · observed {{ window.data_quality.effective_observation_seconds.toFixed(1) }}s</span>
           <span>Average presence — LV {{ window.traffic_category_statistics.LV.average?.toFixed(2) ?? '—' }}, HV {{ window.traffic_category_statistics.HV.average?.toFixed(2) ?? '—' }}, MC {{ window.traffic_category_statistics.MC.average?.toFixed(2) ?? '—' }}, bicycle {{ window.traffic_category_statistics.bicycle.average?.toFixed(2) ?? '—' }}.</span>
           <span>Category peaks — LV {{ window.traffic_category_statistics.LV.peak }}, HV {{ window.traffic_category_statistics.HV.peak }}, MC {{ window.traffic_category_statistics.MC.peak }}, bicycle {{ window.traffic_category_statistics.bicycle.peak }}.</span>
-          <span>Condition: {{ window.condition ? window.condition : window.classification_status.replaceAll('_', ' ') }}</span>
+          <span>MKJI V/C: {{ window.condition ? window.condition : `No Data — ${window.condition_reason}` }}</span>
         </article>
       </div>
       <p>Configured at {{ density.sampled_fps }} FPS · target {{ density.observation_window_seconds }}s windows / {{ density.refresh_seconds }}s refresh · model {{ density.provenance.model?.name ?? 'unknown' }}. Threshold calibration: {{ density.calibration_status }}. Partial footage is not treated as a complete interval.</p>

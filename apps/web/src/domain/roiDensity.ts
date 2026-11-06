@@ -1,9 +1,19 @@
 export type RoiPoint = [number, number]
 export type RoiType = 'rectangle' | 'polygon'
-export type RoiDensityClass = 'great' | 'good' | 'average' | 'poor' | 'bad' | 'terrible'
 export type RoiCalibrationStatus = 'uncalibrated' | 'experimental' | 'calibrated'
-export const ROI_DENSITY_CLASSES: readonly RoiDensityClass[] = ['great', 'good', 'average', 'poor', 'bad', 'terrible']
-export const ROI_VEHICLE_CLASSES = ['car', 'bus', 'truck', 'motorcycle', 'bicycle'] as const
+export const ROI_VEHICLE_CLASSES = ['car', 'motorcycle', 'bus', 'truck'] as const
+export const ROI_PROCESSING_DEFAULTS = {
+  observation_window_seconds: 10,
+  refresh_seconds: 10,
+  sampled_fps: 5,
+  minimum_detection_confidence: 0.35,
+  included_classes: ROI_VEHICLE_CLASSES,
+  busy_threshold_vehicles: 0,
+  minimum_valid_coverage: 0.8,
+  density_thresholds: null,
+  calibration_status: 'uncalibrated',
+  calibration_note: '',
+} as const
 
 export interface RoiDensityConfig {
   schema_version: 'webgista.roi-density-config.v1'
