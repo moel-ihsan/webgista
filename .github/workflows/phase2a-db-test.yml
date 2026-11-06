@@ -39,6 +39,9 @@ jobs:
       - name: Test cached ROI reaggregation
         run: node --test supabase/functions/_shared/roi_reaggregate.test.mjs
 
+      - name: Test ROI analysis job claiming and stale recovery
+        run: node --test supabase/functions/_shared/roi_job_claim.test.mjs
+
       - name: Install Supabase CLI
         uses: supabase/setup-cli@v3
         with:

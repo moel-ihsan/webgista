@@ -1,6 +1,7 @@
 import 'jsr:@supabase/functions-js/edge-runtime.d.ts'
 import { createClient, type SupabaseClient } from 'npm:@supabase/supabase-js@2.118.0'
 import { roiAnalysisCorsHeaders } from '../_shared/roi_analysis_cors.mjs'
+import { claimRoiAnalysisJob } from '../_shared/roi_job_claim.mjs'
 import { reaggregate } from '../_shared/roi_reaggregate.mjs'
 
 declare const EdgeRuntime: { waitUntil<T>(promise: Promise<T>): Promise<T> }
@@ -25,12 +26,9 @@ function response(body: unknown, status: number, headers: Record<string, string>
   return new Response(JSON.stringify(body), { status, headers: { ...headers, 'Content-Type': 'application/json' } })
 }
 
-async function processCachedJob(service: SupabaseClient<any>, job: { id: string; cctv_id: string }, source: (typeof demos)[keyof typeof demos], config: Record<string, unknown>, configurationVersion: number) {
+async function processCachedJob(service: SupabaseClient<any>, job: { id: string; cctv_id: string }, source: (typeof demos)[keyof typeof demos], config: Record<string, unknown>, configurationVersion: number, workerStartedAt: string) {
+  console.info('ROI analysis worker started', { job_id: job.id, source_video_identifier: source.id, configuration_version: configurationVersion })
   try {
-    const { data: claimed, error: claimError } = await service.from('cctv_roi_analysis_jobs').update({ status: 'processing', started_at: new Date().toISOString(), failure_reason: null })
-      .eq('id', job.id).in('status', ['pending', 'failed']).select('id').maybeSingle()
-    if (claimError || !claimed) return
-
     const artifactResponse = await fetch(`https://webgista-v2.vercel.app/traffic-demo/${source.file}`, { signal: AbortSignal.timeout(8000) })
     if (!artifactResponse.ok || Number(artifactResponse.headers.get('content-length') ?? 0) > 1_000_000) throw new Error('Cached detection artifact is unavailable or exceeds the size limit.')
     const bytes = new Uint8Array(await artifactResponse.arrayBuffer())
@@ -39,9 +37,10 @@ async function processCachedJob(service: SupabaseClient<any>, job: { id: string;
     if (digest !== source.artifactHash) throw new Error('Cached detection artifact integrity check failed.')
     const document = JSON.parse(new TextDecoder().decode(bytes))
     if (document.source_video_sha256 !== source.sourceHash || document.source_video_identifier !== source.id) throw new Error('Detection artifact source identity check failed.')
+    console.info('ROI detection artifact verified', { job_id: job.id, source_video_identifier: source.id })
     const result = reaggregate(document, config, configurationVersion)
     const processedAt = new Date().toISOString()
-    const { error: completionError } = await service.rpc('complete_cctv_roi_analysis_job', { p_job_id: job.id, p_windows: result.windows.map((window: Record<string, unknown>) => ({
+    const { data: completion, error: completionError } = await service.rpc('complete_cctv_roi_analysis_job', { p_job_id: job.id, p_windows: result.windows.map((window: Record<string, unknown>) => ({
       window_started_at_seconds: window.window_started_at_seconds,
       window_ended_at_seconds: window.window_ended_at_seconds,
       summary: {
@@ -57,12 +56,16 @@ async function processCachedJob(service: SupabaseClient<any>, job: { id: string;
       },
     })) })
     if (completionError) throw new Error('Analysis result could not be published.')
+    console.info('ROI analysis publication finished', { job_id: job.id, status: completion, window_count: result.windows.length })
   } catch (error) {
     const reason = error instanceof Error ? error.message.slice(0, 240) : 'Analysis failed.'
     try {
-      await service.from('cctv_roi_analysis_jobs').update({ status: 'failed', failure_reason: reason, finished_at: new Date().toISOString() }).eq('id', job.id).eq('status', 'processing')
+      const { error: statusError } = await service.from('cctv_roi_analysis_jobs').update({ status: 'failed', failure_reason: reason, finished_at: new Date().toISOString() })
+        .eq('id', job.id).eq('status', 'processing').eq('started_at', workerStartedAt)
+      if (statusError) throw statusError
+      console.error('ROI analysis failed', { job_id: job.id, reason })
     } catch {
-      console.error('ROI analysis failed and its status could not be recorded.')
+      console.error('ROI analysis failed and its status could not be recorded.', { job_id: job.id })
     }
   }
 }
@@ -133,12 +136,15 @@ Deno.serve(async (request) => {
     else job = data
     if (!job) return respond({ error: 'Analysis job could not be scheduled' }, 503)
   }
-  if (job.status === 'completed' || job.status === 'processing' || job.status === 'superseded') return respond({ job_id: job.id, status: job.status }, 202)
+  if (job.status === 'completed' || job.status === 'superseded') return respond({ job_id: job.id, status: job.status }, 202)
   if (!source) return respond({ job_id: job.id, status: 'pending', reason: job.failure_reason }, 202)
-  const { data: claimed, error: claimError } = await service.from('cctv_roi_analysis_jobs').update({ status: 'processing', started_at: new Date().toISOString(), failure_reason: null })
-    .eq('id', job.id).in('status', ['pending', 'failed']).select('id').maybeSingle()
-  if (claimError) return respond({ job_id: job.id, status: 'pending', reason: 'Analysis could not be scheduled; save the ROI again to retry.' }, 202)
-  if (!claimed) return respond({ job_id: job.id, status: 'processing' }, 202)
-  EdgeRuntime.waitUntil(processCachedJob(service, job, source, config, saved.configuration_version))
+  let claim: { startedAt: string } | null
+  try {
+    claim = await claimRoiAnalysisJob(service, job.id)
+  } catch {
+    return respond({ job_id: job.id, status: 'processing', reason: 'Analysis could not be claimed; retry after checking the current job status.' }, 503)
+  }
+  if (!claim) return respond({ job_id: job.id, status: job.status === 'processing' ? 'processing' : job.status }, 202)
+  EdgeRuntime.waitUntil(processCachedJob(service, job, source, config, saved.configuration_version, claim.startedAt))
   return respond({ job_id: job.id, status: 'processing' }, 202)
 })
