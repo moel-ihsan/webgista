@@ -9,7 +9,7 @@ import { getCctvDemoAssociation } from '../data/cctvDemoVideo'
 import { listTrafficObservations } from '../data/trafficObservations'
 import { privateImageUrl } from '../data/privateMedia'
 import { getCctvAnalysisConfig, type StoredRoiDensityConfig } from '../data/cctvAnalysisConfig'
-import { demoDetectionTotal, demoFrameAt, type TrafficDemoVideo } from '../data/trafficDemo'
+import { demoDetectionTotal, type TrafficDemoVideo } from '../data/trafficDemo'
 import { rectangleToPolygon, type RoiDensityConfig } from '../domain/roiDensity'
 import { roiDensityFrameAt } from '../domain/roiDensityResult'
 import type { TrafficObservation } from '../domain/traffic'
@@ -25,7 +25,6 @@ const imageUrl = ref<string | null>(null)
 const imageFailed = ref(false)
 const demoVideo = ref<TrafficDemoVideo | null>(null)
 const demoAnalysisConfig = ref<StoredRoiDensityConfig | null>(null)
-const demoAssociationEditable = ref(false)
 const demoConfigStatus = ref<'unchecked' | 'loading' | 'ready' | 'error'>('unchecked')
 const videoAssociationReady = ref(false)
 const videoLoading = ref(false)
@@ -33,12 +32,13 @@ const videoFailed = ref(false)
 const videoAutoplayBlocked = ref(false)
 const videoTime = ref(0)
 const demoVideoElement = ref<HTMLVideoElement | null>(null)
+const demoVideoStage = ref<HTMLDivElement | null>(null)
+const fullscreenError = ref(false)
 let loadRevision = 0
 let imageRefreshTimer: ReturnType<typeof setInterval> | null = null
 
 const latest = computed(() => observations.value[0] ?? null)
 const categoryLabel = computed(() => camera.value?.category === 'analytic' ? 'Analytic' : 'Regular')
-const demoFrame = computed(() => demoVideo.value ? demoFrameAt(demoVideo.value.analysis, videoTime.value) : null)
 const demoDetections = computed(() => demoVideo.value ? demoDetectionTotal(demoVideo.value.analysis) : 0)
 const demoDensityFrame = computed(() => demoVideo.value ? roiDensityFrameAt(demoVideo.value.roiDensity, videoTime.value) : null)
 const demoDensityWindow = computed(() => demoVideo.value?.roiDensity.windows.find((window) => videoTime.value >= window.window_started_at_seconds && videoTime.value < window.window_ended_at_seconds) ?? null)
@@ -51,18 +51,16 @@ function configKey(config: RoiDensityConfig): string {
   ])
 }
 const demoDensityStale = computed(() => {
-  if (!demoVideo.value || !appConfig.roiDensityEnabled || !demoAssociationEditable.value) return false
+  if (!demoVideo.value || !appConfig.roiDensityEnabled) return false
   if (demoConfigStatus.value !== 'ready') return true
-  if (demoAnalysisConfig.value === null) return false
+  if (demoAnalysisConfig.value === null) return true
   return configKey(demoAnalysisConfig.value.configuration) !== configKey(demoVideo.value.roiDensity.configuration_snapshot)
     || demoVideo.value.roiDensity.configuration_version !== demoAnalysisConfig.value.configurationVersion
-    || demoVideo.value.roiDensity.provenance.camera_id !== camera.value?.id
     || demoVideo.value.roiDensity.provenance.source_video_identifier !== demoAnalysisConfig.value.configuration.source_video_identifier
 })
 const demoRoiPoints = computed(() => {
-  const result = demoVideo.value?.roiDensity
-  if (!result) return []
-  const config = demoAnalysisConfig.value?.configuration ?? result.configuration_snapshot
+  const config = demoAnalysisConfig.value?.configuration
+  if (!config) return []
   return config.roi_type === 'rectangle' ? rectangleToPolygon(config.roi_geometry as number[]) : config.roi_geometry as [number, number][]
 })
 
@@ -94,6 +92,18 @@ function attemptDemoAutoplay(): void {
   })
 }
 
+async function toggleVideoFullscreen(): Promise<void> {
+  const stage = demoVideoStage.value
+  if (!stage) return
+  try {
+    if (document.fullscreenElement === stage) await document.exitFullscreen()
+    else await stage.requestFullscreen()
+    fullscreenError.value = false
+  } catch {
+    fullscreenError.value = true
+  }
+}
+
 function releaseDemoVideo(): void {
   const video = demoVideoElement.value
   if (!video) return
@@ -108,8 +118,8 @@ function onDemoVideoError(): void {
   videoLoading.value = false
   demoVideo.value = null
   demoAnalysisConfig.value = null
-  demoAssociationEditable.value = false
   demoConfigStatus.value = 'unchecked'
+  fullscreenError.value = false
 }
 
 watch([() => String(route.params.id ?? ''), () => authSession.state.status], ([id, authStatus]) => {
@@ -122,6 +132,8 @@ watch([() => String(route.params.id ?? ''), () => authSession.state.status], ([i
   imageUrl.value = null
   imageFailed.value = false
   demoVideo.value = null
+  demoAnalysisConfig.value = null
+  demoConfigStatus.value = 'unchecked'
   videoAssociationReady.value = authStatus !== 'authenticated'
   videoLoading.value = false
   videoFailed.value = false
@@ -151,13 +163,12 @@ watch([() => String(route.params.id ?? ''), () => authSession.state.status], ([i
       pageStatus.value = 'ready'
 
       if (authStatus === 'authenticated') {
-        void getCctvDemoAssociation(client, id).then(({ video, editable }) => {
+        void getCctvDemoAssociation(client, id).then(({ video }) => {
           if (revision === loadRevision) {
             demoVideo.value = video
-            demoAssociationEditable.value = editable
             videoAssociationReady.value = true
             videoLoading.value = video !== null
-            if (video && appConfig.roiDensityEnabled && editable) {
+            if (video && appConfig.roiDensityEnabled) {
               demoConfigStatus.value = 'loading'
               void getCctvAnalysisConfig(client, id).then((configuration) => {
                 if (revision === loadRevision) {
@@ -240,31 +251,36 @@ onBeforeUnmount(() => {
       <div class="cctv-detail-layout">
         <section class="cctv-detail-media" :aria-label="`${camera.name} camera media`">
           <template v-if="demoVideo && !videoFailed">
-            <div class="cctv-detail-video-stage" :style="{ aspectRatio: `${demoVideo.analysis.video_dimensions.width} / ${demoVideo.analysis.video_dimensions.height}` }">
-              <video
-                ref="demoVideoElement"
-                :key="demoVideo.id"
-                class="cctv-detail-video"
-                :src="demoVideo.videoUrl"
-                :poster="imageUrl || undefined"
-                autoplay
-                muted
-                controls
-                playsinline
-                preload="metadata"
-                :aria-label="`Demo video, not live CCTV: ${demoVideo.title}`"
-                @loadeddata="videoLoading = false"
-                @canplay="attemptDemoAutoplay"
-                @timeupdate="updateDemoTime"
-                @error="onDemoVideoError"
-              >Your browser does not support H.264 playback.</video>
-              <svg class="cctv-detail-roi" viewBox="0 0 1000 1000" preserveAspectRatio="none" aria-label="Experimental detection area">
-                <polygon :points="demoRoiPoints.map(([x, y]) => `${x * 1000},${y * 1000}`).join(' ')" />
-              </svg>
+            <div ref="demoVideoStage" class="cctv-detail-video-stage" :style="{ aspectRatio: `${demoVideo.analysis.video_dimensions.width} / ${demoVideo.analysis.video_dimensions.height}` }">
+              <div class="cctv-detail-video-content" :style="{ aspectRatio: `${demoVideo.analysis.video_dimensions.width} / ${demoVideo.analysis.video_dimensions.height}`, '--video-ratio': demoVideo.analysis.video_dimensions.width / demoVideo.analysis.video_dimensions.height }">
+                <video
+                  ref="demoVideoElement"
+                  :key="demoVideo.id"
+                  class="cctv-detail-video"
+                  :src="demoVideo.playbackVideoUrl"
+                  :poster="imageUrl || undefined"
+                  autoplay
+                  muted
+                  controls
+                  controlslist="nofullscreen"
+                  playsinline
+                  preload="metadata"
+                  :aria-label="`Demo video, not live CCTV: ${demoVideo.title}`"
+                  @loadeddata="videoLoading = false"
+                  @canplay="attemptDemoAutoplay"
+                  @timeupdate="updateDemoTime"
+                  @error="onDemoVideoError"
+                >Your browser does not support H.264 playback.</video>
+                <svg v-if="demoRoiPoints.length" class="cctv-detail-roi" viewBox="0 0 1000 1000" preserveAspectRatio="none" aria-label="Saved camera detection area">
+                  <polygon :points="demoRoiPoints.map(([x, y]) => `${(x * 1000).toFixed(2)},${(y * 1000).toFixed(2)}`).join(' ')" />
+                </svg>
+              </div>
+              <button class="cctv-detail-fullscreen legacy-button legacy-button--outline" type="button" aria-label="View video and saved ROI fullscreen" @click="toggleVideoFullscreen">Fullscreen</button>
             </div>
             <p class="cctv-detail-demo-label">DEMO VIDEO — NOT LIVE CCTV</p>
             <p v-if="videoLoading" class="cctv-detail-media-note" role="status">Loading demo video…</p>
             <button v-if="videoAutoplayBlocked" class="legacy-button legacy-button--outline" type="button" @click="attemptDemoAutoplay">Play demo video</button>
+            <p v-if="fullscreenError" class="cctv-detail-media-note" role="status">Fullscreen is unavailable in this browser.</p>
           </template>
           <template v-else-if="videoAssociationReady && imageUrl && !imageFailed">
             <img :src="imageUrl" :alt="`${camera.name} CCTV`" @error="imageFailed = true">
@@ -296,24 +312,20 @@ onBeforeUnmount(() => {
           <section v-if="demoVideo && !videoFailed" class="cctv-detail-cv" aria-label="Offline demo video analysis">
             <strong>DEMO VIDEO — NOT LIVE CCTV</strong>
             <span>Source: <a :href="demoVideo.sourceUrl" target="_blank" rel="noreferrer">{{ demoVideo.title }} — {{ demoVideo.creator }}</a> · <a href="https://www.pexels.com/license/" target="_blank" rel="noreferrer">Pexels Free License</a>.</span>
-            <span>{{ demoDetections }} detection instances across {{ demoVideo.analysis.processed_frame_count }} sampled frames; not unique vehicles.</span>
-            <span>{{ demoVideo.analysis.tracked_objects_count }} heuristic track IDs and {{ demoVideo.analysis.crossing_event_count }} line-crossing events; ground truth {{ demoVideo.analysis.ground_truth_status.replaceAll('_', ' ') }}.</span>
-            <span>No traffic condition is calculated from this experimental footage: {{ demoVideo.analysis.condition_note }}</span>
+            <span>YOLOX-S detection instances: {{ demoDetections }} across {{ demoVideo.analysis.processed_frame_count }} sampled frames. These are repeated detections, not unique vehicles.</span>
             <span>Model: {{ demoVideo.analysis.model.name }} {{ demoVideo.analysis.model.version }} · sampled at {{ demoVideo.analysis.sampled_fps }} FPS · processed {{ dateLabel(demoVideo.analysis.created_at) }}.</span>
-            <span v-if="demoVideo.analysis.tracking.algorithm">Tracker: {{ demoVideo.analysis.tracking.algorithm }}; {{ demoVideo.analysis.tracking.quality }}.</span>
-            <span v-if="demoFrame">Frame at {{ demoFrame.offset_seconds.toFixed(1) }}s: {{ demoFrame.detections.length }} vehicle detections.</span>
-            <span v-if="demoConfigStatus === 'loading'" role="status">Checking whether the stored ROI matches this analysis…</span>
-            <span v-else-if="demoConfigStatus === 'error'" role="status">Saved ROI status is unavailable; ROI results are withheld until it can be checked.</span>
-            <span v-else-if="demoDensityStale" role="status">This analysis is stale: the saved ROI or analysis settings changed. Export the saved configuration and rerun the local offline analyzer for this source video. Results are not uploaded or published automatically.</span>
+            <span v-if="demoConfigStatus === 'loading'" role="status">Loading the authorized saved ROI…</span>
+            <span v-else-if="demoConfigStatus === 'error'" role="status">Saved ROI is unavailable to this account; camera-specific measurements are withheld.</span>
+            <span v-else-if="!demoAnalysisConfig" role="status">No authorized camera ROI is available. Bundled demo geometry is not shown as this camera’s configuration.</span>
+            <span v-else-if="demoDensityStale" role="status">Analysis Stale — the saved ROI configuration does not match this result. Rerun the local offline analyzer for this camera and source video.</span>
             <template v-else>
-              <span v-if="demoDensityFrame">Bundled demo ROI presence at current sampled frame: {{ demoDensityFrame.vehicle_presence_total }} detections · image coverage {{ ((demoDensityFrame.roi_image_coverage ?? 0) * 100).toFixed(1) }}%.</span>
+              <span v-if="demoDensityFrame">ROI Detection at {{ demoDensityFrame.timestamp_seconds.toFixed(1) }}s: {{ demoDensityFrame.vehicle_presence_total }} vehicles present in the sampled frame.</span>
               <template v-if="demoDensityWindow">
-                <span>10-second ROI window {{ demoDensityWindow.window_started_at_seconds }}–{{ demoDensityWindow.window_ended_at_seconds }}s ({{ demoDensityWindow.status }}): average presence {{ demoDensityWindow.average_vehicles_present?.toFixed(2) ?? 'unavailable' }}, peak {{ demoDensityWindow.peak_vehicles_present ?? 'unavailable' }}.</span>
-                <span>Busy {{ demoDensityWindow.busy_duration_seconds.toFixed(1) }}s; valid coverage {{ (demoDensityWindow.data_quality.valid_observation_coverage * 100).toFixed(1) }}%.</span>
-                <span>MKJI V/C: {{ demoDensityWindow.condition ? demoDensityWindow.condition : `No Data — ${demoDensityWindow.condition_reason}` }}</span>
-                <span>Average presence by class — LV {{ demoDensityWindow.traffic_category_statistics.LV.average?.toFixed(2) ?? '—' }}, HV {{ demoDensityWindow.traffic_category_statistics.HV.average?.toFixed(2) ?? '—' }}, MC {{ demoDensityWindow.traffic_category_statistics.MC.average?.toFixed(2) ?? '—' }}, bicycle {{ demoDensityWindow.traffic_category_statistics.bicycle.average?.toFixed(2) ?? '—' }}.</span>
+                <span>Average Vehicles: {{ demoDensityWindow.average_vehicles_present?.toFixed(2) ?? 'unavailable' }} · Peak: {{ demoDensityWindow.peak_vehicles_present ?? 'unavailable' }} · Observation Duration: {{ demoDensityWindow.window_duration_seconds.toFixed(1) }} seconds.</span>
+                <span>Vehicle Classes — LV {{ demoDensityWindow.traffic_category_statistics.LV.average?.toFixed(2) ?? '—' }}, HV {{ demoDensityWindow.traffic_category_statistics.HV.average?.toFixed(2) ?? '—' }}, MC {{ demoDensityWindow.traffic_category_statistics.MC.average?.toFixed(2) ?? '—' }}.</span>
+                <span>ROI Coverage: {{ demoDensityWindow.roi_image_coverage_average !== null ? `${(demoDensityWindow.roi_image_coverage_average * 100).toFixed(1)}%` : 'unavailable' }} · Busy duration: {{ demoDensityWindow.busy_duration_seconds.toFixed(1) }}s · Measurement Status: {{ demoDensityWindow.status }} / {{ demoDensityWindow.classification_status.replaceAll('_', ' ') }}.</span>
+                <span>Traffic Condition: {{ demoDensityWindow.condition ? demoDensityWindow.condition : `No Data — ${demoDensityWindow.condition_reason}` }}</span>
               </template>
-              <span v-if="!demoAnalysisConfig && appConfig.roiDensityEnabled">No camera-specific ROI is saved; values use the demo's bundled ROI only.</span>
             </template>
             <span>ROI density is visual presence only. Demo footage does not update the saved Traffic Condition or Observation History.</span>
             <span>Experimental demo footage; it does not depict current traffic at this camera location.</span>
@@ -355,10 +367,14 @@ onBeforeUnmount(() => {
 .cctv-detail-layout { display: grid; grid-template-columns: minmax(0, 5fr) minmax(280px, 3fr); gap: 30px; align-items: start; }
 .cctv-detail-media { position: relative; display: flex; flex-direction: column; justify-content: center; min-height: 550px; overflow: hidden; border-radius: 10px; background: var(--color-secondary); box-shadow: var(--shadow); }
 .cctv-detail-media > img { display: block; width: 100%; height: 550px; object-fit: cover; }
-.cctv-detail-video-stage { position: relative; width: 100%; overflow: hidden; background: #101311; }
+.cctv-detail-video-stage { position: relative; display: grid; width: 100%; overflow: hidden; place-items: center; background: #101311; }
+.cctv-detail-video-content { position: relative; width: 100%; overflow: hidden; }
+.cctv-detail-video-stage:fullscreen { width: 100vw; height: 100vh; aspect-ratio: auto !important; }
+.cctv-detail-video-stage:fullscreen .cctv-detail-video-content { width: min(100vw, calc(100vh * var(--video-ratio))); height: min(100vh, calc(100vw / var(--video-ratio))); }
 .cctv-detail-video { display: block; width: 100%; height: 100%; object-fit: fill; background: #101311; }
 .cctv-detail-roi { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
 .cctv-detail-roi polygon { fill: #21c55e24; stroke: #21c55e; stroke-width: 6; vector-effect: non-scaling-stroke; }
+.cctv-detail-fullscreen { position: absolute; z-index: 2; right: 12px; bottom: 12px; }
 .cctv-detail-demo-label { position: absolute; top: 12px; left: 12px; z-index: 1; margin: 0; padding: 7px 10px; border-radius: 6px; color: #fff; background: #a13b20; font-size: .78rem; font-weight: 700; }
 .cctv-detail-fallback { display: grid; min-height: 550px; place-content: center; gap: 10px; padding: 28px; color: var(--text-color); text-align: center; }
 .cctv-detail-fallback span, .cctv-detail-observation-meta, .cctv-detail-history span { color: var(--ink-500); font-size: .82rem; }

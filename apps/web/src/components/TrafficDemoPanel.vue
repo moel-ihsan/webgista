@@ -55,7 +55,7 @@ function crossingDescription(event: NonNullable<DemoAnalysis['crossing_events']>
       <video
         :key="selectedDemo.id"
         class="traffic-demo__video"
-        :src="selectedDemo.videoUrl"
+        :src="selectedDemo.playbackVideoUrl"
         controls
         playsinline
         preload="metadata"

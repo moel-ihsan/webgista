@@ -22,7 +22,7 @@ describe('TrafficDemoPanel', () => {
     app.mount(host)
 
     const select = host.querySelector<HTMLSelectElement>('#traffic-demo-select')!
-    expect(host.querySelector('video')?.getAttribute('src')).toBe('/traffic-demo/traffic_sample_01_annotated.mp4')
+    expect(host.querySelector('video')?.getAttribute('src')).toBe('/traffic-demo/traffic_sample_01_annotated.mp4?v=roi-density-20261106')
     expect(host.textContent).toContain('540 across 111 sampled frames')
     expect(host.textContent).toContain('Experimental line-crossing events: 4')
     expect(host.textContent).toContain('validation: not available')
@@ -35,7 +35,7 @@ describe('TrafficDemoPanel', () => {
     select.value = 'traffic-sample-02'
     select.dispatchEvent(new Event('change'))
     await nextTick()
-    expect(host.querySelector('video')?.getAttribute('src')).toBe('/traffic-demo/traffic_sample_02_annotated.mp4')
+    expect(host.querySelector('video')?.getAttribute('src')).toBe('/traffic-demo/traffic_sample_02_annotated.mp4?v=roi-density-20261106')
     expect(host.textContent).toContain('901 across 130 sampled frames')
     expect(host.textContent).toContain('Experimental line-crossing events: 25')
 

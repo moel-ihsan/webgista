@@ -98,21 +98,19 @@ describe('CCTV detail page', () => {
     expect(host?.querySelector('video')).toBeNull()
   })
 
-  it('plays only the associated local demo first and shows truthful frame analysis, then falls back to the image on error', async () => {
+  it('plays annotated detections, omits line-crossing statistics, and falls back to the image on error', async () => {
     const { trafficDemoVideos } = await import('../data/trafficDemo')
     getCctvDemoAssociation.mockResolvedValue({ video: trafficDemoVideos[1], editable: true })
     await mountPage()
 
     const video = host?.querySelector('.cctv-detail-media video')
-    expect(video?.getAttribute('src')).toBe('/traffic-demo/traffic_sample_02_annotated.mp4')
+    expect(video?.getAttribute('src')).toBe('/traffic-demo/traffic_sample_02_annotated.mp4?v=roi-density-20261106')
     expect(host?.querySelector('.cctv-detail-media > img')).toBeNull()
     expect(host?.textContent).toContain('DEMO VIDEO — NOT LIVE CCTV')
-    expect(host?.textContent).toContain('not unique vehicles')
-    expect(host?.textContent).toContain('25 line-crossing events')
-    expect(host?.textContent).toContain('ground truth not available')
-    expect(host?.textContent).toContain('10-second ROI window')
-    expect(host?.textContent).toContain('average presence')
-    expect(host?.querySelector('.cctv-detail-roi polygon')).not.toBeNull()
+    expect(host?.textContent).not.toContain('line-crossing')
+    expect(host?.textContent).not.toContain('heuristic track IDs')
+    expect(host?.textContent).not.toContain('Average Vehicles')
+    expect(host?.querySelector('.cctv-detail-roi polygon')).toBeNull()
     expect(host?.textContent).toContain('does not depict current traffic at this camera location')
 
     video?.dispatchEvent(new Event('error'))
@@ -143,9 +141,90 @@ describe('CCTV detail page', () => {
     await mountPage()
 
     expect(getCctvAnalysisConfig).toHaveBeenCalledWith({}, 'camera-1')
-    expect(host?.textContent).toContain('This analysis is stale')
-    expect(host?.textContent).toContain('Results are not uploaded or published automatically')
+    expect(host?.textContent).toContain('Analysis Stale')
     expect(host?.textContent).not.toContain('10-second ROI window')
+    expect(host?.textContent).not.toContain('Average Vehicles:')
+    expect(host?.querySelector('.cctv-detail-roi polygon')?.getAttribute('points')).toContain('100.00,100.00')
+  })
+
+  it('uses the authorized saved ROI for overlay and only shows matching density metrics', async () => {
+    const { trafficDemoVideos } = await import('../data/trafficDemo')
+    const video = trafficDemoVideos[0]!
+    appConfigState.roiDensityEnabled = true
+    getCctvDemoAssociation.mockResolvedValue({ video, editable: true })
+    getCctvAnalysisConfig.mockResolvedValue({
+      configuration: video.roiDensity.configuration_snapshot,
+      configurationVersion: video.roiDensity.configuration_version,
+      updatedAt: '2026-11-06T00:00:00Z',
+    })
+    await mountPage()
+
+    expect(getCctvAnalysisConfig).toHaveBeenCalledWith({}, 'camera-1')
+    expect(host?.querySelector('.cctv-detail-roi polygon')?.getAttribute('points')).toBe('550.00,480.00 990.00,480.00 990.00,910.00 550.00,910.00')
+    expect(host?.textContent).toContain('ROI Detection at')
+    expect(host?.textContent).toContain('Average Vehicles:')
+    expect(host?.textContent).toContain('Peak:')
+    expect(host?.textContent).toContain('Observation Duration: 10.0 seconds')
+    expect(host?.textContent).toContain('Vehicle Classes')
+    expect(host?.textContent).toContain('ROI Coverage:')
+    expect(host?.textContent).toContain('Measurement Status:')
+    expect(host?.textContent).not.toContain('line-crossing')
+    expect(host?.querySelector('video')?.getAttribute('controlslist')).toBe('nofullscreen')
+    expect(host?.querySelector('.cctv-detail-video-stage')?.contains(host.querySelector('.cctv-detail-roi'))).toBe(true)
+  })
+
+  it('withholds the bundled demo ROI when no authorized camera configuration is returned', async () => {
+    const { trafficDemoVideos } = await import('../data/trafficDemo')
+    appConfigState.roiDensityEnabled = true
+    getCctvDemoAssociation.mockResolvedValue({ video: trafficDemoVideos[0], editable: true })
+    getCctvAnalysisConfig.mockResolvedValue(null)
+    await mountPage()
+
+    expect(host?.querySelector('.cctv-detail-roi')).toBeNull()
+    expect(host?.textContent).toContain('No authorized camera ROI is available')
+    expect(host?.textContent).not.toContain('Average Vehicles:')
+  })
+
+  it('renders the currently saved polygon in normalized video coordinates at any stage size', async () => {
+    const { trafficDemoVideos } = await import('../data/trafficDemo')
+    const video = trafficDemoVideos[0]!
+    appConfigState.roiDensityEnabled = true
+    getCctvDemoAssociation.mockResolvedValue({ video, editable: true })
+    getCctvAnalysisConfig.mockResolvedValue({
+      configuration: { ...video.roiDensity.configuration_snapshot, roi_type: 'polygon', roi_geometry: [[.1, .2], [.7, .2], [.6, .8], [.2, .9]] },
+      configurationVersion: 2,
+      updatedAt: '2026-11-06T00:00:00Z',
+    })
+    await mountPage()
+
+    const stage = host?.querySelector('.cctv-detail-video-content') as HTMLDivElement
+    const polygon = stage.querySelector('polygon')
+    expect(polygon?.getAttribute('points')).toBe('100.00,200.00 700.00,200.00 600.00,800.00 200.00,900.00')
+    expect(stage.style.aspectRatio).toBe('1280 / 720')
+    expect(stage.querySelector('video')).not.toBeNull()
+    expect(host?.textContent).toContain('Analysis Stale')
+    expect(host?.textContent).not.toContain('Average Vehicles:')
+  })
+
+  it('requests fullscreen on the video stage so the saved ROI stays with the video', async () => {
+    const { trafficDemoVideos } = await import('../data/trafficDemo')
+    appConfigState.roiDensityEnabled = true
+    getCctvDemoAssociation.mockResolvedValue({ video: trafficDemoVideos[0], editable: true })
+    getCctvAnalysisConfig.mockResolvedValue({
+      configuration: trafficDemoVideos[0]!.roiDensity.configuration_snapshot,
+      configurationVersion: 1,
+      updatedAt: '2026-11-06T00:00:00Z',
+    })
+    await mountPage()
+    const stage = host?.querySelector('.cctv-detail-video-stage') as HTMLDivElement
+    const requestFullscreen = vi.fn().mockResolvedValue(undefined)
+    Object.defineProperty(stage, 'requestFullscreen', { configurable: true, value: requestFullscreen })
+    host?.querySelector<HTMLButtonElement>('.cctv-detail-fullscreen')?.click()
+    await flush()
+
+    expect(requestFullscreen).toHaveBeenCalledOnce()
+    expect(stage.querySelector('video')).not.toBeNull()
+    expect(stage.querySelector('.cctv-detail-roi')).not.toBeNull()
   })
 
   it('waits for the authorized video lookup before rendering the image fallback', async () => {

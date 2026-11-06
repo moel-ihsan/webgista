@@ -21,6 +21,15 @@ python tools/traffic-analytics/analyze_video.py apps/web/public/traffic-demo/tra
 
 The JSON includes model/version and model SHA-256, source SHA-256, source dimensions/FPS, sampled FPS/frame interval, configuration, raw detections, track diagnostics, crossing candidates, and ground-truth status. Car→LV, motorcycle→MC, bus/truck→HV, and bicycle remains separate; people and unsupported COCO classes are excluded.
 
+For the ROI Density video shown on CCTV details and `/analysis`, render the stored YOLOX boxes without experimental tracker/line/ROI annotations:
+
+```sh
+python tools/traffic-analytics/render_roi_annotations.py apps/web/public/traffic-demo/traffic_sample_01.mp4 --analysis apps/web/src/data/traffic-demo/traffic_sample_01.analysis.json --output apps/web/public/traffic-demo/traffic_sample_01_annotated.mp4
+python tools/traffic-analytics/render_roi_annotations.py apps/web/public/traffic-demo/traffic_sample_02.mp4 --analysis apps/web/src/data/traffic-demo/traffic_sample_02.analysis.json --output apps/web/public/traffic-demo/traffic_sample_02_annotated.mp4
+```
+
+This renderer verifies the source-video hash and dimensions, reuses the sampled YOLOX detections, and overlays only bounding boxes, class/confidence labels, and the demo timestamp. It does not run inference or draw a saved ROI; the CCTV detail page obtains the current authorized ROI from Supabase and overlays it dynamically. The playback URL carries an asset-version query so clients do not reuse the former line-annotated MP4 from cache. The older tracker/line output remains in analysis JSON for the optional research view, not as the ROI Density video annotation.
+
 ## Human ground-truth review
 
 The local reviewer displays the unannotated clip and configured ROI/counting line, supports playback, timestamp seeking and source-frame stepping, and lets a human add/edit/remove events by class/direction/status/note. Model crossings are bookmarks only and are never copied into labels. Its 2-second timeline covers the entire clip, including intervals without predictions. It records reviewed playback intervals and requires a reviewer attestation; these are human-review aids, not cryptographic proof that the clip was watched.

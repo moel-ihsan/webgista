@@ -101,6 +101,7 @@ export interface TrafficDemoVideo {
   sourceUrl: string
   previewVideoUrl: string
   videoUrl: string
+  playbackVideoUrl: string
   analysis: DemoAnalysis
   roiDensity: RoiDensityResult
 }
@@ -113,6 +114,7 @@ export const trafficDemoVideos: readonly TrafficDemoVideo[] = [
     sourceUrl: 'https://www.pexels.com/video/city-intersection-with-traffic-and-signals-36330668/',
     previewVideoUrl: '/traffic-demo/traffic_sample_01.mp4',
     videoUrl: '/traffic-demo/traffic_sample_01_annotated.mp4',
+    playbackVideoUrl: '/traffic-demo/traffic_sample_01_annotated.mp4?v=roi-density-20261106',
     analysis: sample01,
     roiDensity: sample01RoiDensity as RoiDensityResult,
   },
@@ -123,6 +125,7 @@ export const trafficDemoVideos: readonly TrafficDemoVideo[] = [
     sourceUrl: 'https://www.pexels.com/video/bustling-night-traffic-at-ben-thanh-market-29185480/',
     previewVideoUrl: '/traffic-demo/traffic_sample_02.mp4',
     videoUrl: '/traffic-demo/traffic_sample_02_annotated.mp4',
+    playbackVideoUrl: '/traffic-demo/traffic_sample_02_annotated.mp4?v=roi-density-20261106',
     analysis: sample02,
     roiDensity: sample02RoiDensity as RoiDensityResult,
   },
