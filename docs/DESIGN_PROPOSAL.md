@@ -102,14 +102,18 @@ Makna 6 warna asli v1 **tetap dipertahankan**. Untuk mengatasi masalah buta warn
   - Mobile (`< 768px`): daftar disajikan sebagai **kartu CCTV responsif** (atau wrapper scroll horizontal aman + tombol `+ Add New` berada di bar aksi atas yang selalu terlihat penuh) sehingga nama, alamat, koordinat, agency, status, serta tombol View/Edit/Delete bisa disentuh `44x44px`.
 - **Navbar & Sidebar:**
   - Menggunakan `<header>` dan `<nav aria-label="Navigasi Utama">` berisi `<ul><li><a ...>` murni (menghapus pembungkus `<a>` di luar `<el-menu-item role="menuitem">` agar nol error `aria-required-parent/children`), dan `aria-current="page"` pada halaman aktif.
-  - Switch tema memakai `<button role="switch" aria-checked="true|false" aria-label="...">` berukuran sentuh `>= 44px` tinggi (menggantikan `<el-switch>` yang memicu error `nested-interactive`).
+  - Switch tema memakai `<button role="switch" aria-checked="true|false" aria-label="...">` **hanya dengan ikon Matahari/Bulan** (tanpa teks label "Light/Dark") dan ukuran sentuh `>= 44px` (menggantikan `<el-switch>` yang memicu error `nested-interactive`).
   - Mobile `< 768px`: sidebar pill kiri diganti tombol menu `44x44px` di header yang membuka laci navigasi (*slide-over drawer*) lengkap dengan teks menu.
+- **Kontrol Peta, Popup & Legenda (`/map`):**
+  - Kontrol kiri atas mempertahankan lengkap fungsi v1: **Reset Home**, **Layers & Map Style**, **Navigation (`+`, `−`, Reset Compass)**, dan **Find My Location (`GeolocateControl`)** dengan ukuran sentuh `>= 44x44px`.
+  - **Popup Peta** menampilkan judul persimpangan, chip kondisi, **stream `<video>` / gambar CCTV seperti v1**, status (`Good`, `Average`, dst.), dan tautan `Detail →` **tanpa** menampakkan angka internal rasio `V/C`.
+  - **Legenda Peta** memakai teks v1 yang ringkas (`Terrible`, `Bad`, `Poor`, `Average`, `Good`, `Great`, `No Data`) tanpa angka rentang `V/C`, dipasangkan dengan chip huruf `A–F` / `?` untuk aksesibilitas non-warna.
 
 ---
 
 ## 3. Penerapan pada Halaman Contoh: Map View (`/map`)
 
-Halaman `/map` di-prototipekan dengan token dan komponen di atas menggunakan MapLibre GL + basemap gratis OpenFreeMap (`liberty` untuk Light, `dark` untuk Dark), `ResizeObserver` untuk membasmi bug kanvas setengah lebar, marker huruf+warna A–F, serta `axe-core` audit langsung pada purwarupa.
+Halaman `/map` di-prototipekan dengan token dan komponen di atas menggunakan MapLibre GL + basemap gratis OpenFreeMap (`liberty` untuk Light, `dark` untuk Dark), `ResizeObserver` untuk membasmi bug kanvas setengah lebar, marker huruf+warna A–F, tombol *Find My Location*, video pada popup, serta `axe-core` audit langsung pada purwarupa.
 
 ### 3.1 Ringkasan Peningkatan Terukur (Sebelum vs Sesudah pada `/map`)
 
@@ -118,28 +122,28 @@ Halaman `/map` di-prototipekan dengan token dan komponen di atas menggunakan Map
 | **Pelanggaran `axe-core`** | **`10`** (`Light` & `Dark`, `360` & `1440`) | **`0`** di semua 4 mode (`1440_L`, `1440_D`, `360_L`, `360_D`) |
 | **Target sentuh app `< 44x44px`** | **`14`** elemen (zoom, layer, clear, switch, search) | **`0`** elemen kontrol app (`100% >= 44x44px`) |
 | **Kontras tombol & badge utama** | `3.6:1` (Light), **`1.71:1`** (Dark `#FFF` on `#32E18C`) | **`5.40:1`** (Light), **`9.60:1`** (Dark `#0B2418` on `#32E18C`) |
-| **Aksesibilitas status IHCM A–F** | Hanya bulatan warna (kontras Light `1.07:1`–`2.32:1`) | Chip huruf **`A`–`F` / `?`** + border ring kontras + teks `--text-primary` |
+| **Aksesibilitas status IHCM A–F** | Hanya bulatan warna (kontras Light `1.07:1`–`2.32:1`) | Chip huruf **`A`–`F` / `?`** + border ring kontras + label ringkas tanpa rentang `V/C` |
 | **Render kanvas peta initial** | Setengah lebar di `1024px` & `1440px` Light | Penuh `100%` lebar & tinggi (`ResizeObserver`) |
-| **Sinkronisasi Dark Mode peta** | Basemap tetap putih terang di UI gelap | Peta otomatis memakai gaya `OpenFreeMap dark` + popup gelap |
+| **Sinkronisasi Dark Mode peta** | Basemap tetap putih terang di UI gelap | Peta otomatis memakai gaya `OpenFreeMap dark` + popup & atribusi gelap |
 
 ### 3.2 Perbandingan Visual Sebelum vs Sesudah
 
 #### A. Desktop `1440px` — Light Mode
-*Perbaikan tampak: kanvas peta penuh 100% (tidak lagi terpotong setengah lebar), banner simulasi lebih ringkas dengan kontras tinggi, tombol kontrol `>= 44x44px`, marker berhuruf `B` & `C` dengan popup mudah dibaca, legenda berchip huruf A–F + `?`, serta heading `<h1>Map View</h1>` dan switch tema sinkron.*
+*Perbaikan tampak: kanvas peta penuh 100%, kontrol kiri lengkap (`Home`, `Layer`, `Zoom/Compass`, `Find My Location`) ukuran `>= 44x44px`, theme toggle ikon-only, popup menampilkan video CCTV langsung tanpa angka V/C internal, dan legenda ringkas berchip huruf A–F + `?`.*
 
 | Kondisi Sebelum (`map_1440.png`) | Usulan Desain (`map_proposal_1440_light.png`) |
 | --- | --- |
 | ![Sebelum 1440 Light](/Users/moel_04/work/ta_webgis/docs/screenshots/phase45_audit/map_1440.png) | ![Sesudah 1440 Light](/Users/moel_04/work/ta_webgis/docs/screenshots/phase45_proposal/map_proposal_1440_light.png) |
 
 #### B. Desktop `1440px` — Dark Mode
-*Perbaikan tampak: basemap peta ikut gelap (`OpenFreeMap dark`), tombol `Login` `#32E18C` memakai teks `#0B2418` (`9.60:1`), popup menyesuaikan permukaan `#27293D`, dan badge `SIMULASI` serta marker memiliki border terang agar terbaca tajam.*
+*Perbaikan tampak: basemap peta ikut gelap (`OpenFreeMap dark`), kontrol & switch ikon Bulan sinkron, tombol `Login` `#32E18C` memakai teks `#0B2418` (`9.60:1`), popup video & atribusi peta menyesuaikan tema gelap `#27293D`.*
 
 | Kondisi Sebelum (`map_1440_dark.png`) | Usulan Desain (`map_proposal_1440_dark.png`) |
 | --- | --- |
 | ![Sebelum 1440 Dark](/Users/moel_04/work/ta_webgis/docs/screenshots/phase45_audit/map_1440_dark.png) | ![Sesudah 1440 Dark](/Users/moel_04/work/ta_webgis/docs/screenshots/phase45_proposal/map_proposal_1440_dark.png) |
 
 #### C. Mobile `360px` — Light & Dark Mode
-*Perbaikan tampak: sidebar kiri tidak memakan ruang kanvas 360px (berpindah ke menu hamburger `44x44px`), tombol kontrol kiri & `CCTV (2)` kanan semua berukuran `>= 44x44px`, legenda tersusun 2 kolom rapi, dan nol clipping horizontal.*  
+*Perbaikan tampak: seluruh kontrol kiri termasuk `Find My Location` tetap tersedia berukuran `>= 44x44px`, popup video tampil di atas kontrol peta (`z-index: 20`), legenda 2 kolom ringkas, switch ikon saja, dan nol clipping horizontal.*  
 *(Catatan implementasi Langkah 3: pada layar `<= 767px`, legenda juga dapat dilengkapi tombol ciutkan/buka `Legenda A–F` agar peta semakin lega dan tidak bersinggungan dengan atribusi peta di bagian paling bawah).*
 
 | Sebelum Mobile 360px (`map_360.png`) | Usulan Mobile 360px Light (`map_proposal_360_light.png`) | Usulan Mobile 360px Dark (`map_proposal_360_dark.png`) |
