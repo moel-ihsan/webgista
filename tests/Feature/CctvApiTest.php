@@ -256,8 +256,13 @@ class CctvApiTest extends TestCase
         $homeResponse = $this->get('/');
         $homeResponse->assertOk()
             ->assertSee('name="webgista-simulation"', false)
+            ->assertSee('name="map-config"', false)
             ->assertSee('SIMULASI DEMO', false)
             ->assertDontSee(env('DEMO_ADMIN_PASSWORD', 'password'), false);
+
+        $this->get('/map')
+            ->assertOk()
+            ->assertSee('name="map-config"', false);
 
         $this->get("/detail/video/{$pdam->id}")
             ->assertOk()

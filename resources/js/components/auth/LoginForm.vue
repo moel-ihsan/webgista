@@ -215,10 +215,6 @@ export default {
   transform: scale(1.25);
 }
 
-.mapboxgl-ctrl-attrib.mapboxgl-compact {
-  display: none;
-}
-
 @media screen and (max-width: 992px) {
   .login-container .el-form-item {
     width: 50%;

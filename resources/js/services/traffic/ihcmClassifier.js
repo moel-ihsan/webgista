@@ -235,7 +235,7 @@ export function classifyTrafficWindow({
 }
 
 /**
- * Resolve the Mapbox marker color hex for a stored condition label.
+ * Resolve the map marker color hex for a stored condition label.
  *
  * @param {string | null | undefined} label
  * @returns {string}

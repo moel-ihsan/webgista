@@ -121,7 +121,7 @@
 
 <script>
 import CoordinatePickerMap from "../map/CoordinatePickerMap.vue";
-import { DEFAULT_MAP_CENTER } from "../../config/mapbox";
+import { DEFAULT_MAP_CENTER } from "../../config/map";
 import { fetchAll as fetchAgencies } from "../../services/api/agencyApi";
 import {
   create as createCctv,
@@ -356,10 +356,6 @@ export default {
   border-radius: 10px;
   bottom: 0;
   width: 100%;
-}
-
-.mapboxgl-ctrl-attrib.mapboxgl-compact {
-  display: none;
 }
 
 @media screen and (max-width: 992px) {

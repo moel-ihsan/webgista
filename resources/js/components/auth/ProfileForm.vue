@@ -302,10 +302,6 @@ export default {
   transition: all 0.5s ease;
 }
 
-.mapboxgl-ctrl-attrib.mapboxgl-compact {
-  display: none;
-}
-
 .el-textarea__inner:hover,
 .el-textarea__inner:focus {
   border-color: var(--green-theme);

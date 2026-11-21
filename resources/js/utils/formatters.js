@@ -46,7 +46,7 @@ export function resolveProfileImagePath(pathImage) {
 }
 
 /**
- * Escape HTML special characters before embedding dynamic values into Mapbox popup markup.
+ * Escape HTML special characters before embedding dynamic values into MapLibre popup markup.
  *
  * @param {unknown} value
  * @returns {string}

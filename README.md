@@ -9,7 +9,7 @@ Implementasi pemulihan dan perapihan versi **v1** dari proyek riset *"Banda Aceh
 ## Ringkasan Sistem & Stack
 
 - **Backend:** Laravel 8 (`PHP ^8.2`), MySQL / SQLite, Form Requests, Services, API Resources, Sanctum/Session Auth + middleware `admin`
-- **Frontend:** Vue `2.6.14`, Laravel Mix `6.0.34` (webpack 5, `Node 18.17.1`), Element UI `2.15.3`, Mapbox GL JS `2.3.1`, Flickity, Axios
+- **Frontend:** Vue `2.6.14`, Laravel Mix `6.0.34` (webpack 5, `Node 18.17.1`), Element UI `2.15.3`, MapLibre GL JS (OpenFreeMap / OpenTopoMap gratis tanpa kartu kredit; opsional MapTiler/Stadia via `.env`), Flickity, Axios
 - **Deteksi Kendaraan (Client-Side, Rp0 Server Inference):**
   - Mode utama: TensorFlow.js (`@tensorflow/tfjs`) + model pra-latih `@tensorflow-models/coco-ssd` langsung di browser
   - Mode cadangan otomatis/manual: JSON pra-hitung sinkron waktu video (`public/demo/detections/*.json`)
@@ -24,7 +24,7 @@ Implementasi pemulihan dan perapihan versi **v1** dari proyek riset *"Banda Aceh
 ## Fitur & Menu
 
 1. **Dashboard (`/`)**: Peta ringkasan sebaran CCTV (`Analytic` / `Regular`), kartu profil instansi, dan carousel pembaruan terbaru.
-2. **Map View (`/map`)**: Peta interaktif Mapbox GL JS dengan 4 gaya peta (*Street*, *Light*, *Dark*, *Outdoor*), toggle layer CCTV & batas administrasi 9 kecamatan Kota Banda Aceh (`public/geojson/bandaacehgeojson.geojson`), bilah pencarian kanan, legenda kondisi A–F + `No Data`, dan pembaruan marker setiap `1000 ms`.
+2. **Map View (`/map`)**: Peta interaktif MapLibre GL JS dengan 4 gaya peta (*Street*, *Light*, *Dark*, *Outdoor*), toggle layer CCTV & batas administrasi 9 kecamatan Kota Banda Aceh (`public/geojson/bandaacehgeojson.geojson`), bilah pencarian kanan, legenda kondisi A–F + `No Data`, dan pembaruan marker setiap `1000 ms`.
 3. **Table View (`/table`)**: Tabel titik CCTV dengan pencarian, ukuran halaman (`5–100`), tautan detail (`/detail/{id}`), analisis video (`/detail/video/{id}` untuk kamera `Analytic`), serta CRUD admin (`/table/add`, `/table/edit/{id}`, hapus via `DELETE`).
 4. **Map Settings (`/setting/{id}`, khusus admin)**: Pengaturan titik tengah & zoom peta default serta daftar instansi/agensi (`el-tag`).
 
@@ -32,14 +32,15 @@ Implementasi pemulihan dan perapihan versi **v1** dari proyek riset *"Banda Aceh
 
 ## Instalasi & Menjalankan Secara Lokal
 
-Prasyarat: **Node.js `18.17.1`** (lihat [`.nvmrc`](.nvmrc)), **PHP `^8.2`**, **Composer**, dan token **Mapbox** yang valid.
+Prasyarat: **Node.js `18.17.1`** (lihat [`.nvmrc`](.nvmrc)), **PHP `^8.2`**, dan **Composer** (peta default memakai OpenFreeMap + OpenTopoMap tanpa API key maupun kartu kredit).
 
 ```bash
 composer install
 npm install
 cp .env.example .env
 php artisan key:generate
-# Isi koneksi database (DB_*) serta MAPBOX_ACCESS_TOKEN di .env
+# Isi koneksi database (DB_*). MAP_PROVIDER=auto sudah aktif tanpa API key;
+# opsional isi MAPTILER_API_KEY atau STADIA_API_KEY bila ingin tile vektor berkuota terkelola
 php artisan migrate --seed
 npm run dev
 php artisan serve

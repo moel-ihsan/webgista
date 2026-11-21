@@ -57,7 +57,10 @@ Komponen [`VideoDetectorPlayer.vue`](../resources/js/components/cctv/VideoDetect
 Konfigurasi sumber video dan mode demo dikelola melalui [`config/simulation.php`](../config/simulation.php) dan tidak di-*hardcode* di komponen Vue:
 
 ```env
-MAPBOX_ACCESS_TOKEN=pk.your_mapbox_token_here
+MAP_PROVIDER=auto
+# Opsional: isi kunci gratis tanpa kartu kredit bila ingin tile vektor MapTiler/Stadia
+MAPTILER_API_KEY=
+STADIA_API_KEY=
 DEMO_ADMIN_EMAIL=admin@webgista.test
 DEMO_ADMIN_PASSWORD=your-demo-password
 
@@ -75,7 +78,7 @@ Langkah menjalankan lokal (Node `18.17.1`, PHP `^8.2`):
 ```bash
 cp .env.example .env
 php artisan key:generate
-# Atur DB_* dan MAPBOX_ACCESS_TOKEN di .env
+# Atur DB_* (serta opsional MAPTILER_API_KEY / STADIA_API_KEY jika dipakai) di .env
 php artisan migrate --seed
 php artisan serve
 ```

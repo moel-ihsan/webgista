@@ -6,7 +6,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <meta name="mapbox-token" content="{{ config('services.mapbox.token') }}">
+    <meta name="map-config" content="{{ json_encode(config('services.map'), JSON_UNESCAPED_SLASHES) }}">
     <meta name="webgista-simulation" content="{{ json_encode(config('simulation'), JSON_UNESCAPED_SLASHES) }}">
 
     <title>{{ $title ?? 'Unknown'}}</title>
@@ -20,9 +20,8 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/video.js/7.12.0/video-js.min.css" />
 
     <link rel="stylesheet" href="{{ mix('css/app.css') }}">
-    <link rel="preconnect" href="https://fonts.gstatic.com">    
+    <link rel="preconnect" href="https://fonts.gstatic.com">
     <link href="https://fonts.googleapis.com/css?family=Montserrat:400,100,500,600,700" rel="stylesheet">
-    <link href="https://api.mapbox.com/mapbox-gl-js/v2.5.1/mapbox-gl.css" rel="stylesheet">    
 
     <style>
 

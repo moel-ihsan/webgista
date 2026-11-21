@@ -3,13 +3,8 @@
 </template>
 
 <script>
-import mapboxgl from "mapbox-gl";
-import {
-  DEFAULT_MAP_CENTER,
-  DEFAULT_MAP_ZOOM,
-  getMapboxAccessToken,
-  getMapboxStyleUrl
-} from "../../config/mapbox";
+import maplibregl from "maplibre-gl";
+import { DEFAULT_MAP_CENTER, DEFAULT_MAP_ZOOM, getMapStyle } from "../../config/map";
 import { createPulsingDot } from "../../utils/pulsingDot";
 
 export default {
@@ -77,19 +72,20 @@ export default {
     }
   },
   mounted() {
-    mapboxgl.accessToken = getMapboxAccessToken();
-    const map = new mapboxgl.Map({
+    const map = new maplibregl.Map({
       container: this.$el,
-      style: getMapboxStyleUrl("streets-v11"),
+      style: getMapStyle("streets"),
       center: this.centerCoords,
       minZoom: 2,
       zoom: this.numericZoom,
-      interactive: this.interactive
+      interactive: this.interactive,
+      attributionControl: false
     });
+    map.addControl(new maplibregl.AttributionControl({ compact: true }), "bottom-left");
     this.map = map;
 
     if (this.popupHtml) {
-      this.popup = new mapboxgl.Popup({ closeOnClick: false, offset: 15 })
+      this.popup = new maplibregl.Popup({ closeOnClick: false, offset: 15 })
         .setLngLat(this.centerCoords)
         .setHTML(this.popupHtml)
         .addTo(map);

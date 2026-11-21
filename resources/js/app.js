@@ -3,6 +3,7 @@ require("./bootstrap");
 import Vue from "vue";
 import ElementUI from "element-ui";
 import "element-ui/lib/theme-chalk/index.css";
+import "maplibre-gl/dist/maplibre-gl.css";
 import "./styles/theme-overrides.css";
 import "babel-polyfill";
 import "whatwg-fetch";

@@ -8,14 +8,14 @@
 </template>
 
 <script>
-import mapboxgl from "mapbox-gl";
+import maplibregl from "maplibre-gl";
 import MapLegend from "./MapLegend.vue";
 import {
+  CLUSTER_TEXT_FONT,
   DEFAULT_MAP_CENTER,
   DEFAULT_MAP_ZOOM,
-  getMapboxAccessToken,
-  getMapboxStyleUrl
-} from "../../config/mapbox";
+  getMapStyle
+} from "../../config/map";
 import { fetchAll as fetchCctvPoints } from "../../services/api/cctvApi";
 import { fetchAll as fetchMapSettings } from "../../services/api/mapSettingApi";
 import { escapeHtml } from "../../utils/formatters";
@@ -55,17 +55,18 @@ export default {
             : DEFAULT_MAP_CENTER;
           const zoom = primary ? Number(primary.zoom) : DEFAULT_MAP_ZOOM;
 
-          mapboxgl.accessToken = getMapboxAccessToken();
-          this.map = new mapboxgl.Map({
+          this.map = new maplibregl.Map({
             container: "map",
-            style: getMapboxStyleUrl("streets-v11"),
+            style: getMapStyle("streets"),
             center,
             minZoom: 2,
             zoom,
-            interactive: false
+            interactive: false,
+            attributionControl: false
           });
 
           const map = this.map;
+          map.addControl(new maplibregl.AttributionControl({ compact: true }), "bottom-left");
           map.on("style.load", () => {
             this.loadCctvPoints(map);
           });
@@ -140,7 +141,7 @@ export default {
               filter: ["has", "point_count"],
               layout: {
                 "text-field": "{point_count_abbreviated}",
-                "text-font": ["DIN Offc Pro Medium", "Arial Unicode MS Bold"],
+                "text-font": CLUSTER_TEXT_FONT,
                 "text-size": 12,
                 visibility: "visible"
               }
@@ -178,11 +179,11 @@ export default {
                 zoom: 16,
                 essential: true
               });
-              const popUps = document.getElementsByClassName("mapboxgl-popup");
+              const popUps = document.getElementsByClassName("maplibregl-popup");
               if (popUps[0]) {
                 popUps[0].remove();
               }
-              new mapboxgl.Popup({ closeOnClick: true, offset: 10 })
+              new maplibregl.Popup({ closeOnClick: true, offset: 10 })
                 .setLngLat(geo.geometry.coordinates)
                 .setHTML(geo.properties.flyLoc)
                 .addTo(map);

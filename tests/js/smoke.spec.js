@@ -1,5 +1,5 @@
 import { createLocalVue, shallowMount } from "@vue/test-utils";
-import mapboxgl from "mapbox-gl";
+import maplibregl from "maplibre-gl";
 import CctvDetailView from "@/components/cctv/CctvDetailView.vue";
 import TrafficCounterCards from "@/components/cctv/TrafficCounterCards.vue";
 import VideoDetectorPlayer from "@/components/cctv/VideoDetectorPlayer.vue";
@@ -31,7 +31,7 @@ jest.mock("@/services/api/mapSettingApi", () => ({
   fetchAll: jest.fn()
 }));
 
-jest.mock("mapbox-gl", () => {
+jest.mock("maplibre-gl", () => {
   const handlers = {};
   const sourceData = {};
   const layers = {};
@@ -86,10 +86,10 @@ jest.mock("mapbox-gl", () => {
   return {
     __esModule: true,
     default: {
-      accessToken: "",
       Map: jest.fn(() => mockMapInstance),
       NavigationControl: jest.fn(),
       GeolocateControl: jest.fn(),
+      AttributionControl: jest.fn(),
       Popup: PopupMock,
       __reset: () => {
         Object.keys(handlers).forEach((k) => delete handlers[k]);
@@ -112,7 +112,7 @@ function buildLocalVue() {
 describe("Frontend smoke tests", () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    mapboxgl.__reset();
+    maplibregl.__reset();
     document.head.innerHTML = "";
   });
 
@@ -352,8 +352,8 @@ describe("Frontend smoke tests", () => {
     expect(wrapper.vm.items).toHaveLength(2);
     expect(wrapper.vm.filteredItems).toHaveLength(2);
 
-    const map = mapboxgl.__getInstance();
-    expect(mapboxgl.Map).toHaveBeenCalledTimes(1);
+    const map = maplibregl.__getInstance();
+    expect(maplibregl.Map).toHaveBeenCalledTimes(1);
     expect(map.__handlers["mousemove:state-fills"]).toHaveLength(1);
 
     // Simulate initial style.load and a second style.load after basemap switch
@@ -378,8 +378,10 @@ describe("Frontend smoke tests", () => {
     // Test layer toggle, style switch, search filter, flyTo, zoomHome, sidebar toggle
     wrapper.vm.toggleLayer(1);
     expect(wrapper.vm.cities[0].vis).toBe("visible");
-    wrapper.vm.handleStyleChange({ id: "dark-v10", label: "Dark" });
-    expect(map.setStyle).toHaveBeenCalledWith("mapbox://styles/mapbox/dark-v10");
+    wrapper.vm.handleStyleChange({ id: "dark", label: "Dark" });
+    expect(map.setStyle).toHaveBeenCalledWith("https://tiles.openfreemap.org/styles/dark", {
+      diff: false
+    });
 
     wrapper.vm.filterState = "PDAM";
     expect(wrapper.vm.filteredItems).toHaveLength(1);

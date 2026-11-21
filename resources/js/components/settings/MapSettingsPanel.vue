@@ -181,10 +181,6 @@ export default {
   width: 100%;
 }
 
-.mapboxgl-ctrl-attrib.mapboxgl-compact {
-  display: none;
-}
-
 @media screen and (max-width: 992px) {
   .form-container .el-form-item {
     width: 50%;

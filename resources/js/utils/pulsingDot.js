@@ -1,9 +1,9 @@
 /**
- * Create an animated pulsing dot StyleImageInterface for Mapbox GL JS.
+ * Create an animated pulsing dot StyleImageInterface for MapLibre GL JS.
  *
- * @param {import('mapbox-gl').Map} map
+ * @param {import('maplibre-gl').Map} map
  * @param {number} size
- * @returns {import('mapbox-gl').StyleImageInterface}
+ * @returns {import('maplibre-gl').StyleImageInterface}
  */
 export function createPulsingDot(map, size = 100) {
   return {

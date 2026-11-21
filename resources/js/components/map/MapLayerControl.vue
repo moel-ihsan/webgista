@@ -27,7 +27,7 @@
 </template>
 
 <script>
-import { MAPBOX_STYLES } from "../../config/mapbox";
+import { MAP_STYLES } from "../../config/map";
 
 export default {
   name: "MapLayerControl",
@@ -43,7 +43,7 @@ export default {
   },
   data() {
     return {
-      styles: MAPBOX_STYLES
+      styles: MAP_STYLES
     };
   }
 };

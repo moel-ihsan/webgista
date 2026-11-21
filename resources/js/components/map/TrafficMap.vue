@@ -24,16 +24,16 @@
 </template>
 
 <script>
-import mapboxgl from "mapbox-gl";
+import maplibregl from "maplibre-gl";
 import MapLayerControl from "./MapLayerControl.vue";
 import MapLegend from "./MapLegend.vue";
 import MapSearchSidebar from "./MapSearchSidebar.vue";
 import {
+  CLUSTER_TEXT_FONT,
   DEFAULT_MAP_CENTER,
   DEFAULT_MAP_ZOOM,
-  getMapboxAccessToken,
-  getMapboxStyleUrl
-} from "../../config/mapbox";
+  getMapStyle
+} from "../../config/map";
 import { fetchAll as fetchCctvPoints } from "../../services/api/cctvApi";
 import { fetchAll as fetchMapSettings } from "../../services/api/mapSettingApi";
 import { resolveCameraSimulation } from "../../config/simulation";
@@ -161,23 +161,24 @@ export default {
             : DEFAULT_MAP_CENTER;
           const zoom = primary ? Number(primary.zoom) : DEFAULT_MAP_ZOOM;
 
-          mapboxgl.accessToken = getMapboxAccessToken();
-          this.map = new mapboxgl.Map({
+          this.map = new maplibregl.Map({
             container: "map",
-            style: getMapboxStyleUrl("streets-v11"),
+            style: getMapStyle("streets"),
             center,
             minZoom: 2,
-            zoom
+            zoom,
+            attributionControl: false
           });
 
-          this.map.addControl(new mapboxgl.NavigationControl(), "top-left");
+          this.map.addControl(new maplibregl.NavigationControl(), "top-left");
           this.map.addControl(
-            new mapboxgl.GeolocateControl({
+            new maplibregl.GeolocateControl({
               positionOptions: { enableHighAccuracy: true },
               trackUserLocation: true
             }),
             "top-left"
           );
+          this.map.addControl(new maplibregl.AttributionControl({ compact: true }), "bottom-left");
 
           this.registerMapEvents();
         })
@@ -222,7 +223,7 @@ export default {
           coordinates[0] += e.lngLat.lng > coordinates[0] ? 360 : -360;
         }
 
-        new mapboxgl.Popup().setLngLat(coordinates).setHTML(description).addTo(map);
+        new maplibregl.Popup().setLngLat(coordinates).setHTML(description).addTo(map);
       });
 
       ["places", "unclustered-point"].forEach((layerId) => {
@@ -320,7 +321,7 @@ export default {
               filter: ["has", "point_count"],
               layout: {
                 "text-field": "{point_count_abbreviated}",
-                "text-font": ["DIN Offc Pro Medium", "Arial Unicode MS Bold"],
+                "text-font": CLUSTER_TEXT_FONT,
                 "text-size": 12,
                 visibility: cctvVisibility
               }
@@ -434,7 +435,7 @@ export default {
     handleStyleChange(styleItem) {
       this.style = styleItem.label;
       if (this.map) {
-        this.map.setStyle(getMapboxStyleUrl(styleItem.id));
+        this.map.setStyle(getMapStyle(styleItem.id), { diff: false });
       }
     },
     toggleLayer(layerId) {
@@ -465,12 +466,12 @@ export default {
         essential: true
       });
 
-      const popUps = document.getElementsByClassName("mapboxgl-popup");
+      const popUps = document.getElementsByClassName("maplibregl-popup");
       if (popUps[0]) {
         popUps[0].remove();
       }
 
-      new mapboxgl.Popup({ closeOnClick: true, offset: 10 })
+      new maplibregl.Popup({ closeOnClick: true, offset: 10 })
         .setLngLat(targetItem.latLong)
         .setHTML(
           this.buildPopupHtml({
@@ -496,7 +497,7 @@ export default {
         })
         .catch(() => {});
 
-      const popUps = document.getElementsByClassName("mapboxgl-popup");
+      const popUps = document.getElementsByClassName("maplibregl-popup");
       if (popUps[0]) {
         popUps[0].remove();
       }
@@ -539,7 +540,7 @@ export default {
   width: 100%;
 }
 
-.mapboxgl-ctrl button.mapboxgl-ctrl-zoom-in .mapboxgl-ctrl-icon {
+.maplibregl-ctrl button.maplibregl-ctrl-zoom-in .maplibregl-ctrl-icon {
   background-image: none;
   -webkit-mask: url("data:image/svg+xml;charset=utf-8,%3Csvg width='29' height='29' viewBox='0 0 29 29' xmlns='http://www.w3.org/2000/svg' fill='%23333'%3E%3Cpath d='M14.5 8.5c-.75 0-1.5.75-1.5 1.5v3h-3c-.75 0-1.5.75-1.5 1.5S9.25 16 10 16h3v3c0 .75.75 1.5 1.5 1.5S16 19.75 16 19v-3h3c.75 0 1.5-.75 1.5-1.5S19.75 13 19 13h-3v-3c0-.75-.75-1.5-1.5-1.5z'/%3E%3C/svg%3E");
   mask: url("data:image/svg+xml;charset=utf-8,%3Csvg width='29' height='29' viewBox='0 0 29 29' xmlns='http://www.w3.org/2000/svg' fill='%23333'%3E%3Cpath d='M14.5 8.5c-.75 0-1.5.75-1.5 1.5v3h-3c-.75 0-1.5.75-1.5 1.5S9.25 16 10 16h3v3c0 .75.75 1.5 1.5 1.5S16 19.75 16 19v-3h3c.75 0 1.5-.75 1.5-1.5S19.75 13 19 13h-3v-3c0-.75-.75-1.5-1.5-1.5z'/%3E%3C/svg%3E");
@@ -547,11 +548,11 @@ export default {
   transition: 0.5s;
 }
 
-.mapboxgl-ctrl button.mapboxgl-ctrl-zoom-in .mapboxgl-ctrl-icon:hover {
+.maplibregl-ctrl button.maplibregl-ctrl-zoom-in .maplibregl-ctrl-icon:hover {
   background-color: var(--green-hover);
 }
 
-.mapboxgl-ctrl button.mapboxgl-ctrl-zoom-out .mapboxgl-ctrl-icon {
+.maplibregl-ctrl button.maplibregl-ctrl-zoom-out .maplibregl-ctrl-icon {
   background-image: none;
   -webkit-mask: url("data:image/svg+xml;charset=utf-8,%3Csvg width='29' height='29' viewBox='0 0 29 29' xmlns='http://www.w3.org/2000/svg' fill='%23333'%3E%3Cpath d='M10 13c-.75 0-1.5.75-1.5 1.5S9.25 16 10 16h9c.75 0 1.5-.75 1.5-1.5S19.75 13 19 13h-9z'/%3E%3C/svg%3E");
   mask: url("data:image/svg+xml;charset=utf-8,%3Csvg width='29' height='29' viewBox='0 0 29 29' xmlns='http://www.w3.org/2000/svg' fill='%23333'%3E%3Cpath d='M10 13c-.75 0-1.5.75-1.5 1.5S9.25 16 10 16h9c.75 0 1.5-.75 1.5-1.5S19.75 13 19 13h-9z'/%3E%3C/svg%3E");
@@ -559,11 +560,11 @@ export default {
   transition: 0.5s;
 }
 
-.mapboxgl-ctrl button.mapboxgl-ctrl-zoom-out .mapboxgl-ctrl-icon:hover {
+.maplibregl-ctrl button.maplibregl-ctrl-zoom-out .maplibregl-ctrl-icon:hover {
   background-color: var(--green-hover);
 }
 
-.mapboxgl-ctrl button.mapboxgl-ctrl-zoom-compass .mapboxgl-ctrl-icon {
+.maplibregl-ctrl button.maplibregl-ctrl-compass .maplibregl-ctrl-icon {
   background-image: none;
   -webkit-mask: url("data:image/svg+xml;charset=utf-8,%3Csvg width='29' height='29' viewBox='0 0 29 29' xmlns='http://www.w3.org/2000/svg' fill='%23333'%3E%3Cpath d='M10.5 14l4-8 4 8h-8z'/%3E%3Cpath d='M10.5 16l4 8 4-8h-8z' fill='%23ccc'/%3E%3C/svg%3E");
   mask: url("data:image/svg+xml;charset=utf-8,%3Csvg width='29' height='29' viewBox='0 0 29 29' xmlns='http://www.w3.org/2000/svg' fill='%23333'%3E%3Cpath d='M10.5 14l4-8 4 8h-8z'/%3E%3Cpath d='M10.5 16l4 8 4-8h-8z' fill='%23ccc'/%3E%3C/svg%3E");
@@ -571,11 +572,11 @@ export default {
   transition: 0.5s;
 }
 
-.mapboxgl-ctrl button.mapboxgl-ctrl-zoom-compass .mapboxgl-ctrl-icon:hover {
+.maplibregl-ctrl button.maplibregl-ctrl-compass .maplibregl-ctrl-icon:hover {
   background-color: var(--green-hover);
 }
 
-.mapboxgl-ctrl button.mapboxgl-ctrl-geolocate .mapboxgl-ctrl-icon {
+.maplibregl-ctrl button.maplibregl-ctrl-geolocate .maplibregl-ctrl-icon {
   background-image: none;
   -webkit-mask: url("data:image/svg+xml;charset=utf-8,%3Csvg width='29' height='29' viewBox='0 0 20 20' xmlns='http://www.w3.org/2000/svg' fill='%23333'%3E%3Cpath d='M10 4C9 4 9 5 9 5v.1A5 5 0 005.1 9H5s-1 0-1 1 1 1 1 1h.1A5 5 0 009 14.9v.1s0 1 1 1 1-1 1-1v-.1a5 5 0 003.9-3.9h.1s1 0 1-1-1-1-1-1h-.1A5 5 0 0011 5.1V5s0-1-1-1zm0 2.5a3.5 3.5 0 110 7 3.5 3.5 0 110-7z'/%3E%3Ccircle cx='10' cy='10' r='2'/%3E%3C/svg%3E");
   mask: url("data:image/svg+xml;charset=utf-8,%3Csvg width='29' height='29' viewBox='0 0 20 20' xmlns='http://www.w3.org/2000/svg' fill='%23333'%3E%3Cpath d='M10 4C9 4 9 5 9 5v.1A5 5 0 005.1 9H5s-1 0-1 1 1 1 1 1h.1A5 5 0 009 14.9v.1s0 1 1 1 1-1 1-1v-.1a5 5 0 003.9-3.9h.1s1 0 1-1-1-1-1-1h-.1A5 5 0 0011 5.1V5s0-1-1-1zm0 2.5a3.5 3.5 0 110 7 3.5 3.5 0 110-7z'/%3E%3Ccircle cx='10' cy='10' r='2'/%3E%3C/svg%3E");
@@ -583,45 +584,45 @@ export default {
   transition: 0.5s;
 }
 
-.mapboxgl-ctrl button.mapboxgl-ctrl-geolocate .mapboxgl-ctrl-icon:hover {
+.maplibregl-ctrl button.maplibregl-ctrl-geolocate .maplibregl-ctrl-icon:hover {
   background-color: var(--green-hover);
 }
 
-.mapboxgl-ctrl button:not(:disabled):hover,
-.mapboxgl-ctrl button:not(:disabled):focus {
+.maplibregl-ctrl button:not(:disabled):hover,
+.maplibregl-ctrl button:not(:disabled):focus {
   border-radius: 10px;
   background-color: var(--color-primary);
   transform: translateY(-1px);
   -webkit-transform: translateY(-1px);
 }
 
-.mapboxgl-ctrl button:not(:disabled) {
+.maplibregl-ctrl button:not(:disabled) {
   border-radius: 10px;
   transition: all 0.15s ease;
 }
 
-.mapboxgl-ctrl button:not(:disabled):active {
+.maplibregl-ctrl button:not(:disabled):active {
   border-radius: 10px;
   transform: translateY(1px) !important;
   box-shadow: none !important;
   transition: all 0.15s ease;
 }
 
-.mapboxgl-ctrl button {
+.maplibregl-ctrl button {
   background-color: var(--color-secondary);
   border-color: var(--color-primary);
   border-radius: 10px;
 }
 
-.mapboxgl-ctrl-group button + button {
+.maplibregl-ctrl-group button + button {
   border-top: none;
 }
 
-.mapboxgl-ctrl-group {
+.maplibregl-ctrl-group {
   border-radius: 10px;
 }
 
-.mapboxgl-ctrl-group:not(:empty) {
+.maplibregl-ctrl-group:not(:empty) {
   box-shadow: 2px 2px 6px rgba(29, 29, 29, 0.2);
   background-color: var(--color-secondary);
 }
@@ -730,14 +731,14 @@ export default {
   width: 20px;
 }
 
-.mapboxgl-popup {
+.maplibregl-popup {
   max-width: 400px;
   border-radius: 10px;
   font-size: var(--size-md);
   color: var(--text-color);
 }
 
-.mapboxgl-popup-content {
+.maplibregl-popup-content {
   position: relative;
   background: var(--color-secondary);
   border-radius: 10px;
@@ -747,23 +748,23 @@ export default {
   -moz-box-shadow: 0 10px 20px rgba(29, 29, 29, 0.1);
 }
 
-.mapboxgl-popup-anchor-bottom .mapboxgl-popup-tip,
-.mapboxgl-popup-anchor-bottom-left .mapboxgl-popup-tip,
-.mapboxgl-popup-anchor-bottom-right .mapboxgl-popup-tip {
+.maplibregl-popup-anchor-bottom .maplibregl-popup-tip,
+.maplibregl-popup-anchor-bottom-left .maplibregl-popup-tip,
+.maplibregl-popup-anchor-bottom-right .maplibregl-popup-tip {
   border-top-color: var(--color-secondary);
 }
 
-.mapboxgl-popup-anchor-top .mapboxgl-popup-tip,
-.mapboxgl-popup-anchor-top-left .mapboxgl-popup-tip,
-.mapboxgl-popup-anchor-top-right .mapboxgl-popup-tip {
+.maplibregl-popup-anchor-top .maplibregl-popup-tip,
+.maplibregl-popup-anchor-top-left .maplibregl-popup-tip,
+.maplibregl-popup-anchor-top-right .maplibregl-popup-tip {
   border-bottom-color: var(--color-secondary);
 }
 
-.mapboxgl-popup-anchor-right .mapboxgl-popup-tip {
+.maplibregl-popup-anchor-right .maplibregl-popup-tip {
   border-left-color: var(--color-secondary);
 }
 
-.mapboxgl-popup-anchor-left .mapboxgl-popup-tip {
+.maplibregl-popup-anchor-left .maplibregl-popup-tip {
   border-right-color: var(--color-secondary);
 }
 
@@ -789,15 +790,29 @@ export default {
   border-radius: 10px;
   position: absolute;
   width: 25%;
-  bottom: 10px;
+  bottom: 42px;
   left: 10px;
   padding: 10px;
   display: none;
 }
 
-a.mapboxgl-ctrl-logo,
-.mapboxgl-ctrl-attrib-inner,
-.mapboxgl-popup-close-button {
+.maplibregl-ctrl-attrib {
+  background-color: var(--color-secondary) !important;
+  color: var(--text-color) !important;
+  border-radius: 10px !important;
+  font-size: 11px;
+  opacity: 0.88;
+}
+
+.maplibregl-ctrl-attrib a {
+  color: var(--green-theme) !important;
+}
+
+.maplibregl-ctrl-attrib.maplibregl-compact .maplibregl-ctrl-attrib-button {
+  background-color: rgba(255, 255, 255, 0.85);
+}
+
+.maplibregl-popup-close-button {
   display: none;
 }
 
