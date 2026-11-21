@@ -14,8 +14,11 @@ class CctvPointSeeder extends Seeder
      */
     public function run()
     {
+        $pdamSim = config('simulation.cameras.simpang-pdam', []);
+        $jamboSim = config('simulation.cameras.simpang-jambo-tape', []);
+
         $samples = [
-            [
+            array_merge([
                 'name' => 'Simpang PDAM',
                 'category' => 'Analytic',
                 'address' => 'Jl. Teuku Nyak Arief (Arah Darussalam)',
@@ -24,9 +27,9 @@ class CctvPointSeeder extends Seeder
                 'agency' => 'Dishub',
                 'keterangan' => 'Great',
                 'path_image' => 'tf1.jpg',
-                'url' => null,
-            ],
-            [
+                'url' => $pdamSim['video_url'] ?? '/demo/videos/simpang-pdam.mp4',
+            ], $pdamSim['default_roi'] ?? []),
+            array_merge([
                 'name' => 'Simpang Jambo Tape',
                 'category' => 'Analytic',
                 'address' => 'Jl. T. Daud Beureueh (Arah Simpang Lima)',
@@ -35,12 +38,12 @@ class CctvPointSeeder extends Seeder
                 'agency' => 'Diskominfotik',
                 'keterangan' => 'Average',
                 'path_image' => 'tf2.jpg',
-                'url' => null,
-            ],
+                'url' => $jamboSim['video_url'] ?? '/demo/videos/simpang-jambo-tape.mp4',
+            ], $jamboSim['default_roi'] ?? []),
         ];
 
         foreach ($samples as $sample) {
-            CctvPoint::firstOrCreate(['name' => $sample['name']], $sample);
+            CctvPoint::updateOrCreate(['name' => $sample['name']], $sample);
         }
     }
 }

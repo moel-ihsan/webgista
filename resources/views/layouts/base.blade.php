@@ -7,6 +7,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <meta name="mapbox-token" content="{{ config('services.mapbox.token') }}">
+    <meta name="webgista-simulation" content="{{ json_encode(config('simulation'), JSON_UNESCAPED_SLASHES) }}">
 
     <title>{{ $title ?? 'Unknown'}}</title>
     <!-- Bootstrap CSS -->

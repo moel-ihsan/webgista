@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\CctvPoint;
 use App\Models\User;
+use Database\Seeders\CctvPointSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
@@ -179,5 +180,30 @@ class CctvApiTest extends TestCase
 
         $invalidFile = UploadedFile::fake()->create('script.php', 10, 'application/x-php');
         $this->postJson('/upload', ['image' => $invalidFile])->assertStatus(422);
+    }
+
+    public function test_simulation_seeder_populates_video_urls_roi_and_renders_simulation_meta(): void
+    {
+        $this->seed(CctvPointSeeder::class);
+
+        $pdam = CctvPoint::where('name', 'Simpang PDAM')->firstOrFail();
+        $jambo = CctvPoint::where('name', 'Simpang Jambo Tape')->firstOrFail();
+
+        $this->assertSame('/demo/videos/simpang-pdam.mp4', $pdam->url);
+        $this->assertSame(195.0, (float) $pdam->rec1x);
+        $this->assertSame('/demo/videos/simpang-jambo-tape.mp4', $jambo->url);
+        $this->assertSame(250.0, (float) $jambo->rec1x);
+
+        $homeResponse = $this->get('/');
+        $homeResponse->assertOk()
+            ->assertSee('name="webgista-simulation"', false)
+            ->assertSee('SIMULASI DEMO', false)
+            ->assertDontSee(env('DEMO_ADMIN_PASSWORD', 'password'), false);
+
+        $this->get("/detail/video/{$pdam->id}")
+            ->assertOk()
+            ->assertSee('name="webgista-simulation"', false)
+            ->assertSee('/demo/videos/simpang-pdam.mp4', false)
+            ->assertSee('simpang-pdam.mp4', false);
     }
 }
