@@ -1,8 +1,11 @@
 # WebGISTA — Real-Time Traffic Condition Mapping (Banda Aceh WebGIS + COCO-SSD)
 
-> **PERHATIAN — SIMULASI DEMO:** Versi pada branch `v1-restore` menggunakan **video lalu lintas contoh (simulasi)** berlisensi Creative Commons karena izin siaran langsung CCTV Kota Banda Aceh tidak lagi tersedia. Data lalu lintas yang ditampilkan di demo **bukan kondisi lalu lintas aktual Kota Banda Aceh saat ini**.
+> **PERHATIAN — SIMULASI DEMO:** Demo publik menggunakan **video lalu lintas contoh (simulasi)** berlisensi Creative Commons karena izin siaran langsung CCTV Kota Banda Aceh tidak lagi tersedia. Data lalu lintas yang ditampilkan di demo **bukan kondisi lalu lintas aktual Kota Banda Aceh saat ini**.
 
-Implementasi pemulihan dan perapihan versi **v1** dari proyek riset *"Banda Aceh Traffic Conditions Real-Time Mapping at Intersections Based on WebGIS and Machine Learning"* (*AIP Conf. Proc.* 3082, 050013, 2024, doi: `10.1063/5.0203203`).
+- **URL Demo Publik (Rp0):** [https://traffic-condition-webgista.vercel.app](https://traffic-condition-webgista.vercel.app)
+- **Panduan Deployment & Konfigurasi:** [`docs/DEPLOY.md`](docs/DEPLOY.md)
+
+Implementasi pemulihan dan peningkatan dari proyek riset *"Banda Aceh Traffic Conditions Real-Time Mapping at Intersections Based on WebGIS and Machine Learning"* (*AIP Conf. Proc.* 3082, 050013, 2024, doi: `10.1063/5.0203203`).
 
 ---
 
@@ -70,6 +73,7 @@ Pengujian & linter:
 npm run test:js
 npm run lint
 npm run format:check
+npm run build:static
 ```
 
 ---
@@ -79,4 +83,4 @@ npm run format:check
 - **Simpang PDAM (simulasi):** [`public/demo/videos/simpang-pdam.mp4`](public/demo/videos/simpang-pdam.mp4) diadaptasi (loop `30s`, `640x360`, H.264 tanpa audio) dari [File:A intersection with traffic in Chiang Mai, Thailand.ogv](https://commons.wikimedia.org/wiki/File:A_intersection_with_traffic_in_Chiang_Mai,_Thailand.ogv) oleh **Amada44** ([CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0)).
 - **Simpang Jambo Tape (simulasi):** [`public/demo/videos/simpang-jambo-tape.mp4`](public/demo/videos/simpang-jambo-tape.mp4) diadaptasi (trim `30s`, crop `640x360`, H.264 tanpa audio) dari [File:Changing lanes in Gothenburg ubt.ogv](https://commons.wikimedia.org/wiki/File:Changing_lanes_in_Gothenburg_ubt.ogv) oleh **Tomasz Sienicki (`User:tsca`)** ([CC BY 3.0](https://creativecommons.org/licenses/by/3.0) / GFDL 1.2+).
 
-Dokumentasi teknis & UI/UX tersedia pada [`docs/ANALYSIS.md`](docs/ANALYSIS.md), [`docs/SIMULATION_DEMO.md`](docs/SIMULATION_DEMO.md), [`docs/UIUX_AUDIT.md`](docs/UIUX_AUDIT.md), [`docs/DESIGN_PROPOSAL.md`](docs/DESIGN_PROPOSAL.md), [`docs/UIUX_RESULTS.md`](docs/UIUX_RESULTS.md), dan [`docs/BACKLOG.md`](docs/BACKLOG.md).
+Dokumentasi teknis, deployment & UI/UX tersedia pada [`docs/ANALYSIS.md`](docs/ANALYSIS.md), [`docs/SIMULATION_DEMO.md`](docs/SIMULATION_DEMO.md), [`docs/DEPLOY.md`](docs/DEPLOY.md), [`docs/UIUX_AUDIT.md`](docs/UIUX_AUDIT.md), [`docs/DESIGN_PROPOSAL.md`](docs/DESIGN_PROPOSAL.md), [`docs/UIUX_RESULTS.md`](docs/UIUX_RESULTS.md), dan [`docs/BACKLOG.md`](docs/BACKLOG.md).

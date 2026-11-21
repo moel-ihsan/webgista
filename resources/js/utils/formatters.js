@@ -20,7 +20,12 @@ export function resolveCctvImagePath(pathImage) {
     return "/assets/tf1.jpg";
   }
 
-  if (pathImage.startsWith("/") || pathImage.startsWith("http")) {
+  if (
+    pathImage.startsWith("/") ||
+    pathImage.startsWith("http") ||
+    pathImage.startsWith("data:") ||
+    pathImage.startsWith("blob:")
+  ) {
     return pathImage;
   }
 
@@ -38,7 +43,12 @@ export function resolveProfileImagePath(pathImage) {
     return "/assets/tf5.jpg";
   }
 
-  if (pathImage.startsWith("/") || pathImage.startsWith("http")) {
+  if (
+    pathImage.startsWith("/") ||
+    pathImage.startsWith("http") ||
+    pathImage.startsWith("data:") ||
+    pathImage.startsWith("blob:")
+  ) {
     return pathImage;
   }
 

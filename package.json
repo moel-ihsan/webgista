@@ -13,7 +13,11 @@
         "lint:fix": "eslint --fix \"resources/js/**/*.{js,vue}\" \"tests/js/**/*.js\"",
         "format": "prettier --write \"resources/js/**/*.{js,vue}\" \"tests/js/**/*.js\"",
         "format:check": "prettier --check \"resources/js/**/*.{js,vue}\" \"tests/js/**/*.js\"",
-        "test:js": "jest"
+        "test:js": "jest",
+        "build:static": "cross-env MIX_STATIC_DEMO=true NODE_OPTIONS=--openssl-legacy-provider npm run production && node scripts/build-static.js"
+    },
+    "engines": {
+        "node": "18.x"
     },
     "author": "maulana ihsan ahmad",
     "devDependencies": {

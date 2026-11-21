@@ -1,12 +1,14 @@
 <template>
   <AppLayout title="Table | Edit">
-    <CctvForm :cctv="cctv" :csrf="csrf" />
+    <CctvForm v-if="ready" :cctv="resolvedCctv" :csrf="csrf" />
   </AppLayout>
 </template>
 
 <script>
 import AppLayout from "../components/layout/AppLayout.vue";
 import CctvForm from "../components/table/CctvForm.vue";
+import { ensureStaticAdmin, resolveStaticCctv } from "../services/api/staticPageHelper";
+import { isStaticDemoMode } from "../services/api/staticStore";
 
 export default {
   name: "CctvEditPage",
@@ -22,6 +24,29 @@ export default {
     csrf: {
       type: String,
       default: ""
+    }
+  },
+  data() {
+    const hasProp = Boolean(this.cctv && this.cctv.id);
+    return {
+      resolvedCctv: this.cctv || {},
+      ready: hasProp || !isStaticDemoMode()
+    };
+  },
+  created() {
+    if (isStaticDemoMode()) {
+      ensureStaticAdmin().then(({ allowed }) => {
+        if (!allowed) {
+          return;
+        }
+        if (this.ready) {
+          return;
+        }
+        resolveStaticCctv().then((record) => {
+          this.resolvedCctv = record;
+          this.ready = true;
+        });
+      });
     }
   }
 };
