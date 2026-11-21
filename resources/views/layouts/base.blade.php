@@ -153,22 +153,16 @@ src="https://cdnjs.cloudflare.com/ajax/libs/video.js/7.12.0/video.min.js"></scri
 </script>
 <script src="https://unpkg.com/ionicons@5.4.0/dist/ionicons.js"></script>
 
-<!-- Import TensorFlow.js library -->
-<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs/dist/tf.min.js" type="text/javascript"></script>
-<!-- Load the coco-ssd model to use to recognize things in images -->
-<script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd"></script>
-<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs/dist/tf.min.js" type="text/javascript"></script>
-<script src="https://api.mapbox.com/mapbox-gl-js/v2.5.1/mapbox-gl.js"></script>
-
-
 <script src="{{ mix('js/app.js') }}"></script>
 @section('script')
     
 @show   
 
 <script>
-    const btn = document.querySelector(".el-switch")
-    btn.addEventListener("click", res => changeTheme())
+    const btn = document.querySelector(".el-switch");
+    if (btn) {
+        btn.addEventListener("click", () => changeTheme());
+    }
     // function to set a given theme/color-scheme
     function setTheme(themeName) {
         localStorage.setItem('theme', themeName);
@@ -217,26 +211,5 @@ src="https://cdnjs.cloudflare.com/ajax/libs/video.js/7.12.0/video.min.js"></scri
     }
 
     stickyHeader();
-
-    function getCursorPosition(canvas, event) {
-        const rect = canvas.getBoundingClientRect()
-        const x = event.clientX - rect.left
-        const y = event.clientY - rect.top
-        console.log("x: " + x + " y: " + y)
-    }
-    async function canvasTes(){
-        try{
-            const canvasClick = document.querySelector('#canvasw')
-            canvasClick.addEventListener('mousedown', function(e) {
-                getCursorPosition(canvasClick, e)
-            })
-        }
-        catch(e){}
-    }
-
-    canvasTes();
-   
-
- 
 </script>
 </html>

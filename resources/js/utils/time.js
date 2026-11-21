@@ -56,22 +56,8 @@ export default function ago(date, max) {
   if (Math.abs(diff) < 60000) return "just now";
   for (var i = 0; i < units.length; i++) {
     if (Math.abs(diff) < units[i].max || (max && units[i].name === max)) {
-      return format(
-        diff,
-        units[i].value,
-        units[i].name,
-        units[i].past,
-        units[i].future,
-        diff < 0
-      );
+      return format(diff, units[i].value, units[i].name, units[i].past, units[i].future, diff < 0);
     }
   }
-  return format(
-    diff,
-    31536000000,
-    "year",
-    "last year",
-    "next year",
-    diff < 0
-  );
+  return format(diff, 31536000000, "year", "last year", "next year", diff < 0);
 }

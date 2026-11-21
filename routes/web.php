@@ -38,9 +38,6 @@ Route::get('/authUser', [AuthController::class, 'authUser'])->name('auth.user');
 
 Route::get('/login', [AuthController::class, 'login'])->name('login');
 Route::post('/login/enter', [AuthController::class, 'auth'])->name('auth.enter');
-Route::get('/register', function () {
-    return view('register');
-})->name('register.legacy');
 
 Route::middleware(['auth'])->group(function () {
     Route::get('/logout', [AuthController::class, 'logout'])->name('auth.logout');
