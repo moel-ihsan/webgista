@@ -13,6 +13,7 @@
 !/docs/screenshots/phase45_after/map_1440_dark.png
 !/docs/screenshots/phase45_after/video_detail_1440_dark.png
 /public/hot
+/public/storage
 /storage/*.key
 /vendor
 /public/assets/video
