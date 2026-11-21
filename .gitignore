@@ -1,6 +1,17 @@
 /node_modules
 /dist
 /.vercel
+/docs/*.md
+/docs/screenshots/after
+/docs/screenshots/before
+/docs/screenshots/phase4
+/docs/screenshots/phase45_audit
+/docs/screenshots/phase45_proposal
+/docs/screenshots/phase45_after/*
+!/docs/screenshots/phase45_after/dashboard_1440.png
+!/docs/screenshots/phase45_after/map_1440.png
+!/docs/screenshots/phase45_after/map_1440_dark.png
+!/docs/screenshots/phase45_after/video_detail_1440_dark.png
 /public/hot
 /storage/*.key
 /vendor
