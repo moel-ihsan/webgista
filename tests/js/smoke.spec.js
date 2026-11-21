@@ -257,9 +257,9 @@ describe("Frontend smoke tests", () => {
         "el-option": true,
         "el-input": true,
         "el-table": { template: "<div><slot /></div>" },
-        "el-table-column": true,
+        "el-table-column": { template: '<div><slot name="header" /></div>' },
         "el-pagination": true,
-        "el-button": true,
+        "el-button": { template: "<button><slot /></button>" },
         "el-avatar": true,
         "el-tooltip": true,
         "el-tag": true
@@ -274,6 +274,7 @@ describe("Frontend smoke tests", () => {
     expect(fetchAuthUser).toHaveBeenCalledTimes(1);
     expect(wrapper.vm.tableData).toHaveLength(2);
     expect(wrapper.vm.role).toBe("admin");
+    expect(wrapper.find('a[href="/table/add"]').exists()).toBe(true);
     expect(wrapper.find(".info-table").text()).toContain("Showing 1 To 2 Of 2 Entries");
   });
 
@@ -527,5 +528,67 @@ describe("Frontend smoke tests", () => {
 
     wrapper.destroy();
     getContextSpy.mockRestore();
+  });
+
+  it("persists detected traffic condition after async auth resolves and skips empty loop reset", async () => {
+    let resolveAuth;
+    fetchAuthUser.mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          resolveAuth = resolve;
+        })
+    );
+    updateTrafficCondition.mockResolvedValue({ message: "berhasil" });
+
+    const wrapper = shallowMount(VideoDetectorPlayer, {
+      localVue: buildLocalVue(),
+      stubs: {
+        "el-row": { template: "<div><slot /></div>" },
+        "el-col": { template: "<div><slot /></div>" },
+        "el-card": { template: "<div><slot /></div>" },
+        "el-form": { template: "<div><slot /></div>" },
+        TrafficCounterCards: true
+      },
+      propsData: {
+        cctv: {
+          id: 1,
+          name: "Simpang PDAM",
+          category: "Analytic",
+          url: "/demo/videos/simpang-pdam.mp4"
+        }
+      }
+    });
+
+    // Detection runs before /authUser completes (race condition) -> classified as Terrible
+    const heavyDetections = Array.from({ length: 40 }, () => ({
+      class: "car",
+      bbox: [10, 10, 20, 20]
+    }));
+    wrapper.vm.applyDetectionResults(heavyDetections, 15);
+    expect(wrapper.vm.conditionLabel).toBe("Terrible");
+    expect(updateTrafficCondition).not.toHaveBeenCalled();
+
+    // When admin auth finishes, the already-computed condition is immediately synced
+    resolveAuth({ user: { role: "admin" } });
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(wrapper.vm.isAdmin).toBe(true);
+    expect(wrapper.find("#detector-sync-status").text()).toContain("aktif (Admin)");
+    expect(updateTrafficCondition).toHaveBeenCalledTimes(1);
+    expect(updateTrafficCondition).toHaveBeenCalledWith(1, "Terrible");
+
+    // Looping back to t=0 with an empty 0-vehicle frame must NOT overwrite DB back to "Great"
+    updateTrafficCondition.mockClear();
+    wrapper.vm.applyDetectionResults([], 0);
+    expect(wrapper.vm.conditionLabel).toBe("Great");
+    expect(updateTrafficCondition).not.toHaveBeenCalled();
+
+    // Non-empty detection in the new window resumes syncing normally
+    wrapper.vm.applyDetectionResults([{ class: "car", bbox: [10, 10, 20, 20] }], 1);
+    expect(updateTrafficCondition).toHaveBeenCalledTimes(1);
+    expect(updateTrafficCondition).toHaveBeenCalledWith(1, "Great");
+
+    wrapper.destroy();
   });
 });

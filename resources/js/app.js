@@ -2,6 +2,7 @@ require("./bootstrap");
 
 import Vue from "vue";
 import ElementUI from "element-ui";
+import locale from "element-ui/lib/locale/lang/en";
 import "element-ui/lib/theme-chalk/index.css";
 import "maplibre-gl/dist/maplibre-gl.css";
 import "./styles/theme-overrides.css";
@@ -21,7 +22,7 @@ import ProfilePage from "./pages/ProfilePage.vue";
 import PasswordPage from "./pages/PasswordPage.vue";
 
 Vue.config.ignoredElements = [/^ion-/];
-Vue.use(ElementUI);
+Vue.use(ElementUI, { locale });
 
 /* eslint-disable vue/component-definition-name-casing */
 Vue.component("login", LoginPage);

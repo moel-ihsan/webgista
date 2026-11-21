@@ -22,7 +22,11 @@
       <el-table-column label="Name" prop="name" min-width="100" sortable>
         <template slot-scope="scope">
           <div style="display: flex; flex-direction: row">
-            <el-avatar style="margin-right: 10px" size="large" :src="scope.row.cctvimg" />
+            <el-avatar
+              style="margin-right: 10px; flex-shrink: 0"
+              size="large"
+              :src="scope.row.cctvimg"
+            />
             <div class="cctv-name">
               <div prop="name">{{ scope.row.name }}</div>
               <div class="time-table" prop="time">{{ scope.row.time }}</div>
@@ -56,7 +60,7 @@
         </template>
       </el-table-column>
       <el-table-column align="center">
-        <template slot="header">
+        <template #header>
           <a v-if="role === 'admin'" href="/table/add">
             <el-button type="info" class="detail" icon="el-icon-plus" round>Add New</el-button>
           </a>

@@ -358,12 +358,6 @@ export default {
   width: 100%;
 }
 
-@media screen and (max-width: 992px) {
-  .el-form-item {
-    width: 50%;
-  }
-}
-
 @media screen and (max-width: 600px) {
   .add-container {
     padding-right: 10px;

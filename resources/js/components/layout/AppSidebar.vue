@@ -71,10 +71,14 @@ export default {
     this.currentUrl = window.location.pathname;
     if (this.currentUrl === "/map") {
       this.active = "2";
-    } else if (this.currentUrl.startsWith("/table")) {
+    } else if (this.currentUrl.startsWith("/table") || this.currentUrl.startsWith("/detail")) {
       this.active = "3";
     } else if (this.currentUrl.startsWith("/setting")) {
       this.active = "4";
+    } else if (this.currentUrl.startsWith("/profile") || this.currentUrl.startsWith("/password")) {
+      this.active = "";
+    } else {
+      this.active = "1";
     }
   },
   methods: {

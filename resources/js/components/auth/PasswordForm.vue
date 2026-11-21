@@ -243,12 +243,6 @@ export default {
   transform: scale(1.25);
 }
 
-@media screen and (max-width: 992px) {
-  .password-container .el-form-item {
-    width: 50%;
-  }
-}
-
 @media screen and (max-width: 600px) {
   .password-container {
     padding-right: 10px;

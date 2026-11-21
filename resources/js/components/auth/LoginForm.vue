@@ -215,12 +215,6 @@ export default {
   transform: scale(1.25);
 }
 
-@media screen and (max-width: 992px) {
-  .login-container .el-form-item {
-    width: 50%;
-  }
-}
-
 @media screen and (max-width: 600px) {
   .login-container .el-form-item {
     width: 100%;

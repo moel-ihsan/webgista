@@ -130,6 +130,7 @@
           <el-col :span="24">
             <p style="margin-bottom: 4px">{{ cctv.name }}</p>
             <div id="detector-mode-status" class="detector-mode-meta">{{ detectorStatusText }}</div>
+            <div id="detector-sync-status" class="detector-sync-meta">{{ syncStatusText }}</div>
           </el-col>
         </el-row>
         <el-form class="veh-form" :model="cctv">
@@ -204,7 +205,10 @@ export default {
       tracker: new TrafficWindowTracker(ANALYSIS_WINDOW_SECONDS),
       isDetecting: false,
       isDestroyed: false,
-      isAdmin: false
+      isAdmin: false,
+      lastPersistedCondition: null,
+      hasComputedDetection: false,
+      pendingWindowSync: false
     };
   },
   computed: {
@@ -216,6 +220,11 @@ export default {
     },
     modeToggleLabel() {
       return this.activeMode === "live" ? "Ganti ke Pra-hitung (JSON)" : "Ganti ke Live TF.js";
+    },
+    syncStatusText() {
+      return this.isAdmin
+        ? "Sinkronisasi status ke /map aktif (Admin)"
+        : "Mode tamu — login admin untuk menyinkronkan warna marker ke /map";
     }
   },
   created() {
@@ -237,6 +246,9 @@ export default {
       .then((data) => {
         if (!this.isDestroyed) {
           this.isAdmin = Boolean(data && data.user && data.user.role === "admin");
+          if (this.isAdmin && this.hasComputedDetection) {
+            this.persistConditionIfAdmin(this.conditionLabel);
+          }
         }
       })
       .catch(() => {});
@@ -362,6 +374,9 @@ export default {
       this.roiPoints = [...points];
       this.tracker.reset();
       this.counts = { lv: 0, hv: 0, mc: 0 };
+      this.lastPersistedCondition = null;
+      this.hasComputedDetection = false;
+      this.pendingWindowSync = false;
       this.lastPrecomputedFrameTime = null;
       this.lastMatchedDetections = [];
       this.drawVideoFrameToCanvases();
@@ -437,6 +452,9 @@ export default {
     async toggleDetectionMode() {
       this.tracker.reset();
       this.counts = { lv: 0, hv: 0, mc: 0 };
+      this.lastPersistedCondition = null;
+      this.hasComputedDetection = false;
+      this.pendingWindowSync = false;
       this.lastPrecomputedFrameTime = null;
       this.lastDetectAtMs = 0;
       this.lastMatchedDetections = [];
@@ -695,15 +713,42 @@ export default {
         ctx.closePath();
       });
     },
+    persistConditionIfAdmin(label) {
+      if (
+        !this.isAdmin ||
+        !this.cctv ||
+        !this.cctv.id ||
+        !label ||
+        label === "No Data" ||
+        this.lastPersistedCondition === label
+      ) {
+        return;
+      }
+
+      this.lastPersistedCondition = label;
+      updateTrafficCondition(this.cctv.id, label).catch(() => {
+        if (!this.isDestroyed && this.lastPersistedCondition === label) {
+          this.lastPersistedCondition = null;
+        }
+      });
+    },
     applyDetectionResults(results, currentTime) {
       const step = this.tracker.recordCapture(results, currentTime);
+      this.hasComputedDetection = true;
+      if (step.windowReset) {
+        this.pendingWindowSync = true;
+      }
       this.counts = step.counts;
       this.conditionLabel = step.classification.label;
       this.lastMatchedDetections = step.frameCounts.matchedDetections;
       this.renderCanvasOverlays();
 
-      if (this.isAdmin && step.shouldPersist && this.cctv && this.cctv.id) {
-        updateTrafficCondition(this.cctv.id, step.classification.label).catch(() => {});
+      const isEmptyLoopReset =
+        step.windowReset && step.completedClassification !== null && step.frameCounts.total === 0;
+
+      if (!isEmptyLoopReset && (step.shouldPersist || this.pendingWindowSync)) {
+        this.pendingWindowSync = false;
+        this.persistConditionIfAdmin(step.classification.label);
       }
     },
     onVideoTimeUpdate() {
@@ -790,6 +835,11 @@ export default {
   font-size: var(--size-xs);
   color: var(--green-theme);
   font-weight: 500;
+}
+
+.detector-sync-meta {
+  font-size: var(--size-xs);
+  opacity: 0.75;
 }
 
 .canvasw {
