@@ -4,12 +4,14 @@ module.exports = {
   moduleFileExtensions: ["js", "json", "vue"],
   transform: {
     "^.+\\.vue$": "@vue/vue2-jest",
-    "^.+\\.js$": [
-      "babel-jest",
-      {
-        presets: [["@babel/preset-env", { targets: { node: "current" } }]]
+    "^.+\\.js$": "<rootDir>/tests/js/babelTransformer.js"
+  },
+  globals: {
+    "vue-jest": {
+      transform: {
+        js: "./tests/js/babelTransformer.js"
       }
-    ]
+    }
   },
   moduleNameMapper: {
     "^@/(.*)$": "<rootDir>/resources/js/$1"
