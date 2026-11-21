@@ -33,29 +33,32 @@ export default {
 .simulation-demo-banner {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 10px;
-  padding: 8px 14px;
-  margin-bottom: 14px;
-  border-radius: 10px;
-  background-color: var(--color-secondary);
-  border: 1px solid var(--green-theme-30);
-  color: var(--text-color);
-  font-size: var(--size-sm);
-  box-shadow: 0 4px 12px rgba(29, 29, 29, 0.08);
+  padding: 10px 16px;
+  margin-bottom: var(--space-3);
+  border-radius: var(--radius-md);
+  background-color: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+  box-shadow: var(--shadow-card);
 }
 
 .simulation-demo-badge {
   flex-shrink: 0;
-  padding: 2px 8px;
-  border-radius: 6px;
-  background-color: var(--green-theme);
-  color: #fff;
+  padding: 3px 10px;
+  border-radius: var(--radius-pill);
+  background-color: var(--accent-soft-bg);
+  color: var(--accent-soft-text);
+  border: 1px solid var(--accent-soft-border);
   font-weight: 700;
-  font-size: var(--size-xs);
+  font-size: var(--text-caption);
   letter-spacing: 0.04em;
 }
 
 .simulation-demo-text {
-  line-height: 1.4;
+  line-height: 1.45;
+  color: var(--text-secondary);
 }
 </style>

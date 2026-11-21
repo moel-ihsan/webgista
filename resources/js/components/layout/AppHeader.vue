@@ -1,45 +1,78 @@
 <template>
-  <div>
-    <div class="huhu">
-      <el-menu class="el-menu-demo" mode="horizontal" background-color="transparent">
-        <el-menu-item class="pageTitle" disabled>{{ title }}</el-menu-item>
-        <div class="nav-right">
-          <el-menu-item index="2" disabled>
-            <el-switch v-model="themeSetting" active-color="white" inactive-color="#27293d" />
-          </el-menu-item>
-          <a v-if="role !== 'admin'" href="/login">
-            <el-menu-item index="3" disabled>
-              <div style="cursor: pointer">Login</div>
-            </el-menu-item>
-          </a>
-          <el-submenu v-if="role === 'admin'" index="4">
-            <template slot="title">
-              <el-avatar :size="40" :src="avatarSrc" />
-            </template>
-            <a :href="'/profile/' + id">
-              <el-menu-item index="2-1">
-                <ion-icon name="person-circle" style="margin-right: 10px" />
-                Edit Profile
-              </el-menu-item>
-            </a>
-            <a href="/password">
-              <el-menu-item index="2-2">
-                <ion-icon
-                  name="lock-closed"
-                  style="margin-right: 10px; margin-left: 3px; font-size: 18.9px !important"
-                />
-                Change Password
-              </el-menu-item>
-            </a>
-          </el-submenu>
-        </div>
-      </el-menu>
+  <header class="app-header">
+    <div class="header-left">
+      <button
+        type="button"
+        class="header-menu-btn"
+        aria-label="Toggle menu navigasi"
+        :aria-expanded="menuExpanded ? 'true' : 'false'"
+        @click="$emit('toggle-menu')"
+      >
+        <AppIcon :name="menuExpanded ? 'filter' : 'menu'" :size="20" />
+      </button>
+      <h1 class="page-title">{{ resolvedTitle }}</h1>
     </div>
-  </div>
+
+    <div class="header-right">
+      <button
+        type="button"
+        class="theme-switch-btn"
+        role="switch"
+        :aria-checked="isDark ? 'true' : 'false'"
+        :aria-label="isDark ? 'Aktifkan mode terang' : 'Aktifkan mode gelap'"
+        @click="onToggleTheme"
+      >
+        <span class="theme-switch-thumb" aria-hidden="true">
+          <AppIcon :name="isDark ? 'moon' : 'sun'" :size="16" />
+        </span>
+      </button>
+
+      <a v-if="role !== 'admin'" href="/login" class="header-login-btn">Login</a>
+
+      <div v-else ref="profileMenuWrap" class="profile-menu-wrap">
+        <button
+          type="button"
+          class="avatar-menu-trigger"
+          aria-haspopup="menu"
+          :aria-expanded="profileMenuOpen ? 'true' : 'false'"
+          aria-label="Menu akun admin"
+          @click="toggleProfileMenu"
+        >
+          <img
+            :src="avatarSrc"
+            :alt="userName ? `Foto profil ${userName}` : 'Foto profil admin'"
+            class="avatar-menu-img"
+          />
+        </button>
+
+        <ul v-if="profileMenuOpen" class="profile-dropdown" role="menu" aria-label="Menu admin">
+          <li role="none">
+            <a :href="'/profile/' + id" class="profile-dropdown-link" role="menuitem">
+              <AppIcon name="person-circle" :size="18" />
+              <span>Edit Profile</span>
+            </a>
+          </li>
+          <li role="none">
+            <a href="/password" class="profile-dropdown-link" role="menuitem">
+              <AppIcon name="key" :size="18" />
+              <span>Change Password</span>
+            </a>
+          </li>
+          <li role="none">
+            <a href="/logout" class="profile-dropdown-link profile-dropdown-link--danger" role="menuitem">
+              <AppIcon name="log-out" :size="18" />
+              <span>Log Out</span>
+            </a>
+          </li>
+        </ul>
+      </div>
+    </div>
+  </header>
 </template>
 
 <script>
 import { fetchAuthUser } from "../../services/api/authApi";
+import { isDarkTheme, subscribeTheme, toggleTheme } from "../../services/theme";
 import { resolveProfileImagePath } from "../../utils/formatters";
 
 export default {
@@ -48,25 +81,52 @@ export default {
     propsTitle: {
       type: String,
       required: true
+    },
+    menuExpanded: {
+      type: Boolean,
+      default: false
     }
   },
   data() {
     return {
       circleUrl: "",
-      themeSetting: true,
-      title: "",
+      userName: "",
       role: "",
-      id: ""
+      id: "",
+      isDark: isDarkTheme(),
+      profileMenuOpen: false,
+      unsubscribeTheme: null
     };
   },
   computed: {
+    resolvedTitle() {
+      return this.propsTitle || "WebGIS";
+    },
     avatarSrc() {
       return resolveProfileImagePath(this.circleUrl);
     }
   },
   created() {
     this.loadAuthUser();
-    this.title = this.propsTitle || "UNKNOWN";
+  },
+  mounted() {
+    this.isDark = isDarkTheme();
+    this.unsubscribeTheme = subscribeTheme(({ isDark }) => {
+      this.isDark = isDark;
+    });
+    if (typeof document !== "undefined") {
+      document.addEventListener("click", this.handleOutsideClick);
+      document.addEventListener("keydown", this.handleEscapeKey);
+    }
+  },
+  beforeDestroy() {
+    if (typeof this.unsubscribeTheme === "function") {
+      this.unsubscribeTheme();
+    }
+    if (typeof document !== "undefined") {
+      document.removeEventListener("click", this.handleOutsideClick);
+      document.removeEventListener("keydown", this.handleEscapeKey);
+    }
   },
   methods: {
     loadAuthUser() {
@@ -74,114 +134,220 @@ export default {
         .then((data) => {
           if (data && data.user) {
             this.circleUrl = data.user.profile_photo_path || "";
+            this.userName = data.user.name || "";
             this.role = data.user.role || "";
             this.id = data.user.id || "";
           }
         })
         .catch(() => {});
+    },
+    onToggleTheme() {
+      const next = toggleTheme();
+      this.isDark = next === "theme-dark";
+    },
+    toggleProfileMenu() {
+      this.profileMenuOpen = !this.profileMenuOpen;
+    },
+    handleOutsideClick(event) {
+      const wrap = this.$refs.profileMenuWrap;
+      if (this.profileMenuOpen && wrap && !wrap.contains(event.target)) {
+        this.profileMenuOpen = false;
+      }
+    },
+    handleEscapeKey(event) {
+      if (event.key === "Escape" && this.profileMenuOpen) {
+        this.profileMenuOpen = false;
+      }
     }
   }
 };
 </script>
 
 <style>
-.pageTitle {
-  font-size: var(--size-lg) !important;
+.app-header {
+  min-height: 64px;
+  padding: var(--space-2) var(--space-4);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  background-color: var(--bg-canvas);
+  color: var(--text-primary);
 }
 
-.el-submenu__title,
-.el-submenu__title:hover,
-.el-submenu__title:focus {
-  opacity: 1 !important;
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-width: 0;
+  flex: 1;
+}
+
+.header-menu-btn {
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-subtle);
+  background-color: var(--bg-surface);
+  color: var(--text-primary);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   cursor: pointer;
-  color: var(--text-color) !important;
-  border-bottom-color: transparent;
-  background-color: transparent !important;
-  font-size: var(--size-md);
+  flex-shrink: 0;
+  box-shadow: var(--shadow-card);
+  transition: background-color 0.15s ease, border-color 0.15s ease;
 }
 
-.el-menu.el-menu--horizontal {
-  border-bottom: none;
+.header-menu-btn:hover {
+  background-color: var(--bg-surface-subtle);
+  border-color: var(--accent-primary);
 }
 
-.el-menu-item.is-disabled {
-  opacity: 1 !important;
-  cursor: default;
-  color: var(--text-color) !important;
-  border-bottom-color: transparent;
-  background-color: transparent !important;
-  font-size: var(--size-md);
+.page-title {
+  margin: 0;
+  font-size: var(--text-xl);
+  font-weight: 700;
+  line-height: 1.25;
+  letter-spacing: -0.015em;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-ul {
-  padding: 0.5em 0;
-}
-
-.el-header {
-  padding: 0px;
-  box-sizing: border-box;
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
   flex-shrink: 0;
 }
 
-.nav-right {
-  display: flex;
+.theme-switch-btn {
+  width: 60px;
+  height: 44px;
+  padding: 0 5px;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--border-input);
+  background-color: var(--bg-surface);
+  color: var(--text-primary);
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-start;
+  cursor: pointer;
+  box-shadow: var(--shadow-card);
+  transition: border-color 0.15s ease, background-color 0.15s ease;
+}
+
+.theme-switch-btn:hover {
+  border-color: var(--accent-primary);
+}
+
+html.theme-dark .theme-switch-btn {
   justify-content: flex-end;
 }
 
-.el-switch .el-switch__core::after {
-  background-color: white;
+.theme-switch-thumb {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background-color: var(--accent-primary);
+  color: var(--accent-on-fill);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
-.el-switch.is-checked .el-switch__core::after {
-  background-color: #27293d;
+.header-login-btn {
+  min-height: 44px;
+  padding: 0 var(--space-4);
+  border-radius: var(--radius-sm);
+  background-color: var(--accent-primary);
+  color: var(--accent-on-fill);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: var(--shadow-card);
+  transition: background-color 0.15s ease, transform 0.15s ease;
 }
 
-.el-submenu__icon-arrow {
-  display: none;
+.header-login-btn:hover {
+  background-color: var(--accent-primary-hover);
+  color: var(--accent-on-fill);
 }
 
-ion-icon {
-  font-size: var(--size-xl);
+.profile-menu-wrap {
+  position: relative;
 }
 
-.el-menu--popup {
-  right: 40px !important;
-  background-color: var(--color-secondary) !important;
-  padding: 5px 0;
-  border-radius: 10px;
+.avatar-menu-trigger {
+  width: 44px;
+  height: 44px;
+  padding: 2px;
+  border-radius: 50%;
+  border: 2px solid var(--accent-primary);
+  background-color: var(--bg-surface);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  box-shadow: var(--shadow-card);
 }
 
-.el-menu--popup .el-menu-item {
-  font-size: var(--size-sm);
+.avatar-menu-img {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  object-fit: cover;
 }
 
-.el-menu--popup .el-menu-item:hover,
-.el-menu--popup .el-menu-item.is-active,
-.el-menu--popup .el-menu-item:focus {
-  background-color: transparent !important;
-  color: var(--text-color) !important;
+.profile-dropdown {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  min-width: 210px;
+  margin: 0;
+  padding: var(--space-2);
+  list-style: none;
+  background-color: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-float);
+  z-index: 60;
 }
 
-.pageTitle {
-  display: block;
-  transition: 0.5s;
+.profile-dropdown-link {
+  min-height: 44px;
+  padding: 0 var(--space-3);
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  color: var(--text-primary);
 }
 
-.el-menu--horizontal > .el-menu-item.is-active {
-  border-bottom: none;
-  color: #303133;
+.profile-dropdown-link:hover {
+  background-color: var(--bg-surface-subtle);
+  color: var(--accent-primary);
 }
 
-@media screen and (max-width: 992px) {
-  .pageTitle {
-    display: block;
-    transition: 0.5s;
+.profile-dropdown-link--danger:hover {
+  color: var(--danger-text);
+  background-color: var(--danger-soft-bg);
+}
+
+@media screen and (max-width: 767px) {
+  .app-header {
+    padding: var(--space-2) var(--space-3);
   }
-}
 
-@media screen and (max-width: 600px) {
-  .pageTitle {
-    display: none;
+  .page-title {
+    font-size: 1.125rem;
   }
 }
 </style>

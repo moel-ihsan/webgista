@@ -1,53 +1,48 @@
 <template>
   <div>
-    <el-aside
-      :style="{ width: isCollapse ? '84px' : '220px' }"
-      style="transition: all 0.35s; overflow: hidden"
-    >
-      <div class="hihi">
-        <div class="toggle-sidebar-custom">
-          <ion-icon v-if="isCollapse" name="menu" @click="handleCollapse(false)" />
-          <ion-icon v-else name="filter" @click="handleCollapse(true)" />
-        </div>
+    <div
+      v-if="mobileOpen"
+      class="sidebar-backdrop"
+      aria-hidden="true"
+      @click="$emit('close-mobile')"
+    />
 
-        <el-menu
-          :default-active="active"
-          class="el-menu-vertical-demo is-hover hihi"
-          :collapse="isCollapse"
+    <nav
+      aria-label="Navigasi Utama"
+      class="sidebar-nav"
+      :class="{
+        'sidebar-nav--expanded': desktopExpanded,
+        'sidebar-nav--mobile-open': mobileOpen
+      }"
+    >
+      <div class="sidebar-mobile-header">
+        <span class="sidebar-brand">WebGIS</span>
+        <button
+          type="button"
+          class="sidebar-close-btn"
+          aria-label="Tutup menu navigasi"
+          @click="$emit('close-mobile')"
         >
-          <a href="/">
-            <el-menu-item index="1" disabled>
-              <ion-icon name="home" />
-              <span slot="title">Dashboard</span>
-            </el-menu-item>
-          </a>
-          <a href="/map">
-            <el-menu-item index="2" disabled>
-              <ion-icon name="map" />
-              <span slot="title">View Map</span>
-            </el-menu-item>
-          </a>
-          <a href="/table">
-            <el-menu-item index="3" disabled>
-              <ion-icon name="list" />
-              <span slot="title">Data Table</span>
-            </el-menu-item>
-          </a>
-          <a v-if="role === 'admin'" href="/setting/1">
-            <el-menu-item index="4" disabled>
-              <ion-icon name="settings" />
-              <span slot="title">Settings</span>
-            </el-menu-item>
-          </a>
-          <a v-if="role === 'admin'" href="/logout">
-            <el-menu-item index="5" disabled>
-              <ion-icon name="log-out" />
-              <span slot="title">Log Out</span>
-            </el-menu-item>
-          </a>
-        </el-menu>
+          <AppIcon name="close" :size="20" />
+        </button>
       </div>
-    </el-aside>
+
+      <ul class="sidebar-list">
+        <li v-for="item in navItems" :key="item.href" class="sidebar-item">
+          <a
+            :href="item.href"
+            class="sidebar-link"
+            :aria-current="isItemActive(item.id) ? 'page' : null"
+            :aria-label="item.label"
+            :title="!desktopExpanded && !mobileOpen ? item.label : ''"
+            @click="$emit('close-mobile')"
+          >
+            <AppIcon :name="item.icon" :size="20" />
+            <span class="sidebar-link-label">{{ item.label }}</span>
+          </a>
+        </li>
+      </ul>
+    </nav>
   </div>
 </template>
 
@@ -56,29 +51,53 @@ import { fetchAuthUser } from "../../services/api/authApi";
 
 export default {
   name: "AppSidebar",
+  props: {
+    desktopExpanded: {
+      type: Boolean,
+      default: false
+    },
+    mobileOpen: {
+      type: Boolean,
+      default: false
+    }
+  },
   data() {
     return {
-      isCollapse: true,
       currentUrl: "",
-      active: "1",
+      activeId: "dashboard",
       role: ""
     };
+  },
+  computed: {
+    navItems() {
+      const items = [
+        { id: "dashboard", href: "/", icon: "home", label: "Dashboard" },
+        { id: "map", href: "/map", icon: "map", label: "View Map" },
+        { id: "table", href: "/table", icon: "list", label: "Data Table" }
+      ];
+      if (this.role === "admin") {
+        items.push({ id: "settings", href: "/setting/1", icon: "settings", label: "Map Settings" });
+        items.push({ id: "logout", href: "/logout", icon: "log-out", label: "Log Out" });
+      }
+      return items;
+    }
   },
   created() {
     this.loadAuthUser();
   },
   mounted() {
-    this.currentUrl = window.location.pathname;
-    if (this.currentUrl === "/map") {
-      this.active = "2";
-    } else if (this.currentUrl.startsWith("/table") || this.currentUrl.startsWith("/detail")) {
-      this.active = "3";
-    } else if (this.currentUrl.startsWith("/setting")) {
-      this.active = "4";
-    } else if (this.currentUrl.startsWith("/profile") || this.currentUrl.startsWith("/password")) {
-      this.active = "";
+    const path = typeof window !== "undefined" ? window.location.pathname : "/";
+    this.currentUrl = path;
+    if (path === "/map") {
+      this.activeId = "map";
+    } else if (path.startsWith("/table") || path.startsWith("/detail")) {
+      this.activeId = "table";
+    } else if (path.startsWith("/setting")) {
+      this.activeId = "settings";
+    } else if (path.startsWith("/profile") || path.startsWith("/password")) {
+      this.activeId = "";
     } else {
-      this.active = "1";
+      this.activeId = "dashboard";
     }
   },
   methods: {
@@ -91,146 +110,150 @@ export default {
         })
         .catch(() => {});
     },
-    handleCollapse(newCollapse) {
-      this.isCollapse = newCollapse;
+    isItemActive(itemId) {
+      return this.activeId === itemId;
     }
   }
 };
 </script>
 
 <style>
-.toggle-sidebar-custom {
-  margin: 10px;
-  width: 64px;
-  height: 64px;
+.sidebar-backdrop {
+  display: none;
+}
+
+.sidebar-nav {
+  width: 68px;
+  flex-shrink: 0;
+  background: var(--bg-sidebar-gradient);
+  border-radius: var(--radius-lg);
+  padding: var(--space-3) var(--space-2);
+  box-shadow: var(--shadow-float);
+  transition: width 0.2s ease, transform 0.2s ease;
+}
+
+.sidebar-nav--expanded {
+  width: 210px;
+  padding: var(--space-3);
+}
+
+.sidebar-mobile-header {
+  display: none;
+}
+
+.sidebar-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
   display: flex;
-  justify-content: center;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.sidebar-item {
+  width: 100%;
+}
+
+.sidebar-link {
+  width: 100%;
+  min-height: 48px;
+  padding: 0 14px;
+  border-radius: var(--radius-md);
+  color: var(--sidebar-item-text);
+  display: flex;
   align-items: center;
-  transition: 0.5s;
+  justify-content: center;
+  gap: var(--space-3);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  transition: background-color 0.15s ease, color 0.15s ease;
 }
 
-.el-menu-item {
-  background: transparent;
-  color: whitesmoke;
+.sidebar-nav--expanded .sidebar-link {
+  justify-content: flex-start;
 }
 
-ul .el-menu-item:hover {
-  background: #222;
-  color: whitesmoke;
+.sidebar-link:hover {
+  background-color: rgba(255, 255, 255, 0.18);
+  color: var(--sidebar-item-text);
 }
 
-.el-menu-item.is-active {
-  color: whitesmoke;
-  background: #333;
+.sidebar-link[aria-current="page"] {
+  background-color: var(--sidebar-active-bg);
+  color: var(--sidebar-active-text);
+  box-shadow: var(--shadow-card);
 }
 
-.el-menu-item.is-active i {
-  color: whitesmoke;
+.sidebar-link-label {
+  display: none;
+  white-space: nowrap;
 }
 
-.is-hover .el-menu-item.is-active:hover {
-  background: #333;
+.sidebar-nav--expanded .sidebar-link-label {
+  display: inline;
 }
 
-.el-tooltip {
-  color: whitesmoke;
-  padding: 0px 13px !important;
-}
+@media screen and (max-width: 767px) {
+  .sidebar-backdrop {
+    display: block;
+    position: fixed;
+    inset: 0;
+    background-color: rgba(15, 23, 42, 0.55);
+    z-index: 80;
+  }
 
-.el-tooltip:hover {
-  color: whitesmoke;
-}
+  .sidebar-nav {
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    width: 260px;
+    border-radius: 0 var(--radius-lg) var(--radius-lg) 0;
+    padding: var(--space-4);
+    z-index: 90;
+    transform: translateX(-110%);
+    visibility: hidden;
+  }
 
-.el-menu-item i::before {
-  color: whitesmoke;
-}
+  .sidebar-nav--mobile-open {
+    transform: translateX(0);
+    visibility: visible;
+  }
 
-.el-menu-item i:hover,
-.el-menu-item span:hover,
-.el-menu-item i::before:hover {
-  color: whitesmoke;
-}
+  .sidebar-mobile-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: var(--space-4);
+    padding-bottom: var(--space-3);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.22);
+  }
 
-.el-menu-vertical-demo {
-  border: none;
-  border-radius: 10px;
-  margin-left: 10px;
-  background: linear-gradient(90deg, rgba(66, 183, 130, 1) 0%, rgba(58, 155, 108, 1) 100%);
-}
+  .sidebar-brand {
+    font-size: var(--text-lg);
+    font-weight: 700;
+    color: #ffffff;
+  }
 
-.el-menu-vertical-demo:not(.el-menu--collapse) {
-  width: 200px;
-  border: none;
-  border-radius: 10px;
-  margin-left: 10px;
-}
+  .sidebar-close-btn {
+    width: 44px;
+    height: 44px;
+    border-radius: var(--radius-sm);
+    border: 1px solid rgba(255, 255, 255, 0.35);
+    background: rgba(255, 255, 255, 0.12);
+    color: #ffffff;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+  }
 
-.toggle-sidebar-custom ion-icon {
-  color: var(--text-color);
-  transition: 0.5s;
-}
+  .sidebar-link {
+    justify-content: flex-start;
+  }
 
-.is-hover .el-menu-item.is-disabled {
-  color: whitesmoke !important;
-}
-
-.toggle-sidebar-custom ion-icon:hover {
-  color: #32e18c;
-  transition: 0.5s;
-  cursor: pointer;
-}
-
-.el-menu-item {
-  color: white;
-}
-
-.el-menu-item span {
-  font-size: var(--size-sm);
-}
-
-.is-hover .el-menu-item.is-disabled:hover span {
-  cursor: pointer;
-  transition: 0.5s;
-  color: #32e18c;
-}
-
-.el-menu-vertical-demo ion-icon {
-  transition: 0.5s;
-  font-size: var(--size-lg);
-}
-
-.is-hover .el-menu-item.is-disabled ion-icon {
-  margin-right: 10px;
-}
-
-.is-hover .el-menu-item.is-disabled:hover ion-icon {
-  cursor: pointer;
-  color: #32e18c;
-  transition: 0.5s;
-}
-
-.is-hover .el-menu-item {
-  line-height: 45px;
-  height: 45px;
-  margin: 10px !important;
-}
-
-.is-hover .el-menu-item.is-active.is-disabled {
-  background-color: white !important;
-  border-radius: 10px !important;
-}
-
-.is-hover .el-menu-item.is-disabled {
-  padding: 0 13px !important;
-}
-
-.is-hover .el-menu-item.is-active.is-disabled ion-icon,
-.is-hover .el-menu-item.is-active.is-disabled span {
-  color: #32e18c;
-}
-
-a:hover {
-  color: var(--text-color);
-  text-decoration: none;
+  .sidebar-link-label {
+    display: inline;
+  }
 }
 </style>
