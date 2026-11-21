@@ -205,3 +205,56 @@ export function filterDetectionsByRoi(detections = [], roiPoints = []) {
     return isPointInPolygon({ x: cx, y: cy }, roiPoints);
   });
 }
+
+/**
+ * Map a pointer event client coordinate onto intrinsic canvas bitmap coordinates,
+ * accounting for CSS object-fit sizing (`cover`, `contain`, or `fill`).
+ *
+ * @param {{ clientX: number, clientY: number, rect: { left: number, top: number, width: number, height: number }, canvasWidth: number, canvasHeight: number, objectFit?: string }} params
+ * @returns {{ x: number, y: number }}
+ */
+export function mapClientPointToCanvas({
+  clientX,
+  clientY,
+  rect,
+  canvasWidth,
+  canvasHeight,
+  objectFit = "fill"
+}) {
+  const boxW = Number(rect && rect.width) || 1;
+  const boxH = Number(rect && rect.height) || 1;
+  const left = Number(rect && rect.left) || 0;
+  const top = Number(rect && rect.top) || 0;
+  const canvasW = Number(canvasWidth) || 1;
+  const canvasH = Number(canvasHeight) || 1;
+
+  const relX = Number(clientX) - left;
+  const relY = Number(clientY) - top;
+
+  let x;
+  let y;
+
+  if (objectFit === "cover" || objectFit === "contain") {
+    const scale =
+      objectFit === "cover"
+        ? Math.max(boxW / canvasW, boxH / canvasH)
+        : Math.min(boxW / canvasW, boxH / canvasH);
+    const renderedW = canvasW * scale;
+    const renderedH = canvasH * scale;
+    const offsetX = (boxW - renderedW) / 2;
+    const offsetY = (boxH - renderedH) / 2;
+    x = (relX - offsetX) / scale;
+    y = (relY - offsetY) / scale;
+  } else {
+    x = (relX / boxW) * canvasW;
+    y = (relY / boxH) * canvasH;
+  }
+
+  const clampedX = Math.min(canvasW, Math.max(0, x));
+  const clampedY = Math.min(canvasH, Math.max(0, y));
+
+  return {
+    x: Math.round(clampedX * 100) / 100,
+    y: Math.round(clampedY * 100) / 100
+  };
+}

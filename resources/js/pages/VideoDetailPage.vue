@@ -1,27 +1,17 @@
 <template>
-  <div>
-    <el-container>
-      <el-header class="topFix haha" height="5px" />
-    </el-container>
-    <el-container>
-      <el-container>
-        <el-main style="">
-          <SimulationBanner />
-          <VideoDetectorPlayer :cctv="cctv" />
-        </el-main>
-      </el-container>
-    </el-container>
-  </div>
+  <AppLayout title="Video Detail" main-class="mainmain">
+    <VideoDetectorPlayer :cctv="cctv" />
+  </AppLayout>
 </template>
 
 <script>
-import SimulationBanner from "../components/layout/SimulationBanner.vue";
 import VideoDetectorPlayer from "../components/cctv/VideoDetectorPlayer.vue";
+import AppLayout from "../components/layout/AppLayout.vue";
 
 export default {
   name: "VideoDetailPage",
   components: {
-    SimulationBanner,
+    AppLayout,
     VideoDetectorPlayer
   },
   props: {
@@ -36,10 +26,3 @@ export default {
   }
 };
 </script>
-
-<style>
-.topFix {
-  background-color: var(--green-theme);
-  height: 10px;
-}
-</style>

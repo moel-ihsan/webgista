@@ -4,6 +4,7 @@ import {
   filterDetectionsByRoi,
   isPointInPolygon,
   isValidRoi,
+  mapClientPointToCanvas,
   polygonArea,
   serializeRoiPoints
 } from "../../resources/js/services/traffic/roiGeometry";
@@ -88,5 +89,44 @@ describe("roiGeometry", () => {
     expect(filtered[0].class).toBe("car");
 
     expect(filterDetectionsByRoi(detections, [])).toHaveLength(2);
+  });
+
+  test("maps client coordinates to canvas pixels across fill, cover, and contain", () => {
+    const rect = { left: 100, top: 50, width: 800, height: 550 };
+
+    // Center point on 800x550 maps cleanly to (320, 180) on 640x360 under cover, contain, and fill
+    expect(
+      mapClientPointToCanvas({
+        clientX: 500,
+        clientY: 325,
+        rect,
+        canvasWidth: 640,
+        canvasHeight: 360,
+        objectFit: "cover"
+      })
+    ).toEqual({ x: 320, y: 180 });
+
+    expect(
+      mapClientPointToCanvas({
+        clientX: 500,
+        clientY: 325,
+        rect,
+        canvasWidth: 640,
+        canvasHeight: 360,
+        objectFit: "contain"
+      })
+    ).toEqual({ x: 320, y: 180 });
+
+    // Clamps outside pointers cleanly within [0, width] x [0, height]
+    expect(
+      mapClientPointToCanvas({
+        clientX: 0,
+        clientY: 9999,
+        rect,
+        canvasWidth: 640,
+        canvasHeight: 360,
+        objectFit: "fill"
+      })
+    ).toEqual({ x: 0, y: 360 });
   });
 });

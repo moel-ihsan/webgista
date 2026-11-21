@@ -2,18 +2,25 @@ import { createLocalVue, shallowMount } from "@vue/test-utils";
 import mapboxgl from "mapbox-gl";
 import CctvDetailView from "@/components/cctv/CctvDetailView.vue";
 import TrafficCounterCards from "@/components/cctv/TrafficCounterCards.vue";
+import VideoDetectorPlayer from "@/components/cctv/VideoDetectorPlayer.vue";
 import SimulationBanner from "@/components/layout/SimulationBanner.vue";
 import MapLegend from "@/components/map/MapLegend.vue";
 import TrafficMap from "@/components/map/TrafficMap.vue";
 import CctvTable from "@/components/table/CctvTable.vue";
 import { fetchAuthUser } from "@/services/api/authApi";
-import { fetchAll as fetchCctvPoints } from "@/services/api/cctvApi";
+import {
+  fetchAll as fetchCctvPoints,
+  updateRoi,
+  updateTrafficCondition
+} from "@/services/api/cctvApi";
 import { fetchAll as fetchMapSettings } from "@/services/api/mapSettingApi";
 import { TRAFFIC_LEVELS } from "@/services/traffic/ihcmClassifier";
 
 jest.mock("@/services/api/cctvApi", () => ({
   fetchAll: jest.fn(),
-  remove: jest.fn()
+  remove: jest.fn(),
+  updateRoi: jest.fn(() => Promise.resolve({})),
+  updateTrafficCondition: jest.fn(() => Promise.resolve({}))
 }));
 
 jest.mock("@/services/api/authApi", () => ({
@@ -399,5 +406,98 @@ describe("Frontend smoke tests", () => {
 
     wrapper.destroy();
     overlayEl.remove();
+  });
+
+  it("allows editing the 5-point blue ROI on #canvasx via Manage Video and Done", async () => {
+    fetchAuthUser.mockResolvedValue({ user: { role: "admin" } });
+    updateRoi.mockResolvedValue({});
+    updateTrafficCondition.mockResolvedValue({});
+
+    const fakeCtx = {
+      clearRect: jest.fn(),
+      save: jest.fn(),
+      restore: jest.fn(),
+      setLineDash: jest.fn(),
+      beginPath: jest.fn(),
+      moveTo: jest.fn(),
+      lineTo: jest.fn(),
+      closePath: jest.fn(),
+      stroke: jest.fn(),
+      clip: jest.fn(),
+      arc: jest.fn(),
+      fill: jest.fn(),
+      fillText: jest.fn(),
+      rect: jest.fn(),
+      drawImage: jest.fn()
+    };
+
+    const getContextSpy = jest
+      .spyOn(HTMLCanvasElement.prototype, "getContext")
+      .mockReturnValue(fakeCtx);
+    const messageMock = jest.fn();
+
+    const wrapper = shallowMount(VideoDetectorPlayer, {
+      localVue: buildLocalVue(),
+      mocks: {
+        $message: messageMock
+      },
+      stubs: {
+        "el-row": { template: "<div><slot /></div>" },
+        "el-col": { template: "<div><slot /></div>" },
+        "el-card": { template: "<div><slot /></div>" },
+        "el-form": { template: "<div><slot /></div>" },
+        TrafficCounterCards: true
+      },
+      propsData: {
+        cctv: {
+          id: 1,
+          name: "Simpang PDAM",
+          category: "Analytic",
+          url: "/demo/videos/simpang-pdam.mp4"
+        }
+      }
+    });
+
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(wrapper.vm.isAdmin).toBe(true);
+
+    const canvasx = wrapper.find("#canvasx");
+    canvasx.element.width = 640;
+    canvasx.element.height = 360;
+    canvasx.element.getBoundingClientRect = () => ({
+      left: 0,
+      top: 0,
+      width: 640,
+      height: 360
+    });
+
+    await wrapper.find("#btn-manage").trigger("click");
+    expect(wrapper.find("#roi-edit-hint").text()).toContain("0/5 titik");
+
+    const pts = [
+      [100, 100],
+      [400, 100],
+      [500, 300],
+      [300, 340],
+      [80, 300]
+    ];
+    for (const [clientX, clientY] of pts) {
+      await canvasx.trigger("mousedown", { clientX, clientY });
+    }
+
+    expect(wrapper.vm.draftRoiPoints).toHaveLength(5);
+    expect(wrapper.find("#roi-edit-hint").text()).toContain("5/5 titik");
+
+    await wrapper.find("#btn-drop").trigger("click");
+    await Promise.resolve();
+
+    expect(wrapper.vm.areaVideo).toBe(true);
+    expect(wrapper.vm.roiPoints).toHaveLength(5);
+    expect(updateRoi).toHaveBeenCalledTimes(1);
+    expect(messageMock).toHaveBeenCalledWith(expect.objectContaining({ type: "success" }));
+
+    wrapper.destroy();
+    getContextSpy.mockRestore();
   });
 });

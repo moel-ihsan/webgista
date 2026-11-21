@@ -30,7 +30,9 @@
             id="canvasx"
             ref="canvasx"
             class="videoCCTV"
+            :class="{ 'roi-editing': !areaVideo }"
             style="display: block; z-index: 12"
+            @mousedown="handleRoiCanvasClick"
           />
           <canvas
             id="canvasv"
@@ -55,15 +57,24 @@
           >
             Manage Video
           </button>
-          <button
-            v-else
-            id="btn-drop"
-            type="button"
-            class="el-button el-button--primary"
-            @click="manageVideo"
-          >
-            Done
-          </button>
+          <template v-else>
+            <button
+              id="btn-drop"
+              type="button"
+              class="el-button el-button--primary"
+              @click="manageVideo"
+            >
+              Done
+            </button>
+            <button
+              id="btn-reset-roi"
+              type="button"
+              class="el-button el-button--info"
+              @click="resetDraftRoi"
+            >
+              Reset Titik
+            </button>
+          </template>
 
           <button
             v-if="oriVideo === true"
@@ -95,21 +106,18 @@
           </button>
         </div>
 
-        <canvas id="canvasw" ref="canvasw" class="canvasw" @mousedown="handleRoiCanvasClick" />
+        <div v-if="!areaVideo" id="roi-edit-hint" class="roi-edit-hint">
+          Mode Edit Area Deteksi: Klik 5 titik pada video ({{ draftRoiPoints.length }}/5 titik),
+          lalu klik Done.
+        </div>
+
+        <canvas id="canvasw" ref="canvasw" class="canvasw" />
       </el-col>
       <el-col :span="9" :xs="24" :md="24" :lg="9">
         <el-row :gutter="30" style="padding-left: 15px; padding-right: 15px; margin-bottom: 20px">
-          <el-col :span="16" :xs="16">
+          <el-col :span="24">
             <p style="margin-bottom: 4px">{{ cctv.name }}</p>
             <div id="detector-mode-status" class="detector-mode-meta">{{ detectorStatusText }}</div>
-          </el-col>
-          <el-col :span="8" :xs="8">
-            <el-switch
-              v-model="themeSetting"
-              class="nav-right"
-              active-color="white"
-              inactive-color="#27293d"
-            />
           </el-col>
         </el-row>
         <el-form class="veh-form" :model="cctv">
@@ -139,6 +147,7 @@ import {
   drawRoiPolygon,
   extractRoiPoints,
   isValidRoi,
+  mapClientPointToCanvas,
   serializeRoiPoints
 } from "../../services/traffic/roiGeometry";
 import { TrafficWindowTracker } from "../../services/traffic/windowTracker";
@@ -165,7 +174,6 @@ export default {
     return {
       oriVideo: true,
       areaVideo: true,
-      themeSetting: true,
       host: "",
       simulationConfig,
       cameraSimulation,
@@ -198,9 +206,16 @@ export default {
     }
   },
   created() {
+    const sessionRoi = this.readSessionRoi();
     const dbRoi = extractRoiPoints(this.cctv);
-    this.roiPoints =
-      dbRoi.length === 5 ? dbRoi : extractRoiPoints(this.cameraSimulation.defaultRoi);
+    if (sessionRoi.length === 5) {
+      this.roiPoints = sessionRoi;
+    } else if (dbRoi.length === 5) {
+      this.roiPoints = dbRoi;
+    } else {
+      this.roiPoints = extractRoiPoints(this.cameraSimulation.defaultRoi);
+    }
+
     if (this.cctv && this.cctv.keterangan) {
       this.conditionLabel = this.cctv.keterangan;
     }
@@ -225,6 +240,47 @@ export default {
     }
   },
   methods: {
+    getRoiStorageKey() {
+      return this.cctv && this.cctv.id ? `webgista_roi_${this.cctv.id}` : "";
+    },
+    readSessionRoi() {
+      const key = this.getRoiStorageKey();
+      if (!key || typeof sessionStorage === "undefined") {
+        return [];
+      }
+      try {
+        const raw = sessionStorage.getItem(key);
+        if (!raw) {
+          return [];
+        }
+        const parsed = JSON.parse(raw);
+        return isValidRoi(parsed) ? parsed : [];
+      } catch (_err) {
+        return [];
+      }
+    },
+    writeSessionRoi(points) {
+      const key = this.getRoiStorageKey();
+      if (!key || typeof sessionStorage === "undefined") {
+        return;
+      }
+      try {
+        sessionStorage.setItem(key, JSON.stringify(points));
+      } catch (_err) {
+        // Ignore storage quota errors
+      }
+    },
+    clearSessionRoi() {
+      const key = this.getRoiStorageKey();
+      if (!key || typeof sessionStorage === "undefined") {
+        return;
+      }
+      try {
+        sessionStorage.removeItem(key);
+      } catch (_err) {
+        // Ignore storage errors
+      }
+    },
     parseUrl() {
       if (!this.resolvedVideoUrl) {
         this.host = "";
@@ -239,71 +295,107 @@ export default {
       }
     },
     manageVideo() {
-      const { canvasw, videoEl } = this.$refs;
-      if (!canvasw) {
+      if (this.areaVideo === true) {
+        this.draftRoiPoints = [];
+        this.areaVideo = false;
+        this.renderCanvasOverlays();
         return;
       }
 
-      if (this.areaVideo === true) {
-        this.draftRoiPoints = [];
-        canvasw.style.display = "block";
-        this.areaVideo = false;
-
-        const ctw = canvasw.getContext("2d");
-        if (ctw && videoEl && videoEl.videoWidth) {
-          ctw.clearRect(0, 0, canvasw.width, canvasw.height);
-          ctw.drawImage(videoEl, 0, 0, canvasw.width, canvasw.height);
-        }
-      } else {
-        canvasw.style.display = "none";
+      if (this.draftRoiPoints.length === 0) {
         this.areaVideo = true;
-        if (this.draftRoiPoints.length === 5 && isValidRoi(this.draftRoiPoints)) {
-          this.saveRoi(this.draftRoiPoints);
-        }
+        this.renderCanvasOverlays();
+        return;
       }
+
+      if (this.draftRoiPoints.length < 5) {
+        this.$message({
+          message:
+            "Klik tepat 5 titik pada video untuk membentuk area biru (atau klik Reset Titik).",
+          type: "warning"
+        });
+        return;
+      }
+
+      if (!isValidRoi(this.draftRoiPoints)) {
+        this.$message({
+          message: "5 titik belum membentuk poligon berluas valid. Silakan ulangi.",
+          type: "warning"
+        });
+        return;
+      }
+
+      this.areaVideo = true;
+      this.saveRoi(this.draftRoiPoints);
+      this.draftRoiPoints = [];
+    },
+    resetDraftRoi() {
+      this.draftRoiPoints = [];
+      this.areaVideo = true;
+      this.renderCanvasOverlays();
     },
     saveRoi(points) {
       this.roiPoints = [...points];
+      this.tracker.reset();
+      this.counts = { lv: 0, hv: 0, mc: 0 };
+      this.lastPrecomputedFrameTime = null;
+      this.lastMatchedDetections = [];
+      this.drawVideoFrameToCanvases();
       this.renderCanvasOverlays();
+      this.runCurrentModeStep(true);
 
-      updateRoi(this.cctv.id, serializeRoiPoints(points))
-        .then(() => {
-          this.$message({ message: "Detection area saved", type: "success" });
-        })
-        .catch(() => {});
+      if (this.isAdmin && this.cctv && this.cctv.id) {
+        this.clearSessionRoi();
+        updateRoi(this.cctv.id, serializeRoiPoints(points))
+          .then(() => {
+            this.$message({ message: "Area deteksi biru disimpan ke database.", type: "success" });
+          })
+          .catch(() => {
+            this.$message({
+              message: "Gagal menyimpan area deteksi ke database.",
+              type: "error"
+            });
+          });
+      } else {
+        this.writeSessionRoi(points);
+        this.$message({
+          message:
+            "Area deteksi biru diterapkan untuk sesi ini (login admin untuk simpan permanen).",
+          type: "success"
+        });
+      }
     },
     handleRoiCanvasClick(event) {
       if (this.areaVideo) {
         return;
       }
 
-      const canvasw = this.$refs.canvasw;
-      if (!canvasw || !canvasw.width || !canvasw.height) {
+      const canvasx = this.$refs.canvasx;
+      if (!canvasx || !canvasx.width || !canvasx.height) {
         return;
       }
 
-      const rect = canvasw.getBoundingClientRect();
-      const scaleX = canvasw.width / (rect.width || 1);
-      const scaleY = canvasw.height / (rect.height || 1);
-      const x = (event.clientX - rect.left) * scaleX;
-      const y = (event.clientY - rect.top) * scaleY;
+      const rect = canvasx.getBoundingClientRect();
+      const computedStyle =
+        typeof window !== "undefined" && typeof window.getComputedStyle === "function"
+          ? window.getComputedStyle(canvasx)
+          : null;
+      const objectFit = (computedStyle && computedStyle.objectFit) || "fill";
+
+      const point = mapClientPointToCanvas({
+        clientX: event.clientX,
+        clientY: event.clientY,
+        rect,
+        canvasWidth: canvasx.width,
+        canvasHeight: canvasx.height,
+        objectFit
+      });
 
       if (this.draftRoiPoints.length >= 5) {
         this.draftRoiPoints = [];
       }
-      this.draftRoiPoints.push({ x, y });
-
-      const ctw = canvasw.getContext("2d");
-      if (ctw) {
-        ctw.fillStyle = "blue";
-        ctw.beginPath();
-        ctw.arc(x, y, 5, 0, Math.PI * 2);
-        ctw.fill();
-
-        if (this.draftRoiPoints.length === 5 && isValidRoi(this.draftRoiPoints)) {
-          drawRoiPolygon(ctw, this.draftRoiPoints, { strokeStyle: "blue", lineWidth: 5 });
-        }
-      }
+      this.draftRoiPoints.push(point);
+      this.renderCanvasOverlays();
     },
     showVideo() {
       const video = this.$refs.videoEl;
@@ -354,15 +446,17 @@ export default {
     },
     async onVideoLoaded() {
       const { videoEl, canvasv, canvasx, canvasy, canvasw } = this.$refs;
-      if (!videoEl || !canvasv || !canvasx || !canvasy || !canvasw) {
+      if (!videoEl || !canvasv || !canvasx || !canvasy) {
         return;
       }
 
       const targetW = videoEl.videoWidth || 640;
       const targetH = videoEl.videoHeight || 360;
       [canvasv, canvasx, canvasy, canvasw].forEach((canvas) => {
-        canvas.width = targetW;
-        canvas.height = targetH;
+        if (canvas) {
+          canvas.width = targetW;
+          canvas.height = targetH;
+        }
       });
 
       const ctv = canvasv.getContext("2d");
@@ -445,15 +539,14 @@ export default {
       }
     },
     drawVideoFrameToCanvases() {
-      const { videoEl, canvasv, canvasy, canvasw } = this.$refs;
-      if (!videoEl || !canvasv || !canvasy || !canvasw || videoEl.readyState < 2) {
+      const { videoEl, canvasv, canvasy } = this.$refs;
+      if (!videoEl || !canvasv || !canvasy || videoEl.readyState < 2) {
         return;
       }
 
       const ctv = canvasv.getContext("2d");
       const cty = canvasy.getContext("2d");
-      const ctw = canvasw.getContext("2d");
-      if (!ctv || !cty || !ctw) {
+      if (!ctv || !cty) {
         return;
       }
 
@@ -466,10 +559,59 @@ export default {
         drawRoiPolygon(ctv, this.roiPoints, { clip: true });
       }
       ctv.drawImage(videoEl, 0, 0, canvasv.width, canvasv.height);
-
-      if (!this.areaVideo) {
-        ctw.drawImage(videoEl, 0, 0, canvasw.width, canvasw.height);
+    },
+    drawDraftRoiPreview(ctx) {
+      if (this.draftRoiPoints.length === 0) {
+        if (isValidRoi(this.roiPoints)) {
+          if (typeof ctx.save === "function") {
+            ctx.save();
+          }
+          if (typeof ctx.setLineDash === "function") {
+            ctx.setLineDash([8, 6]);
+          }
+          drawRoiPolygon(ctx, this.roiPoints, {
+            strokeStyle: "rgba(0, 123, 255, 0.75)",
+            lineWidth: 3
+          });
+          if (typeof ctx.restore === "function") {
+            ctx.restore();
+          }
+        }
+        return;
       }
+
+      if (this.draftRoiPoints.length >= 2) {
+        if (this.draftRoiPoints.length === 5 && isValidRoi(this.draftRoiPoints)) {
+          drawRoiPolygon(ctx, this.draftRoiPoints, { strokeStyle: "blue", lineWidth: 4 });
+        } else {
+          ctx.beginPath();
+          ctx.moveTo(this.draftRoiPoints[0].x, this.draftRoiPoints[0].y);
+          for (let i = 1; i < this.draftRoiPoints.length; i += 1) {
+            ctx.lineTo(this.draftRoiPoints[i].x, this.draftRoiPoints[i].y);
+          }
+          ctx.lineWidth = 4;
+          ctx.strokeStyle = "blue";
+          ctx.stroke();
+        }
+      }
+
+      this.draftRoiPoints.forEach((pt, idx) => {
+        ctx.beginPath();
+        ctx.arc(pt.x, pt.y, 7, 0, Math.PI * 2);
+        ctx.fillStyle = "blue";
+        ctx.fill();
+        ctx.lineWidth = 2;
+        ctx.strokeStyle = "#ffffff";
+        ctx.stroke();
+
+        if (typeof ctx.fillText === "function") {
+          ctx.fillStyle = "#ffffff";
+          ctx.font = "bold 10px sans-serif";
+          ctx.textAlign = "center";
+          ctx.textBaseline = "middle";
+          ctx.fillText(String(idx + 1), pt.x, pt.y);
+        }
+      });
     },
     renderCanvasOverlays() {
       const canvasx = this.$refs.canvasx;
@@ -483,6 +625,11 @@ export default {
       }
 
       ctx.clearRect(0, 0, canvasx.width, canvasx.height);
+
+      if (!this.areaVideo) {
+        this.drawDraftRoiPreview(ctx);
+        return;
+      }
 
       if (isValidRoi(this.roiPoints)) {
         drawRoiPolygon(ctx, this.roiPoints, { strokeStyle: "blue", lineWidth: 5 });
@@ -571,10 +718,24 @@ export default {
 <style>
 .btn-video {
   margin-top: -20px;
-  margin-bottom: 20px;
+  margin-bottom: 12px;
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
+}
+
+.roi-editing {
+  cursor: crosshair;
+}
+
+.roi-edit-hint {
+  margin-bottom: 16px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  background-color: var(--color-secondary);
+  border: 1px solid var(--green-theme-30);
+  color: var(--text-color);
+  font-size: var(--size-sm);
 }
 
 .detector-mode-meta {
