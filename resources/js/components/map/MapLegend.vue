@@ -13,21 +13,44 @@
       </button>
     </div>
 
-    <div class="legend-items" :class="{ 'legend-items--mobile-hidden': !mobileExpanded }">
-      <div v-for="item in items" :key="item.label" class="legend-item">
-        <TrafficGradeBadge
-          v-if="hasGradeBadge(item)"
-          :grade="item.grade || ''"
-          :status="item.label"
-          :small="true"
-        />
-        <span
-          v-else
-          class="legend-dot"
-          :style="{ backgroundColor: item.color }"
-          aria-hidden="true"
-        />
-        <span class="legend-label">{{ item.label }}</span>
+    <div class="legend-body" :class="{ 'legend-body--mobile-hidden': !mobileExpanded }">
+      <div class="legend-items">
+        <div v-for="item in items" :key="item.label" class="legend-item">
+          <TrafficGradeBadge
+            v-if="hasGradeBadge(item)"
+            :grade="item.grade || ''"
+            :status="item.label"
+            :small="true"
+          />
+          <span
+            v-else
+            class="legend-dot"
+            :style="{ backgroundColor: item.color }"
+            aria-hidden="true"
+          />
+          <span class="legend-label">{{ item.label }}</span>
+        </div>
+      </div>
+
+      <div v-if="secondaryItems && secondaryItems.length" class="legend-secondary">
+        <h3 v-if="secondaryTitle" class="legend-subtitle">{{ secondaryTitle }}</h3>
+        <div class="legend-items legend-items--secondary">
+          <div v-for="item in secondaryItems" :key="item.label" class="legend-item">
+            <TrafficGradeBadge
+              v-if="hasGradeBadge(item)"
+              :grade="item.grade || ''"
+              :status="item.label"
+              :small="true"
+            />
+            <span
+              v-else
+              class="legend-dot"
+              :style="{ backgroundColor: item.color }"
+              aria-hidden="true"
+            />
+            <span class="legend-label">{{ item.label }}</span>
+          </div>
+        </div>
       </div>
     </div>
   </section>
@@ -44,6 +67,14 @@ export default {
     items: {
       type: Array,
       required: true
+    },
+    secondaryTitle: {
+      type: String,
+      default: ""
+    },
+    secondaryItems: {
+      type: Array,
+      default: () => []
     }
   },
   data() {
@@ -113,6 +144,23 @@ export default {
   margin-top: 6px;
 }
 
+.legend-secondary {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border-subtle);
+}
+
+.legend-subtitle {
+  margin: 0;
+  font-size: var(--text-caption);
+  font-weight: 700;
+  color: var(--text-secondary);
+}
+
+.legend-items--secondary {
+  margin-top: 5px;
+}
+
 .legend-item {
   display: flex;
   align-items: center;
@@ -155,7 +203,7 @@ export default {
     gap: 6px 10px;
   }
 
-  .legend-items--mobile-hidden {
+  .legend-body--mobile-hidden {
     display: none;
   }
 }

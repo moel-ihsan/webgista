@@ -30,7 +30,13 @@
     />
 
     <div id="map-overlay" class="map-overlay" />
-    <MapLegend v-show="rightCollapsed" title="Traffic Condition" :items="legendItems" />
+    <MapLegend
+      v-show="rightCollapsed"
+      title="Traffic Condition"
+      :items="legendItems"
+      secondary-title="Camera Type"
+      :secondary-items="cameraLegendItems"
+    />
   </div>
 </template>
 
@@ -96,7 +102,10 @@ export default {
   },
   computed: {
     legendItems() {
-      return [...TRAFFIC_LEVELS].reverse().concat([NO_DATA_LEVEL, REGULAR_CAMERA_LEVEL]);
+      return [...TRAFFIC_LEVELS].reverse().concat([NO_DATA_LEVEL]);
+    },
+    cameraLegendItems() {
+      return [REGULAR_CAMERA_LEVEL];
     },
     filteredItems() {
       const q = this.filterState.toLowerCase();
