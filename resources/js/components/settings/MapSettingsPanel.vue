@@ -10,6 +10,7 @@
           label-width="100px"
           :model="settingform"
           :rules="rules"
+          :hide-required-asterisk="true"
         >
           <el-form-item label="Lattitude (N)" prop="lattitude">
             <el-input v-model.number="settingform.lattitude" @change="handleCoordinateChange" />

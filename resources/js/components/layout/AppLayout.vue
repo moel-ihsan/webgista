@@ -18,14 +18,14 @@
 </template>
 
 <script>
-import AppHeader from "./AppHeader.vue";
 import AppSidebar from "./AppSidebar.vue";
+import AppHeader from "./AppHeader.vue";
 
 export default {
   name: "AppLayout",
   components: {
-    AppHeader,
-    AppSidebar
+    AppSidebar,
+    AppHeader
   },
   props: {
     title: {

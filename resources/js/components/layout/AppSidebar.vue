@@ -105,10 +105,6 @@ export default {
   transition: 0.5s;
 }
 
-ul {
-  padding: 50px 0 50px 0;
-}
-
 .el-menu-item {
   background: transparent;
   color: whitesmoke;
