@@ -1,46 +1,69 @@
 <template>
-  <div id="right" class="sidebar flex-center right" :class="{ collapsed: isCollapsed }">
+  <aside
+    id="right"
+    class="sidebar flex-center right"
+    :class="{ collapsed: isCollapsed }"
+    aria-label="Pencarian dan daftar titik CCTV"
+  >
     <div class="sidebar-content rounded-rect">
-      <el-input
-        :value="filterText"
-        placeholder="Please input"
-        @input="$emit('update:filter-text', $event)"
-      />
+      <div class="map-search-header">
+        <label for="map-search-input" class="map-search-label">Cari Persimpangan / Status</label>
+        <input
+          id="map-search-input"
+          type="search"
+          class="map-search-input"
+          :value="filterText"
+          placeholder="Ketik nama, jalan, atau status..."
+          @input="$emit('update:filter-text', $event.target.value)"
+        />
+      </div>
+
       <div class="search-card-item">
-        <div v-for="item in items" :key="item.id">
-          <div class="search-card">
-            <div :id="item.id" class="search-info-card" @click="$emit('select', item.id)">
-              <div class="search-content">
-                <div class="name">{{ item.name }}</div>
-                <div class="coordinate">{{ item.coordinate }}</div>
-                <div v-if="item.address.length > 25" class="address">
-                  {{ item.address.substr(0, 25) }} . . .
-                </div>
-                <div v-else class="address">{{ item.address }}</div>
-                <el-button
-                  class="detail"
-                  :type="item.status === 'Regular' ? 'danger' : 'warning'"
-                  round
-                >
-                  {{ item.status }}
-                </el-button>
-              </div>
-              <div class="search-icon">
-                <img class="search-img" :src="item.imageUrl" />
-              </div>
-            </div>
+        <button
+          v-for="item in items"
+          :id="String(item.id)"
+          :key="item.id"
+          type="button"
+          class="search-info-card"
+          @click="$emit('select', item.id)"
+        >
+          <div class="search-icon">
+            <img class="search-img" :src="item.imageUrl" :alt="'Pratinjau CCTV ' + item.name" />
           </div>
-        </div>
-        <div v-if="items.length === 0">
-          <div class="search-info-card no-data-match">No Data</div>
+          <div class="search-content">
+            <div class="search-title-row">
+              <span class="name">{{ item.name }}</span>
+              <TrafficGradeBadge :grade="item.grade || ''" :status="item.cond || ''" :small="true" />
+            </div>
+            <div class="coordinate">{{ item.coordinate }}</div>
+            <div class="address">{{ truncateAddress(item.address) }}</div>
+            <span
+              class="search-category-pill"
+              :class="item.status === 'Regular' ? 'search-category-pill--muted' : 'search-category-pill--accent'"
+            >
+              {{ item.status }}
+            </span>
+          </div>
+        </button>
+
+        <div v-if="items.length === 0" class="ui-state-box" style="margin-top: 12px">
+          Tidak ada titik CCTV yang cocok.
         </div>
       </div>
-      <div id="mapSeacrh" class="sidebar-toggle rounded-rect right" @click="$emit('toggle')">
-        <ion-icon v-if="isCollapsed === false" name="close" />
-        <ion-icon v-else name="search" />
-      </div>
+
+      <button
+        id="mapSeacrh"
+        type="button"
+        class="sidebar-toggle rounded-rect right"
+        :aria-expanded="isCollapsed ? 'false' : 'true'"
+        :aria-label="isCollapsed ? 'Buka panel pencarian CCTV' : 'Tutup panel pencarian CCTV'"
+        @click="$emit('toggle')"
+      >
+        <AppIcon v-if="isCollapsed === false" name="close" :size="18" />
+        <AppIcon v-else name="search" :size="18" />
+      </button>
     </div>
-  </div>
+  </aside>
 </template>
 
 <script>
@@ -59,135 +82,151 @@ export default {
       type: Boolean,
       default: true
     }
+  },
+  methods: {
+    truncateAddress(address) {
+      if (!address) {
+        return "";
+      }
+      return address.length > 34 ? `${address.slice(0, 34)}…` : address;
+    }
   }
 };
 </script>
 
 <style>
+.map-search-header {
+  margin-bottom: var(--space-2);
+}
+
+.map-search-label {
+  display: block;
+  font-size: var(--text-caption);
+  font-weight: 700;
+  color: var(--text-secondary);
+  margin-bottom: 4px;
+}
+
+.map-search-input {
+  width: 100%;
+  min-height: 44px;
+  padding: 8px 12px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-input);
+  background-color: var(--bg-surface-subtle);
+  color: var(--text-primary);
+  font-size: var(--text-sm);
+}
+
+.map-search-input::placeholder {
+  color: var(--text-muted);
+}
+
 .search-card-item {
-  margin-top: 10px;
-  margin-bottom: 20px;
-  height: 95%;
-  border-radius: 0px 0px 10px 10px;
-  overflow: auto;
-  -ms-overflow-style: none;
-  scrollbar-width: none;
-}
-
-.search-card-item::-webkit-scrollbar {
-  width: 5px;
-}
-
-.search-card-item::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-.search-card-item::-webkit-scrollbar-thumb {
-  background-color: rgba(var(--green-theme), 0.8);
-  border-radius: 20px;
-  border: none;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-right: 2px;
 }
 
 .search-info-card {
-  margin-top: 15px;
-  position: relative;
-  font-size: var(--size-md);
-  cursor: default;
-  background-color: var(--color-secondary);
-  color: var(--text-color);
-  height: 120px;
-  border-radius: 10px;
-  width: 90%;
+  width: 100%;
+  text-align: left;
+  padding: 10px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-subtle);
+  background-color: var(--bg-surface-subtle);
+  color: var(--text-primary);
   display: flex;
-  justify-content: flex-start;
   align-items: center;
-  box-shadow: 0 10px 20px rgba(29, 29, 29, 0.2);
-  -webkit-box-shadow: 0 10px 20px rgba(29, 29, 29, 0.2);
-  -moz-box-shadow: 0 10px 20px rgba(29, 29, 29, 0.2);
+  gap: 10px;
+  cursor: pointer;
+  min-height: 72px;
+  transition: border-color 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
 }
 
 .search-info-card:hover {
-  cursor: pointer;
-}
-
-.search-info-card.no-data-match:hover {
-  cursor: default;
+  border-color: var(--accent-primary);
+  box-shadow: var(--shadow-card);
+  transform: translateY(-1px);
 }
 
 .search-icon {
-  width: 80px;
-  border-radius: 10px;
-  border: none;
-  position: absolute;
-  height: 80%;
-  margin-left: 80%;
-  justify-content: end;
+  width: 64px;
+  height: 64px;
+  border-radius: var(--radius-sm);
   overflow: hidden;
+  flex-shrink: 0;
+  background-color: var(--bg-canvas);
 }
 
-.search-info-card .search-img {
-  border-radius: 10px;
-  top: 0;
-  left: 0;
+.search-img {
   width: 100%;
   height: 100%;
-  -o-object-fit: cover;
   object-fit: cover;
-  position: absolute;
-  transition: 0.5s;
-  box-shadow: -3px 3px 6px rgba(29, 29, 29, 0.3);
-  -webkit-box-shadow: -3px 3px 6px rgba(29, 29, 29, 0.3);
-  -moz-box-shadow: -3px 3px 6px rgba(29, 29, 29, 0.3);
-}
-
-.search-info-card:hover .search-img {
-  transform: scale(1.2);
+  display: block;
 }
 
 .search-content {
-  position: relative;
-  width: 80%;
-  left: 0;
-  padding: 10px;
-  line-height: 20px;
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.search-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
 }
 
 .name {
-  font-size: var(--size-md);
-  font-weight: 600;
-  color: var(--text-color);
+  font-size: var(--text-sm);
+  font-weight: 700;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .coordinate {
-  opacity: 0.5;
-  font-style: italic;
-  font-size: var(--size-md);
-  color: var(--text-color);
-  transition: 0.5s;
-}
-
-.search-info-card:hover .coordinate {
-  color: var(--green-theme);
-  opacity: 1;
+  font-size: var(--text-caption);
+  font-weight: 600;
+  color: var(--accent-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .address {
-  color: var(--text-color);
-  font-size: var(--size-md);
-  transition: 0.5s;
-  line-height: 15px;
+  font-size: var(--text-caption);
+  color: var(--text-secondary);
+  line-height: 1.35;
 }
 
-.detail {
-  margin-top: 10px;
+.search-category-pill {
+  align-self: flex-start;
+  margin-top: 2px;
+  padding: 2px 8px;
+  border-radius: var(--radius-pill);
+  font-size: 11px;
+  font-weight: 700;
 }
 
-.no-data-match {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: var(--size-lg);
-  font-weight: 600;
-  color: var(--green-theme);
+.search-category-pill--accent {
+  background-color: var(--accent-soft-bg);
+  color: var(--accent-soft-text);
+  border: 1px solid var(--accent-soft-border);
+}
+
+.search-category-pill--muted {
+  background-color: var(--tag-bg-primary);
+  color: var(--tag-text-primary);
+  border: 1px solid var(--border-subtle);
 }
 </style>

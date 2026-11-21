@@ -244,3 +244,15 @@ export function getColorForCondition(label) {
   const matched = TRAFFIC_LEVELS.find((level) => level.label === label);
   return matched ? matched.color : NO_DATA_LEVEL.color;
 }
+
+/**
+ * Resolve the single-letter IHCM grade (or "?" for No Data) for a stored condition label.
+ *
+ * @param {string | null | undefined} label
+ * @returns {string}
+ */
+export function getGradeForCondition(label) {
+  const normalized = typeof label === "string" ? label.trim().toLowerCase() : "";
+  const matched = TRAFFIC_LEVELS.find((level) => level.label.toLowerCase() === normalized);
+  return matched ? matched.grade : "?";
+}

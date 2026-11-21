@@ -1,64 +1,76 @@
 <template>
-  <div>
-    <el-row :gutter="30">
-      <el-col :span="15" :xs="24" :md="24" :lg="15">
-        <el-card :body-style="{ padding: '0px' }" class="cardVideoCCTV">
-          <video
-            v-if="cctv.category === 'Analytic' && videoSrc"
-            class="videoCCTV"
-            controls
-            autoplay
-            muted
-            loop
-            playsinline
+  <div class="detail-grid-layout">
+    <el-card :body-style="{ padding: '0px' }" class="cardVideoCCTV">
+      <video
+        v-if="cctv.category === 'Analytic' && videoSrc"
+        class="videoCCTV"
+        controls
+        autoplay
+        muted
+        loop
+        playsinline
+        :aria-label="`Video streaming CCTV ${cctv.name}`"
+      >
+        <source :src="videoSrc" type="video/mp4" />
+      </video>
+      <img
+        v-else
+        :src="thumbnailSrc"
+        :alt="`Tangkapan kamera ${cctv.name}`"
+        class="detail-regular-image"
+      />
+    </el-card>
+
+    <el-card :body-style="{ padding: '0px' }" class="cardOffice detail-info-card">
+      <div class="imgBox cctvThumbnail">
+        <img class="imgCont" :src="thumbnailSrc" :alt="`Pratinjau ${cctv.name}`" />
+        <div class="cctvStatus">
+          <span
+            class="detail-category-badge"
+            :class="
+              cctv.category === 'Regular'
+                ? 'detail-category-badge--regular'
+                : 'detail-category-badge--analytic'
+            "
           >
-            <source :src="videoSrc" type="video/mp4" />
-          </video>
-          <div v-if="cctv.category === 'Regular'" class="cardVideoCCTV">
-            <img :src="thumbnailSrc" height="100%" width="100%" style="object-fit: cover" />
-          </div>
-        </el-card>
-      </el-col>
-      <el-col :span="9" :xs="24" :md="24" :lg="9">
-        <el-card :body-style="{ padding: '0px' }" class="cardOffice">
-          <div class="imgBox cctvThumbnail">
-            <img class="imgCont" :src="thumbnailSrc" />
-            <div class="cctvStatus">
-              <el-tag
-                :type="cctv.category === 'Regular' ? 'primary' : 'success'"
-                disable-transitions
-              >
-                {{ cctv.category }}
-              </el-tag>
-            </div>
-          </div>
-          <div style="padding-top: 14px">
-            <div class="cctvName">{{ cctv.name }}</div>
-            <div class="cctvAddress">{{ cctv.address }}</div>
-            <div class="cctvCoordinate">{{ cctv.longitude }} E {{ cctv.lattitude }} N</div>
-            <div class="cctvAgency">{{ cctv.agency }} Agent</div>
-          </div>
-          <div class="imgBox mapBox" style="margin-top: 20px">
-            <CoordinatePickerMap
-              :latitude="cctv.lattitude"
-              :longitude="cctv.longitude"
-              :zoom="16"
-              :interactive="false"
-            />
-          </div>
-          <div class="btn-form-submit back-btn">
-            <a
-              v-if="cctv.category === 'Analytic'"
-              :href="'/detail/video/' + cctv.id"
-              class="detail-detect-link"
-            >
-              <el-button type="primary">Detection View</el-button>
-            </a>
-            <el-button type="info" @click="handleCancel">Back</el-button>
-          </div>
-        </el-card>
-      </el-col>
-    </el-row>
+            {{ cctv.category }}
+          </span>
+        </div>
+      </div>
+
+      <div class="detail-meta-block">
+        <h2 class="cctvName">{{ cctv.name }}</h2>
+        <div class="cctvAddress">{{ cctv.address }}</div>
+        <div class="cctvCoordinate">{{ cctv.longitude }} E {{ cctv.lattitude }} N</div>
+        <div class="cctvAgency">{{ cctv.agency }} Agent</div>
+      </div>
+
+      <div class="detail-map-box">
+        <CoordinatePickerMap
+          :latitude="cctv.lattitude"
+          :longitude="cctv.longitude"
+          :zoom="16"
+          :interactive="false"
+        />
+      </div>
+
+      <div class="btn-form-submit back-btn">
+        <a
+          v-if="cctv.category === 'Analytic'"
+          :href="'/detail/video/' + cctv.id"
+          class="detail-action-btn detail-action-btn--primary detail-detect-link"
+        >
+          Detection View
+        </a>
+        <button
+          type="button"
+          class="detail-action-btn detail-action-btn--secondary"
+          @click="handleCancel"
+        >
+          Back
+        </button>
+      </div>
+    </el-card>
   </div>
 </template>
 
@@ -98,145 +110,161 @@ export default {
 </script>
 
 <style>
+.detail-grid-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.55fr) minmax(0, 1fr);
+  gap: var(--space-5);
+  align-items: start;
+}
+
 .cardVideoCCTV {
-  border-radius: 10px;
-  border: none;
-  height: 550px;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border-subtle);
+  background-color: #0f172a;
+  aspect-ratio: 16 / 9;
+  width: 100%;
   overflow: hidden;
   position: relative;
-  margin-bottom: 50px;
-  transition: all 0.5s ease;
+  box-shadow: var(--shadow-card);
 }
 
-.is-always-shadow {
-  border: none;
-  box-shadow: 0 10px 20px rgba(29, 29, 29, 1);
-  -webkit-box-shadow: 0 10px 20px rgba(29, 29, 29, 1);
-  -moz-box-shadow: 0 10px 20px rgba(29, 29, 29, 1);
-}
-
-.videoCCTV {
-  top: 0;
-  left: 0;
+.videoCCTV,
+.detail-regular-image {
+  position: absolute;
+  inset: 0;
   width: 100%;
   height: 100%;
-  -o-object-fit: cover;
   object-fit: cover;
-  position: absolute;
-  z-index: 10;
-  transition: all 0.5s ease;
+  display: block;
 }
 
-.cardOffice {
-  background-color: var(--color-secondary);
-  padding: 15px;
-  border-radius: 10px;
-  border: none;
-  overflow: hidden;
+.detail-info-card {
+  background-color: var(--bg-surface);
+  padding: var(--space-4);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border-subtle);
+  box-shadow: var(--shadow-card);
+}
+
+.cctvThumbnail {
   position: relative;
-  cursor: default;
-  transition: all 0.5s ease;
-}
-
-.imgBox {
-  border-radius: 10px;
-  border: none;
-  height: 200px;
-  overflow: hidden;
-  box-shadow: 0 10px 20px rgba(29, 29, 29, 0.2);
-  -webkit-box-shadow: 0 10px 20px rgba(29, 29, 29, 0.2);
-  -moz-box-shadow: 0 10px 20px rgba(29, 29, 29, 0.2);
-  position: relative;
-  transition: all 0.5s ease;
-}
-
-.imgBox.cctvThumbnail {
-  height: 150px;
-}
-
-.imgBox.cctvThumbnail:before {
-  content: "";
-  position: absolute;
-  top: 0;
-  right: 0;
-  opacity: 0.5;
-  height: 50%;
-  width: 100%;
-  z-index: 1;
-  background: linear-gradient(45deg, rgba(13, 13, 13, 0) 0%, rgba(7, 7, 7, 1) 100%);
-  mix-blend-mode: multiply;
-  transition: all 0.5s ease;
-}
-
-.imgBox:hover.cctvThumbnail:before {
-  opacity: 0.8;
-}
-
-.imgBox .imgCont {
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  -o-object-fit: cover;
-  object-fit: cover;
-  position: absolute;
-  transition: all 0.5s ease;
-}
-
-.imgBox:hover {
-  transform: scale(0.98);
-  z-index: 1;
-}
-
-.imgBox.mapBox:hover {
-  transform: none;
-  z-index: 1;
-}
-
-.imgBox.mapBox {
-  height: 200px;
-}
-
-.imgBox:hover .imgCont {
-  transform: scale(1.25);
-}
-
-.cctvName {
-  font-size: var(--size-md);
-  color: var(--text-color);
-  font-weight: 500;
-}
-
-.cctvAddress {
-  font-size: var(--size-xs);
-  color: var(--text-color);
-}
-
-.cctvCoordinate {
-  font-size: var(--size-xs);
-  color: var(--green-theme);
-}
-
-.cctvAgency {
-  font-size: var(--size-xs);
-  color: var(--text-color);
 }
 
 .cctvStatus {
   position: absolute;
   top: 10px;
   right: 10px;
-  z-index: 1;
+  z-index: 2;
 }
 
-.btn-form-submit.back-btn {
+.detail-category-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 12px;
+  border-radius: var(--radius-pill);
+  font-size: var(--text-caption);
+  font-weight: 700;
+  box-shadow: var(--shadow-card);
+}
+
+.detail-category-badge--analytic {
+  background-color: var(--accent-soft-bg);
+  color: var(--accent-soft-text);
+  border: 1px solid var(--accent-soft-border);
+}
+
+.detail-category-badge--regular {
+  background-color: var(--bg-surface);
+  color: var(--text-primary);
+  border: 1px solid var(--border-subtle);
+}
+
+.detail-meta-block {
+  padding-top: var(--space-4);
+}
+
+.cctvName {
+  margin: 0 0 4px;
+  font-size: var(--text-lg);
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.cctvAddress,
+.cctvAgency {
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+}
+
+.cctvCoordinate {
+  font-size: var(--text-caption);
+  font-weight: 700;
+  color: var(--accent-primary);
+  margin: 6px 0;
+}
+
+.detail-map-box {
+  margin-top: var(--space-4);
+  height: 210px;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  border: 1px solid var(--border-subtle);
+  position: relative;
+}
+
+.detail-map-box > div,
+.detail-map-box #map {
+  width: 100%;
+  height: 100%;
+}
+
+.back-btn {
+  margin-top: var(--space-4);
   display: flex;
+  flex-wrap: wrap;
   gap: 10px;
 }
 
-.btn-form-submit.back-btn .detail-detect-link,
-.btn-form-submit.back-btn .el-button {
+.detail-action-btn {
   flex: 1;
-  width: 100%;
+  min-width: 130px;
+  min-height: 44px;
+  padding: 0 16px;
+  border-radius: var(--radius-sm);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  border: 1px solid transparent;
+  text-decoration: none;
+}
+
+.detail-action-btn--primary {
+  background-color: var(--accent-primary);
+  color: var(--accent-on-fill);
+}
+
+.detail-action-btn--primary:hover {
+  background-color: var(--accent-primary-hover);
+  color: var(--accent-on-fill);
+}
+
+.detail-action-btn--secondary {
+  background-color: var(--bg-surface-subtle);
+  color: var(--text-primary);
+  border-color: var(--border-input);
+}
+
+.detail-action-btn--secondary:hover {
+  border-color: var(--accent-primary);
+  color: var(--accent-primary);
+}
+
+@media screen and (max-width: 1023px) {
+  .detail-grid-layout {
+    grid-template-columns: 1fr;
+  }
 }
 </style>

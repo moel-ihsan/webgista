@@ -1,14 +1,5 @@
 <template>
-  <div id="mapContainer" class="basemap">
-    <div id="zoomHome" class="sidebar-toggle rounded-rect zoomHome" @click="zoomHome">
-      <ion-icon name="home" />
-    </div>
-    <MapLayerControl
-      :selected-style="style"
-      :checked-layers.sync="checkList"
-      @change-style="handleStyleChange"
-      @toggle-layer="toggleLayer"
-    />
+  <div id="mapContainer" ref="mapContainer" class="basemap">
     <div id="map">
       <MapSearchSidebar
         :items="filteredItems"
@@ -18,6 +9,25 @@
         @toggle="toggleSidebar"
       />
     </div>
+
+    <button
+      id="zoomHome"
+      type="button"
+      class="sidebar-toggle rounded-rect zoomHome"
+      aria-label="Reset posisi peta ke Banda Aceh"
+      title="Reset Zoom"
+      @click="zoomHome"
+    >
+      <AppIcon name="home" :size="18" />
+    </button>
+
+    <MapLayerControl
+      :selected-style="style"
+      :checked-layers.sync="checkList"
+      @change-style="handleStyleChange"
+      @toggle-layer="toggleLayer"
+    />
+
     <div id="map-overlay" class="map-overlay" />
     <MapLegend v-show="rightCollapsed" title="Traffic Condition" :items="legendItems" />
   </div>
@@ -37,7 +47,12 @@ import {
 import { fetchAll as fetchCctvPoints } from "../../services/api/cctvApi";
 import { fetchAll as fetchMapSettings } from "../../services/api/mapSettingApi";
 import { resolveCameraSimulation } from "../../config/simulation";
-import { NO_DATA_LEVEL, TRAFFIC_LEVELS } from "../../services/traffic/ihcmClassifier";
+import { isDarkTheme, subscribeTheme } from "../../services/theme";
+import {
+  getGradeForCondition,
+  NO_DATA_LEVEL,
+  TRAFFIC_LEVELS
+} from "../../services/traffic/ihcmClassifier";
 import { escapeHtml, formatCoordinate, resolveCctvImagePath } from "../../utils/formatters";
 
 export default {
@@ -48,15 +63,19 @@ export default {
     MapSearchSidebar
   },
   data() {
+    const darkActive = isDarkTheme();
     return {
       map: null,
       items: [],
       filterState: "",
-      style: "Street",
+      style: darkActive ? "Dark" : "Street",
+      manualStyleOverride: false,
       checkList: ["cctv"],
       rightCollapsed: true,
       pollTimer: null,
       hoveredStateId: null,
+      resizeObserver: null,
+      unsubscribeTheme: null,
       cities: [
         {
           id: 1,
@@ -67,7 +86,7 @@ export default {
         {
           id: 2,
           name: "CCTV",
-          layers: ["places", "cluster-count", "unclustered-point"],
+          layers: ["places", "cluster-count", "unclustered-point", "unclustered-point-grade"],
           vis: "visible"
         }
       ]
@@ -83,7 +102,9 @@ export default {
         (item) =>
           (item.name || "").toLowerCase().includes(q) ||
           (item.address || "").toLowerCase().includes(q) ||
-          (item.status || "").toLowerCase().includes(q)
+          (item.status || "").toLowerCase().includes(q) ||
+          (item.cond || "").toLowerCase().includes(q) ||
+          (item.grade || "").toLowerCase().includes(q)
       );
     }
   },
@@ -92,14 +113,44 @@ export default {
   },
   mounted() {
     this.initMap();
+    this.bindResizeObserver();
+    this.unsubscribeTheme = subscribeTheme(({ isDark }) => {
+      if (this.manualStyleOverride) {
+        return;
+      }
+      const nextStyleId = isDark ? "dark" : "streets";
+      this.style = isDark ? "Dark" : "Street";
+      if (this.map && typeof this.map.setStyle === "function") {
+        this.map.setStyle(getMapStyle(nextStyleId), { diff: false });
+      }
+    });
   },
   beforeDestroy() {
     this.clearPolling();
+    if (this.resizeObserver && typeof this.resizeObserver.disconnect === "function") {
+      this.resizeObserver.disconnect();
+      this.resizeObserver = null;
+    }
+    if (typeof this.unsubscribeTheme === "function") {
+      this.unsubscribeTheme();
+      this.unsubscribeTheme = null;
+    }
     if (this.map && typeof this.map.remove === "function") {
       this.map.remove();
     }
   },
   methods: {
+    bindResizeObserver() {
+      if (typeof ResizeObserver === "undefined" || !this.$refs.mapContainer) {
+        return;
+      }
+      this.resizeObserver = new ResizeObserver(() => {
+        if (this.map && typeof this.map.resize === "function") {
+          this.map.resize();
+        }
+      });
+      this.resizeObserver.observe(this.$refs.mapContainer);
+    },
     loadSidebarItems() {
       fetchCctvPoints()
         .then((rows) => {
@@ -114,6 +165,7 @@ export default {
       }
     },
     mapRowToSidebarItem(row) {
+      const condLabel = row.keterangan || NO_DATA_LEVEL.label;
       return {
         id: row.id,
         name: row.name,
@@ -121,6 +173,8 @@ export default {
         coordinate: `${formatCoordinate(row.longitude)} E ${formatCoordinate(row.lattitude)} N`,
         latLong: [Number(row.longitude), Number(row.lattitude)],
         status: row.category,
+        cond: condLabel,
+        grade: getGradeForCondition(condLabel),
         source: row.path_image,
         imageUrl: resolveCctvImagePath(row.path_image),
         url: row.url
@@ -128,14 +182,30 @@ export default {
     },
     buildPopupHtml(row) {
       const category = row.status || row.category;
+      const condLabel = row.cond || row.keterangan || NO_DATA_LEVEL.label;
+      const grade = getGradeForCondition(condLabel);
+      const chipCode = grade === "?" ? "N" : grade;
+      const safeName = escapeHtml(row.name || "CCTV");
+      const safeCond = escapeHtml(condLabel);
+      const safeDetailUrl = `/detail/${encodeURIComponent(String(row.id || ""))}`;
       const resolvedUrl =
         row.url || (category === "Analytic" ? resolveCameraSimulation(row).videoUrl : "");
-      if (resolvedUrl) {
-        const safeUrl = escapeHtml(resolvedUrl);
-        return `<video id="my-video" class="popup-img vidcctv" controls autoplay muted loop playsinline><source src="${safeUrl}" type="video/mp4" /></video><br/>`;
-      }
-      const imageSource = escapeHtml(resolveCctvImagePath(row.path_image));
-      return `<img id="my-img" class="popup-img vidcctv" src="${imageSource}" /><br/>`;
+
+      const mediaHtml = resolvedUrl
+        ? `<video id="my-video" class="popup-img vidcctv" controls autoplay muted loop playsinline aria-label="Video CCTV ${safeName}"><source src="${escapeHtml(resolvedUrl)}" type="video/mp4" /></video>`
+        : `<img id="my-img" class="popup-img vidcctv" src="${escapeHtml(resolveCctvImagePath(row.path_image))}" alt="Pratinjau CCTV ${safeName}" />`;
+
+      return `<div class="map-popup-card">
+        <div class="map-popup-header">
+          <strong class="map-popup-name">${safeName}</strong>
+          <span class="grade-chip grade-chip--sm grade-chip--${chipCode}" aria-label="Kondisi ${safeCond}">${escapeHtml(grade)}</span>
+        </div>
+        ${mediaHtml}
+        <div class="map-popup-footer">
+          <span class="map-popup-status">Status: ${safeCond}</span>
+          <a href="${safeDetailUrl}" class="map-popup-link">Detail →</a>
+        </div>
+      </div>`;
     },
     toGeoJsonFeatures(rows) {
       return rows.map((row) => ({
@@ -144,7 +214,8 @@ export default {
           pointID: String(row.id),
           description: this.buildPopupHtml(row),
           traffic: `${row.category}`,
-          cond: `${row.keterangan}`
+          cond: `${row.keterangan}`,
+          grade: getGradeForCondition(row.keterangan)
         },
         geometry: {
           type: "Point",
@@ -160,16 +231,19 @@ export default {
             ? [Number(primary.longitude), Number(primary.lattitude)]
             : DEFAULT_MAP_CENTER;
           const zoom = primary ? Number(primary.zoom) : DEFAULT_MAP_ZOOM;
+          const initialStyle = isDarkTheme() ? "dark" : "streets";
 
           this.map = new maplibregl.Map({
             container: "map",
-            style: getMapStyle("streets"),
+            style: getMapStyle(initialStyle),
             center,
             minZoom: 2,
             zoom,
             attributionControl: false
           });
 
+          // Preserve exact vertical order on top-left:
+          // (1) Navigation (+, -, Compass), (2) Geolocate (Find My Location), (3) Zoom Home, (4) Map Layer Control
           this.map.addControl(new maplibregl.NavigationControl(), "top-left");
           this.map.addControl(
             new maplibregl.GeolocateControl({
@@ -181,6 +255,13 @@ export default {
           this.map.addControl(new maplibregl.AttributionControl({ compact: true }), "bottom-left");
 
           this.registerMapEvents();
+          if (typeof window !== "undefined" && typeof window.requestAnimationFrame === "function") {
+            window.requestAnimationFrame(() => {
+              if (this.map && typeof this.map.resize === "function") {
+                this.map.resize();
+              }
+            });
+          }
         })
         .catch(() => {});
     },
@@ -212,21 +293,23 @@ export default {
         });
       });
 
-      map.on("click", "unclustered-point", (e) => {
-        if (!e.features || !e.features.length) {
-          return;
-        }
-        const coordinates = e.features[0].geometry.coordinates.slice();
-        const description = e.features[0].properties.description;
+      ["unclustered-point", "unclustered-point-grade"].forEach((layerId) => {
+        map.on("click", layerId, (e) => {
+          if (!e.features || !e.features.length) {
+            return;
+          }
+          const coordinates = e.features[0].geometry.coordinates.slice();
+          const description = e.features[0].properties.description;
 
-        while (Math.abs(e.lngLat.lng - coordinates[0]) > 180) {
-          coordinates[0] += e.lngLat.lng > coordinates[0] ? 360 : -360;
-        }
+          while (Math.abs(e.lngLat.lng - coordinates[0]) > 180) {
+            coordinates[0] += e.lngLat.lng > coordinates[0] ? 360 : -360;
+          }
 
-        new maplibregl.Popup().setLngLat(coordinates).setHTML(description).addTo(map);
+          new maplibregl.Popup().setLngLat(coordinates).setHTML(description).addTo(map);
+        });
       });
 
-      ["places", "unclustered-point"].forEach((layerId) => {
+      ["places", "unclustered-point", "unclustered-point-grade"].forEach((layerId) => {
         map.on("mouseenter", layerId, () => {
           map.getCanvas().style.cursor = "pointer";
         });
@@ -336,9 +419,9 @@ export default {
               filter: ["!", ["has", "point_count"]],
               layout: { visibility: cctvVisibility },
               paint: {
-                "circle-radius": 10,
-                "circle-stroke-width": 1,
-                "circle-stroke-color": "#fff",
+                "circle-radius": 13,
+                "circle-stroke-width": 2.5,
+                "circle-stroke-color": isDarkTheme() ? "#1E1E2E" : "#FFFFFF",
                 "circle-color": [
                   "match",
                   ["get", "cond"],
@@ -353,8 +436,43 @@ export default {
                   "Bad",
                   "#FF5F00",
                   "Terrible",
-                  "#FF0000",
-                  "#0000FF"
+                  "#DC2626",
+                  "#2563EB"
+                ]
+              }
+            });
+          }
+
+          if (!map.getLayer("unclustered-point-grade")) {
+            map.addLayer({
+              id: "unclustered-point-grade",
+              type: "symbol",
+              source: "data",
+              filter: ["!", ["has", "point_count"]],
+              layout: {
+                "text-field": ["get", "grade"],
+                "text-font": CLUSTER_TEXT_FONT,
+                "text-size": 12,
+                "text-allow-overlap": true,
+                visibility: cctvVisibility
+              },
+              paint: {
+                "text-color": [
+                  "match",
+                  ["get", "cond"],
+                  "Great",
+                  "#0F2E1A",
+                  "Good",
+                  "#FFFFFF",
+                  "Average",
+                  "#241F00",
+                  "Poor",
+                  "#1F1500",
+                  "Bad",
+                  "#1F0B00",
+                  "Terrible",
+                  "#FFFFFF",
+                  "#FFFFFF"
                 ]
               }
             });
@@ -368,9 +486,7 @@ export default {
                 if (!source) {
                   return;
                 }
-                const conditionById = new Map(
-                  latestRows.map((row) => [String(row.id), `${row.keterangan}`])
-                );
+                const rowById = new Map(latestRows.map((row) => [String(row.id), row]));
 
                 if (latestRows.length !== geojson.features.length) {
                   geojson = {
@@ -380,9 +496,12 @@ export default {
                   this.items = latestRows.map((row) => this.mapRowToSidebarItem(row));
                 } else {
                   geojson.features.forEach((feature) => {
-                    const nextCond = conditionById.get(feature.properties.pointID);
-                    if (nextCond !== undefined) {
+                    const matchedRow = rowById.get(feature.properties.pointID);
+                    if (matchedRow) {
+                      const nextCond = `${matchedRow.keterangan}`;
                       feature.properties.cond = nextCond;
+                      feature.properties.grade = getGradeForCondition(nextCond);
+                      feature.properties.description = this.buildPopupHtml(matchedRow);
                     }
                   });
                 }
@@ -434,6 +553,7 @@ export default {
     },
     handleStyleChange(styleItem) {
       this.style = styleItem.label;
+      this.manualStyleOverride = styleItem.id === "light" || styleItem.id === "outdoor";
       if (this.map) {
         this.map.setStyle(getMapStyle(styleItem.id), { diff: false });
       }
@@ -471,12 +591,14 @@ export default {
         popUps[0].remove();
       }
 
-      new maplibregl.Popup({ closeOnClick: true, offset: 10 })
+      new maplibregl.Popup({ closeOnClick: true, offset: 14 })
         .setLngLat(targetItem.latLong)
         .setHTML(
           this.buildPopupHtml({
+            id: targetItem.id,
             name: targetItem.name,
             status: targetItem.status,
+            cond: targetItem.cond,
             url: targetItem.url,
             path_image: targetItem.source
           })
@@ -507,8 +629,9 @@ export default {
       this.rightCollapsed = nextCollapsed;
 
       if (this.map) {
+        const isMobile = typeof window !== "undefined" && window.innerWidth < 768;
         this.map.easeTo({
-          padding: { right: nextCollapsed ? 0 : 400 },
+          padding: { right: nextCollapsed || isMobile ? 0 : 400 },
           duration: 1000
         });
       }
@@ -519,118 +642,32 @@ export default {
 
 <style>
 .vidcctv {
-  display: inline-block;
+  display: block;
 }
 
 .basemap {
   position: relative;
   width: 100%;
-  height: 550px;
-  border-radius: 10px;
-  box-shadow: 0 10px 20px rgba(29, 29, 29, 0.2);
-  -webkit-box-shadow: 0 10px 20px rgba(29, 29, 29, 0.2);
-  -moz-box-shadow: 0 10px 20px rgba(29, 29, 29, 0.2);
+  height: clamp(500px, calc(100vh - 170px), 760px);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border-subtle);
+  background-color: var(--bg-surface);
+  overflow: hidden;
+  box-shadow: var(--shadow-card);
 }
 
 #map {
   position: absolute;
-  top: 0;
-  border-radius: 10px;
-  bottom: 0;
+  inset: 0;
   width: 100%;
-}
-
-.maplibregl-ctrl button.maplibregl-ctrl-zoom-in .maplibregl-ctrl-icon {
-  background-image: none;
-  -webkit-mask: url("data:image/svg+xml;charset=utf-8,%3Csvg width='29' height='29' viewBox='0 0 29 29' xmlns='http://www.w3.org/2000/svg' fill='%23333'%3E%3Cpath d='M14.5 8.5c-.75 0-1.5.75-1.5 1.5v3h-3c-.75 0-1.5.75-1.5 1.5S9.25 16 10 16h3v3c0 .75.75 1.5 1.5 1.5S16 19.75 16 19v-3h3c.75 0 1.5-.75 1.5-1.5S19.75 13 19 13h-3v-3c0-.75-.75-1.5-1.5-1.5z'/%3E%3C/svg%3E");
-  mask: url("data:image/svg+xml;charset=utf-8,%3Csvg width='29' height='29' viewBox='0 0 29 29' xmlns='http://www.w3.org/2000/svg' fill='%23333'%3E%3Cpath d='M14.5 8.5c-.75 0-1.5.75-1.5 1.5v3h-3c-.75 0-1.5.75-1.5 1.5S9.25 16 10 16h3v3c0 .75.75 1.5 1.5 1.5S16 19.75 16 19v-3h3c.75 0 1.5-.75 1.5-1.5S19.75 13 19 13h-3v-3c0-.75-.75-1.5-1.5-1.5z'/%3E%3C/svg%3E");
-  background-color: var(--text-color);
-  transition: 0.5s;
-}
-
-.maplibregl-ctrl button.maplibregl-ctrl-zoom-in .maplibregl-ctrl-icon:hover {
-  background-color: var(--green-hover);
-}
-
-.maplibregl-ctrl button.maplibregl-ctrl-zoom-out .maplibregl-ctrl-icon {
-  background-image: none;
-  -webkit-mask: url("data:image/svg+xml;charset=utf-8,%3Csvg width='29' height='29' viewBox='0 0 29 29' xmlns='http://www.w3.org/2000/svg' fill='%23333'%3E%3Cpath d='M10 13c-.75 0-1.5.75-1.5 1.5S9.25 16 10 16h9c.75 0 1.5-.75 1.5-1.5S19.75 13 19 13h-9z'/%3E%3C/svg%3E");
-  mask: url("data:image/svg+xml;charset=utf-8,%3Csvg width='29' height='29' viewBox='0 0 29 29' xmlns='http://www.w3.org/2000/svg' fill='%23333'%3E%3Cpath d='M10 13c-.75 0-1.5.75-1.5 1.5S9.25 16 10 16h9c.75 0 1.5-.75 1.5-1.5S19.75 13 19 13h-9z'/%3E%3C/svg%3E");
-  background-color: var(--text-color);
-  transition: 0.5s;
-}
-
-.maplibregl-ctrl button.maplibregl-ctrl-zoom-out .maplibregl-ctrl-icon:hover {
-  background-color: var(--green-hover);
-}
-
-.maplibregl-ctrl button.maplibregl-ctrl-compass .maplibregl-ctrl-icon {
-  background-image: none;
-  -webkit-mask: url("data:image/svg+xml;charset=utf-8,%3Csvg width='29' height='29' viewBox='0 0 29 29' xmlns='http://www.w3.org/2000/svg' fill='%23333'%3E%3Cpath d='M10.5 14l4-8 4 8h-8z'/%3E%3Cpath d='M10.5 16l4 8 4-8h-8z' fill='%23ccc'/%3E%3C/svg%3E");
-  mask: url("data:image/svg+xml;charset=utf-8,%3Csvg width='29' height='29' viewBox='0 0 29 29' xmlns='http://www.w3.org/2000/svg' fill='%23333'%3E%3Cpath d='M10.5 14l4-8 4 8h-8z'/%3E%3Cpath d='M10.5 16l4 8 4-8h-8z' fill='%23ccc'/%3E%3C/svg%3E");
-  background-color: var(--text-color);
-  transition: 0.5s;
-}
-
-.maplibregl-ctrl button.maplibregl-ctrl-compass .maplibregl-ctrl-icon:hover {
-  background-color: var(--green-hover);
-}
-
-.maplibregl-ctrl button.maplibregl-ctrl-geolocate .maplibregl-ctrl-icon {
-  background-image: none;
-  -webkit-mask: url("data:image/svg+xml;charset=utf-8,%3Csvg width='29' height='29' viewBox='0 0 20 20' xmlns='http://www.w3.org/2000/svg' fill='%23333'%3E%3Cpath d='M10 4C9 4 9 5 9 5v.1A5 5 0 005.1 9H5s-1 0-1 1 1 1 1 1h.1A5 5 0 009 14.9v.1s0 1 1 1 1-1 1-1v-.1a5 5 0 003.9-3.9h.1s1 0 1-1-1-1-1-1h-.1A5 5 0 0011 5.1V5s0-1-1-1zm0 2.5a3.5 3.5 0 110 7 3.5 3.5 0 110-7z'/%3E%3Ccircle cx='10' cy='10' r='2'/%3E%3C/svg%3E");
-  mask: url("data:image/svg+xml;charset=utf-8,%3Csvg width='29' height='29' viewBox='0 0 20 20' xmlns='http://www.w3.org/2000/svg' fill='%23333'%3E%3Cpath d='M10 4C9 4 9 5 9 5v.1A5 5 0 005.1 9H5s-1 0-1 1 1 1 1 1h.1A5 5 0 009 14.9v.1s0 1 1 1 1-1 1-1v-.1a5 5 0 003.9-3.9h.1s1 0 1-1-1-1-1-1h-.1A5 5 0 0011 5.1V5s0-1-1-1zm0 2.5a3.5 3.5 0 110 7 3.5 3.5 0 110-7z'/%3E%3Ccircle cx='10' cy='10' r='2'/%3E%3C/svg%3E");
-  background-color: var(--text-color);
-  transition: 0.5s;
-}
-
-.maplibregl-ctrl button.maplibregl-ctrl-geolocate .maplibregl-ctrl-icon:hover {
-  background-color: var(--green-hover);
-}
-
-.maplibregl-ctrl button:not(:disabled):hover,
-.maplibregl-ctrl button:not(:disabled):focus {
-  border-radius: 10px;
-  background-color: var(--color-primary);
-  transform: translateY(-1px);
-  -webkit-transform: translateY(-1px);
-}
-
-.maplibregl-ctrl button:not(:disabled) {
-  border-radius: 10px;
-  transition: all 0.15s ease;
-}
-
-.maplibregl-ctrl button:not(:disabled):active {
-  border-radius: 10px;
-  transform: translateY(1px) !important;
-  box-shadow: none !important;
-  transition: all 0.15s ease;
-}
-
-.maplibregl-ctrl button {
-  background-color: var(--color-secondary);
-  border-color: var(--color-primary);
-  border-radius: 10px;
-}
-
-.maplibregl-ctrl-group button + button {
-  border-top: none;
-}
-
-.maplibregl-ctrl-group {
-  border-radius: 10px;
-}
-
-.maplibregl-ctrl-group:not(:empty) {
-  box-shadow: 2px 2px 6px rgba(29, 29, 29, 0.2);
-  background-color: var(--color-secondary);
+  height: 100%;
 }
 
 .rounded-rect {
-  background: var(--color-secondary);
-  border-radius: 10px;
-  box-shadow: 2px 2px 6px rgba(29, 29, 29, 0.2);
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-float);
 }
 
 .flex-center {
@@ -641,281 +678,157 @@ export default {
 }
 
 .flex-center.right {
-  top: 0px;
-  right: 0px;
+  top: 10px;
+  bottom: 10px;
+  right: 10px;
+}
+
+.sidebar {
+  transition: transform 0.35s ease;
+  z-index: 15;
+  width: min(320px, calc(100vw - 74px));
+  height: calc(100% - 20px);
 }
 
 .sidebar-content {
-  position: absolute;
-  width: 95%;
-  height: 95%;
-  font-family: "montserrat";
-  margin: 10px;
-  background-color: transparent;
-  box-shadow: none;
+  position: relative;
+  width: 100%;
+  height: 100%;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  background-color: var(--bg-surface);
+}
+
+.right.collapsed {
+  transform: translateX(calc(100% + 20px));
 }
 
 .sidebar-toggle {
   position: absolute;
-  width: 29px;
-  height: 29px;
-  border-radius: 10px;
-  top: 0;
-  display: flex;
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-md);
+  display: inline-flex;
   justify-content: center;
   align-items: center;
-  transition: all 0.15s ease;
+  color: var(--text-primary);
+  cursor: pointer;
+  padding: 0;
+  transition: background-color 0.15s ease, color 0.15s ease;
 }
 
 .sidebar-toggle.right {
-  left: -3.5em;
+  top: 0;
+  left: -54px;
+  z-index: 16;
+}
+
+/* Aligned cleanly right below Navigation (3x44=134) + Geolocate (44) */
+.sidebar-toggle.zoomHome {
+  left: 10px;
+  top: 210px;
+  z-index: 10;
 }
 
 .sidebar-toggle.left {
   left: 10px;
-  top: 190px;
-  z-index: 2;
+  top: 264px;
+  z-index: 10;
 }
 
-.sidebar-toggle.zoomHome {
-  left: 10px;
-  top: 150px;
-  z-index: 2;
-}
-
-.sidebar-toggle.left ion-icon,
-.sidebar-toggle.zoomHome ion-icon {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-}
-
-.sidebar-toggle.zoomHome ion-icon {
-  font-size: 18px;
-}
-
-.sidebar-toggle:hover,
-.sidebar-toggle:focus {
-  cursor: pointer;
-  color: var(--green-hover);
-  background-color: var(--color-primary);
-  transform: translateY(-1px);
-  -webkit-transform: translateY(-1px);
-}
-
-.sidebar-toggle:active {
-  cursor: pointer;
-  color: var(--green-hover);
-  transform: translateY(1px) !important;
-  box-shadow: none !important;
-  transition: all 0.15s ease;
-}
-
-.sidebar {
-  transition: transform 0.5s;
-  z-index: 1;
-  width: 300px;
-  height: 100%;
-}
-
-.left.collapsed {
-  transform: translateX(-295px);
-}
-
-.right.collapsed {
-  transform: translateX(295px);
-}
-
-#mapSeacrh ion-icon,
-#panelLeft ion-icon {
-  width: 20px;
-}
-
-.maplibregl-popup {
-  max-width: 400px;
-  border-radius: 10px;
-  font-size: var(--size-md);
-  color: var(--text-color);
-}
-
-.maplibregl-popup-content {
-  position: relative;
-  background: var(--color-secondary);
-  border-radius: 10px;
-  padding: 10px;
-  box-shadow: 0 10px 20px rgba(29, 29, 29, 0.1);
-  -webkit-box-shadow: 0 10px 20px rgba(29, 29, 29, 0.1);
-  -moz-box-shadow: 0 10px 20px rgba(29, 29, 29, 0.1);
-}
-
-.maplibregl-popup-anchor-bottom .maplibregl-popup-tip,
-.maplibregl-popup-anchor-bottom-left .maplibregl-popup-tip,
-.maplibregl-popup-anchor-bottom-right .maplibregl-popup-tip {
-  border-top-color: var(--color-secondary);
-}
-
-.maplibregl-popup-anchor-top .maplibregl-popup-tip,
-.maplibregl-popup-anchor-top-left .maplibregl-popup-tip,
-.maplibregl-popup-anchor-top-right .maplibregl-popup-tip {
-  border-bottom-color: var(--color-secondary);
-}
-
-.maplibregl-popup-anchor-right .maplibregl-popup-tip {
-  border-left-color: var(--color-secondary);
-}
-
-.maplibregl-popup-anchor-left .maplibregl-popup-tip {
-  border-right-color: var(--color-secondary);
-}
-
-.popup-img {
-  border-radius: 10px;
-  top: 0;
-  left: 0;
-  width: 200px;
-  height: 100px;
-  -o-object-fit: cover;
-  object-fit: cover;
-  margin: 0;
-  box-shadow: -3px 3px 6px rgba(29, 29, 29, 0.3);
-  -webkit-box-shadow: -3px 3px 6px rgba(29, 29, 29, 0.3);
-  -moz-box-shadow: -3px 3px 6px rgba(29, 29, 29, 0.3);
+.sidebar-toggle:hover {
+  background-color: var(--bg-surface-subtle);
+  color: var(--accent-primary);
 }
 
 .map-overlay {
-  font: 12px/20px "Montserat";
-  background-color: var(--color-secondary);
-  box-shadow: 2px 2px 6px rgba(29, 29, 29, 0.2);
-  color: var(--text-color);
-  border-radius: 10px;
+  font-family: var(--font-sans);
+  font-size: var(--text-caption);
+  line-height: 1.45;
+  background-color: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  box-shadow: var(--shadow-float);
+  color: var(--text-primary);
+  border-radius: var(--radius-md);
   position: absolute;
-  width: 25%;
-  bottom: 42px;
+  max-width: 260px;
+  bottom: 44px;
   left: 10px;
-  padding: 10px;
+  padding: 10px 12px;
+  z-index: 9;
   display: none;
 }
 
-.maplibregl-ctrl-attrib {
-  background-color: var(--color-secondary) !important;
-  color: var(--text-color) !important;
-  border-radius: 10px !important;
-  font-size: 11px;
-  opacity: 0.88;
+.map-popup-card {
+  width: min(260px, 70vw);
+  font-family: var(--font-sans);
 }
 
-.maplibregl-ctrl-attrib a {
-  color: var(--green-theme) !important;
+.map-popup-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding-right: 36px;
+  margin-bottom: 8px;
 }
 
-.maplibregl-ctrl-attrib.maplibregl-compact .maplibregl-ctrl-attrib-button {
-  background-color: rgba(255, 255, 255, 0.85);
+.map-popup-name {
+  font-size: var(--text-sm);
+  font-weight: 700;
+  color: var(--text-primary);
+  line-height: 1.3;
 }
 
-.maplibregl-popup-close-button {
-  display: none;
+.popup-img {
+  border-radius: var(--radius-sm);
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+  background-color: #0f172a;
+  margin: 0 0 8px;
+}
+
+.map-popup-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.map-popup-status {
+  font-size: var(--text-caption);
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.map-popup-link {
+  font-size: var(--text-caption);
+  font-weight: 700;
+  color: var(--accent-primary);
+  text-decoration: underline;
+  min-height: 28px;
+  display: inline-flex;
+  align-items: center;
 }
 
 .radio-group-map {
   display: flex;
   flex-direction: column;
-  margin-top: 10px;
+  gap: 6px;
 }
 
-.el-popover {
-  background: var(--color-secondary);
-  border: none;
-  padding: 20px;
-  border-radius: 10px;
-  color: var(--text-color);
-  line-height: 1.4;
-  box-shadow: 0 10px 20px rgba(29, 29, 29, 0.2);
-  -webkit-box-shadow: 0 10px 20px rgba(29, 29, 29, 0.2);
-  -moz-box-shadow: 0 10px 20px rgba(29, 29, 29, 0.2);
+.style-item {
+  margin-right: 0 !important;
+  min-height: 36px;
+  display: flex;
+  align-items: center;
 }
 
-.el-popper[x-placement^="right"] .popper__arrow::after {
-  bottom: -6px;
-  left: 1px;
-  border-right-color: var(--color-secondary);
-  border-left-width: 0;
-}
-
-.el-popper[x-placement^="top"] .popper__arrow::after {
-  bottom: 1px;
-  margin-left: -6px;
-  border-top-color: var(--color-secondary);
-  border-bottom-width: 0;
-}
-
-.el-radio {
-  color: var(--text-color);
-}
-
-.el-radio__label {
-  font-size: var(--size-md);
-  font-weight: 400;
-}
-
-.el-radio__input.is-checked + .el-radio__label {
-  color: var(--green-theme);
-  font-size: var(--size-md);
-  font-weight: 500;
-}
-
-.el-radio__input.is-checked .el-radio__inner {
-  border-color: var(--green-theme);
-  background: var(--green-theme);
-}
-
-.el-radio__inner::after {
-  background-color: var(--green-theme);
-}
-
-.el-radio__inner:hover {
-  border-color: var(--green-theme);
-}
-
-.el-radio__inner {
-  border: none;
-  background-color: var(--text-color);
-}
-
-.el-popper[x-placement^="right"] .popper__arrow {
-  border-right-color: var(--color-secondary);
-}
-
-.el-checkbox__label {
-  color: var(--text-color);
-  font-weight: 400;
-}
-
-.el-checkbox__input.is-checked + .el-checkbox__label {
-  color: var(--green-theme);
-  font-size: var(--size-md);
-  font-weight: 500;
-}
-
-.el-checkbox__input.is-checked .el-checkbox__inner,
-.el-checkbox__input.is-indeterminate .el-checkbox__inner {
-  background-color: var(--green-theme);
-  border-color: var(--green-theme);
-}
-
-.el-checkbox__input.is-focus .el-checkbox__inner {
-  border: 1px solid var(--green-theme);
-}
-
-.el-checkbox__inner:hover,
-.el-checkbox__inner:active {
-  border-color: var(--green-theme);
-}
-
-.el-checkbox__inner {
-  border: 1px solid var(--text-color);
-  border-radius: 4px;
-  width: 14px;
-  height: 14px;
-  background-color: var(--text-color);
+@media screen and (max-width: 767px) {
+  .basemap {
+    height: clamp(500px, 72vh, 620px);
+  }
 }
 </style>

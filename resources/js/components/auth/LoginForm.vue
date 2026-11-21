@@ -1,60 +1,58 @@
 <template>
-  <div>
-    <div class="login-page-container" style="overflow: hidden">
-      <div class="login-container">
-        <el-row>
-          <el-col :span="12" :xs="24">
-            <div class="form-content">
-              <div class="webgis">Web<span>GIS</span></div>
-              <el-form
-                class="register-form"
-                :label-position="labelPosition"
-                label-width="100px"
-                :model="formLabelAlign"
-              >
-                <el-row>
-                  <el-col :span="24">
-                    <el-form-item>
-                      <el-input
-                        v-model="formLabelAlign.email"
-                        type="email"
-                        placeholder="Your Email"
-                        @keyup.enter.native="onSubmit"
-                      />
-                    </el-form-item>
-                  </el-col>
-                </el-row>
-                <el-row>
-                  <el-col :span="24">
-                    <el-form-item>
-                      <el-input
-                        v-model="formLabelAlign.pass"
-                        type="password"
-                        placeholder="Your Password"
-                        @keyup.enter.native="onSubmit"
-                      />
-                    </el-form-item>
-                  </el-col>
-                </el-row>
-                <el-row>
-                  <el-col :span="24">
-                    <el-form-item>
-                      <div class="btn-form-submit back-btn">
-                        <el-button type="primary" @click="onSubmit">Sign In</el-button>
-                      </div>
-                      <a href="/">
-                        <div class="forgot-password">Back to Dashboard</div>
-                      </a>
-                    </el-form-item>
-                  </el-col>
-                </el-row>
-              </el-form>
-            </div>
-          </el-col>
-        </el-row>
-        <div class="set-img-profile">
-          <img class="imgCont" src="/assets/tf5.jpg" />
-        </div>
+  <div class="login-page-container">
+    <div class="login-container">
+      <div class="form-content">
+        <h1 class="webgis">Web<span>GIS</span></h1>
+        <el-form
+          class="register-form"
+          label-position="top"
+          :model="formLabelAlign"
+          @submit.native.prevent="onSubmit"
+        >
+          <el-form-item>
+            <label for="login-email" class="login-field-label">Email</label>
+            <el-input
+              id="login-email"
+              v-model="formLabelAlign.email"
+              type="email"
+              placeholder="Your Email"
+              autocomplete="email"
+              @keyup.enter.native="onSubmit"
+            />
+          </el-form-item>
+
+          <el-form-item>
+            <label for="login-password" class="login-field-label">Password</label>
+            <el-input
+              id="login-password"
+              v-model="formLabelAlign.pass"
+              type="password"
+              placeholder="Your Password"
+              autocomplete="current-password"
+              @keyup.enter.native="onSubmit"
+            />
+          </el-form-item>
+
+          <div class="login-actions">
+            <el-button
+              :loading="submitting"
+              type="primary"
+              class="login-submit-btn"
+              @click="onSubmit"
+            >
+              Sign In
+            </el-button>
+            <a href="/" class="forgot-password">Back to Dashboard</a>
+          </div>
+        </el-form>
+      </div>
+
+      <div class="set-img-profile">
+        <img
+          class="imgCont"
+          src="/assets/tf5.jpg"
+          alt="Ilustrasi kondisi lalu lintas persimpangan Banda Aceh"
+        />
       </div>
     </div>
   </div>
@@ -73,7 +71,7 @@ export default {
   },
   data() {
     return {
-      labelPosition: "top",
+      submitting: false,
       formLabelAlign: {
         email: "",
         pass: ""
@@ -82,6 +80,10 @@ export default {
   },
   methods: {
     onSubmit() {
+      if (this.submitting) {
+        return;
+      }
+      this.submitting = true;
       login({
         email: this.formLabelAlign.email,
         password: this.formLabelAlign.pass
@@ -105,6 +107,9 @@ export default {
             message: "Wrong email or password!",
             type: "error"
           });
+        })
+        .finally(() => {
+          this.submitting = false;
         });
     }
   }
@@ -112,121 +117,101 @@ export default {
 </script>
 
 <style>
+.login-page-container {
+  width: 100%;
+  max-width: 980px;
+}
+
 .login-container {
-  left: 50%;
-  transform: translateX(-50%);
-  position: relative;
-  width: 80%;
-  background-color: var(--color-secondary);
-  border-radius: 10px;
-  box-shadow: 0 10px 20px rgba(29, 29, 29, 0.2);
-  -webkit-box-shadow: 0 10px 20px rgba(29, 29, 29, 0.2);
-  -moz-box-shadow: 0 10px 20px rgba(29, 29, 29, 0.2);
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  background-color: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  box-shadow: var(--shadow-float);
 }
 
 .login-container .form-content {
-  padding: 80px 50px;
-  padding-left: 80px;
+  padding: 48px 40px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
 }
 
 .webgis {
-  margin-bottom: 30px;
-  font-size: var(--size-xl);
-  font-weight: 400;
+  margin: 0 0 28px;
+  font-size: 1.75rem;
+  font-weight: 500;
   text-align: center;
-  padding-right: 30px;
-  color: var(--text-color);
+  color: var(--text-primary);
 }
 
 .webgis span {
-  color: var(--green-theme);
+  color: var(--accent-primary);
   font-weight: 700;
-  font-size: var(--size-lg);
 }
 
-.forgot-password,
-.register {
-  text-align: center;
-  color: var(--text-color);
+.login-field-label {
+  display: block;
+  margin-bottom: 6px;
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--text-secondary);
+  line-height: 1.4;
+}
+
+.login-actions {
+  margin-top: var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  align-items: stretch;
+}
+
+.login-submit-btn {
+  width: 100%;
+  min-height: 44px;
 }
 
 .forgot-password {
-  margin-top: 10px;
-}
-
-.register {
-  margin-top: -10px;
-}
-
-.register-form .el-input__inner {
-  margin-bottom: 10px;
-}
-
-.register-form .el-input__inner,
-.register-form .el-select {
-  width: 100%;
-}
-
-.login-container .el-form-item {
-  width: 100%;
-  margin-bottom: 10px;
-  padding-right: 30px;
-}
-
-.login-container .el-input__inner {
-  width: 100%;
-  height: 40px;
-}
-
-.btn-form-submit {
-  margin-top: 20px;
-  display: flex-end;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--accent-primary);
+  text-decoration: underline;
+  border-radius: var(--radius-sm);
 }
 
 .set-img-profile {
-  position: absolute;
-  background: white;
-  display: flex;
-  align-items: center;
-  border-radius: 10px;
-  overflow: hidden;
-  height: 100%;
-  width: 50%;
-  top: 0;
-  right: 0;
-  box-shadow: -10px 0 20px rgba(29, 29, 29, 0.2);
-  -webkit-box-shadow: -10px 0 20px rgba(29, 29, 29, 0.2);
-  -moz-box-shadow: -10px 0 20px rgba(29, 29, 29, 0.2);
-  transition: all 0.5s ease;
+  position: relative;
+  min-height: 420px;
+  background-color: var(--bg-surface-subtle);
 }
 
 .set-img-profile .imgCont {
-  top: 0;
-  left: 0;
   width: 100%;
   height: 100%;
-  -o-object-fit: cover;
   object-fit: cover;
-  position: absolute;
-  transition: all 0.5s ease;
+  display: block;
 }
 
-.set-img-profile:hover .imgCont {
-  transform: scale(1.25);
-}
-
-@media screen and (max-width: 600px) {
-  .login-container .el-form-item {
-    width: 100%;
+@media screen and (max-width: 767px) {
+  .login-container {
+    grid-template-columns: 1fr;
   }
 
   .set-img-profile {
-    top: 102%;
-    width: 100%;
-    left: 0;
-    box-shadow: 0px -10px 20px rgba(29, 29, 29, 0.2);
-    -webkit-box-shadow: 0px -10px 20px rgba(29, 29, 29, 0.2);
-    -moz-box-shadow: 0px -10px 20px rgba(29, 29, 29, 0.2);
+    order: -1;
+    min-height: 150px;
+    max-height: 170px;
+  }
+
+  .login-container .form-content {
+    padding: 28px 20px;
   }
 }
 </style>

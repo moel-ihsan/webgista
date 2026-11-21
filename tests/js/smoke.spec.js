@@ -1,6 +1,8 @@
 import { createLocalVue, shallowMount } from "@vue/test-utils";
 import maplibregl from "maplibre-gl";
 import CctvDetailView from "@/components/cctv/CctvDetailView.vue";
+import AppIcon from "@/components/common/AppIcon.vue";
+import TrafficGradeBadge from "@/components/common/TrafficGradeBadge.vue";
 import TrafficCounterCards from "@/components/cctv/TrafficCounterCards.vue";
 import VideoDetectorPlayer from "@/components/cctv/VideoDetectorPlayer.vue";
 import SimulationBanner from "@/components/layout/SimulationBanner.vue";
@@ -72,6 +74,7 @@ jest.mock("maplibre-gl", () => {
     setFeatureState: jest.fn(),
     flyTo: jest.fn(),
     easeTo: jest.fn(),
+    resize: jest.fn(),
     getCanvas: jest.fn(() => ({ style: {} })),
     queryRenderedFeatures: jest.fn(() => []),
     remove: jest.fn()
@@ -105,6 +108,8 @@ jest.mock("maplibre-gl", () => {
 function buildLocalVue() {
   const localVue = createLocalVue();
   localVue.config.ignoredElements = [/^ion-/];
+  localVue.component("AppIcon", AppIcon);
+  localVue.component("TrafficGradeBadge", TrafficGradeBadge);
   localVue.directive("loading", {});
   return localVue;
 }
@@ -129,7 +134,7 @@ describe("Frontend smoke tests", () => {
       }
     });
 
-    expect(wrapper.find("h4").text()).toBe("Traffic Condition");
+    expect(wrapper.find("h2").text()).toBe("Traffic Condition");
     TRAFFIC_LEVELS.forEach((level) => {
       expect(wrapper.text()).toContain(level.label);
     });

@@ -1,148 +1,152 @@
 <template>
-  <div>
-    <el-row :gutter="30" style="margin-top: 20px">
-      <el-col :span="15" :xs="24" :md="24" :lg="15">
-        <el-card :body-style="{ padding: '0px' }" class="cardVideoCCTV">
-          <video
-            id="my-video"
-            ref="videoEl"
-            :class="
-              host === 'www.youtube.com'
-                ? 'video-js vjs-default-skin vjs-big-play-centered videoCCTV'
-                : 'videoCCTV'
-            "
-            preload="auto"
-            autoplay
-            muted
-            loop
-            playsinline
-            crossorigin="anonymous"
-            style="display: none"
-          >
-            <source
-              v-if="host === 'www.youtube.com'"
-              :src="resolvedVideoUrl"
-              type="video/youtube"
-            />
-            <source v-else-if="resolvedVideoUrl" :src="resolvedVideoUrl" type="video/mp4" />
-          </video>
-          <canvas
-            id="canvasx"
-            ref="canvasx"
-            class="videoCCTV"
-            :class="{ 'roi-editing': !areaVideo }"
-            style="display: block; z-index: 12"
-            @mousedown="handleRoiCanvasClick"
+  <div class="video-detector-layout">
+    <div class="video-detector-primary">
+      <div class="detector-video-card">
+        <video
+          id="my-video"
+          ref="videoEl"
+          :class="
+            host === 'www.youtube.com'
+              ? 'video-js vjs-default-skin vjs-big-play-centered detector-layer-media'
+              : 'detector-layer-media'
+          "
+          preload="auto"
+          autoplay
+          muted
+          loop
+          playsinline
+          crossorigin="anonymous"
+          style="display: none"
+        >
+          <source
+            v-if="host === 'www.youtube.com'"
+            :src="resolvedVideoUrl"
+            type="video/youtube"
           />
-          <canvas
-            id="canvasv"
-            ref="canvasv"
-            class="videoCCTV"
-            style="display: block; background-color: rgba(0, 0, 0, 0); z-index: 11"
-          />
-          <canvas
-            id="canvasy"
-            ref="canvasy"
-            class="videoCCTV"
-            style="display: block; z-index: 10"
-          />
-        </el-card>
-        <div class="btn-video">
+          <source v-else-if="resolvedVideoUrl" :src="resolvedVideoUrl" type="video/mp4" />
+        </video>
+        <canvas
+          id="canvasx"
+          ref="canvasx"
+          class="detector-layer-media"
+          :class="{ 'roi-editing': !areaVideo }"
+          style="display: block; z-index: 12"
+          @mousedown="handleRoiCanvasClick"
+        />
+        <canvas
+          id="canvasv"
+          ref="canvasv"
+          class="detector-layer-media"
+          style="display: block; background-color: rgba(0, 0, 0, 0); z-index: 11"
+        />
+        <canvas
+          id="canvasy"
+          ref="canvasy"
+          class="detector-layer-media"
+          style="display: block; z-index: 10"
+        />
+      </div>
+
+      <div class="btn-video">
+        <button
+          v-if="areaVideo === true"
+          id="btn-manage"
+          type="button"
+          class="el-button el-button--primary"
+          @click="manageVideo"
+        >
+          Manage Video
+        </button>
+        <template v-else>
           <button
-            v-if="areaVideo === true"
-            id="btn-manage"
+            id="btn-drop"
             type="button"
             class="el-button el-button--primary"
             @click="manageVideo"
           >
-            Manage Video
-          </button>
-          <template v-else>
-            <button
-              id="btn-drop"
-              type="button"
-              class="el-button el-button--primary"
-              @click="manageVideo"
-            >
-              Done
-            </button>
-            <button
-              id="btn-undo-roi"
-              type="button"
-              class="el-button el-button--warning"
-              :disabled="draftRoiPoints.length === 0"
-              @click="undoLastDraftPoint"
-            >
-              Undo Titik
-            </button>
-            <button
-              id="btn-reset-roi"
-              type="button"
-              class="el-button el-button--info"
-              @click="resetDraftRoi"
-            >
-              Reset Titik
-            </button>
-            <button id="btn-cancel-roi" type="button" class="el-button" @click="cancelEditRoi">
-              Batal
-            </button>
-          </template>
-
-          <button
-            v-if="oriVideo === true"
-            id="btn-show"
-            type="button"
-            class="el-button el-button--primary"
-            @click="showVideo"
-          >
-            Show Video
+            Done
           </button>
           <button
-            v-else
-            id="btn-hide"
+            id="btn-undo-roi"
             type="button"
-            class="el-button el-button--primary"
-            @click="showVideo"
+            class="el-button el-button--warning"
+            :disabled="draftRoiPoints.length === 0"
+            @click="undoLastDraftPoint"
           >
-            Hide Video
+            Undo Titik
           </button>
-
           <button
-            v-if="resolvedPrecomputedUrl"
-            id="btn-mode"
+            id="btn-reset-roi"
             type="button"
-            class="el-button el-button--primary"
-            @click="toggleDetectionMode"
+            class="el-button el-button--info"
+            @click="resetDraftRoi"
           >
-            {{ modeToggleLabel }}
+            Reset Titik
           </button>
-        </div>
+          <button
+            id="btn-cancel-roi"
+            type="button"
+            class="el-button el-button--info"
+            @click="cancelEditRoi"
+          >
+            Batal
+          </button>
+        </template>
 
-        <div v-if="!areaVideo" id="roi-edit-hint" class="roi-edit-hint">
-          Mode Edit Area Deteksi: Klik bebas titik pada video untuk membentuk poligon (minimal 3
-          titik, saat ini {{ draftRoiPoints.length }} titik), lalu klik Done.
-        </div>
+        <button
+          v-if="oriVideo === true"
+          id="btn-show"
+          type="button"
+          class="el-button el-button--primary"
+          @click="showVideo"
+        >
+          Show Video
+        </button>
+        <button
+          v-else
+          id="btn-hide"
+          type="button"
+          class="el-button el-button--primary"
+          @click="showVideo"
+        >
+          Hide Video
+        </button>
 
-        <canvas id="canvasw" ref="canvasw" class="canvasw" />
-      </el-col>
-      <el-col :span="9" :xs="24" :md="24" :lg="9">
-        <el-row :gutter="30" style="padding-left: 15px; padding-right: 15px; margin-bottom: 20px">
-          <el-col :span="24">
-            <p style="margin-bottom: 4px">{{ cctv.name }}</p>
-            <div id="detector-mode-status" class="detector-mode-meta">{{ detectorStatusText }}</div>
-            <div id="detector-sync-status" class="detector-sync-meta">{{ syncStatusText }}</div>
-          </el-col>
-        </el-row>
-        <el-form class="veh-form" :model="cctv">
-          <TrafficCounterCards
-            :lv-count="counts.lv"
-            :hv-count="counts.hv"
-            :mc-count="counts.mc"
-            :condition-label="conditionLabel"
-          />
-        </el-form>
-      </el-col>
-    </el-row>
+        <button
+          v-if="resolvedPrecomputedUrl"
+          id="btn-mode"
+          type="button"
+          class="el-button el-button--primary"
+          @click="toggleDetectionMode"
+        >
+          {{ modeToggleLabel }}
+        </button>
+      </div>
+
+      <div v-if="!areaVideo" id="roi-edit-hint" class="roi-edit-hint" role="status">
+        Mode Edit Area Deteksi: Klik bebas titik pada video untuk membentuk poligon (minimal 3
+        titik, saat ini {{ draftRoiPoints.length }} titik), lalu klik Done.
+      </div>
+
+      <canvas id="canvasw" ref="canvasw" class="canvasw" />
+    </div>
+
+    <div class="video-detector-sidebar">
+      <div class="detector-summary-card">
+        <h2 class="detector-cctv-heading">{{ cctv.name }}</h2>
+        <div id="detector-mode-status" class="detector-mode-meta">{{ detectorStatusText }}</div>
+        <div id="detector-sync-status" class="detector-sync-meta">{{ syncStatusText }}</div>
+      </div>
+
+      <el-form class="veh-form" :model="cctv">
+        <TrafficCounterCards
+          :lv-count="counts.lv"
+          :hv-count="counts.hv"
+          :mc-count="counts.mc"
+          :condition-label="conditionLabel"
+        />
+      </el-form>
+    </div>
   </div>
 </template>
 
@@ -809,12 +813,43 @@ export default {
 </script>
 
 <style>
+.video-detector-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.55fr) minmax(0, 1fr);
+  gap: var(--space-5);
+  align-items: start;
+}
+
+.video-detector-primary,
+.video-detector-sidebar {
+  min-width: 0;
+}
+
+.detector-video-card {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border-subtle);
+  background-color: #0f172a;
+  overflow: hidden;
+  box-shadow: var(--shadow-card);
+}
+
+.detector-layer-media {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
 .btn-video {
-  margin-top: -20px;
-  margin-bottom: 12px;
+  margin-top: var(--space-3);
+  margin-bottom: var(--space-3);
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: 10px;
 }
 
 .roi-editing {
@@ -822,31 +857,54 @@ export default {
 }
 
 .roi-edit-hint {
-  margin-bottom: 16px;
-  padding: 8px 12px;
-  border-radius: 8px;
-  background-color: var(--color-secondary);
-  border: 1px solid var(--green-theme-30);
-  color: var(--text-color);
-  font-size: var(--size-sm);
+  margin-bottom: var(--space-4);
+  padding: 10px 14px;
+  border-radius: var(--radius-md);
+  background-color: var(--bg-surface);
+  border: 1px solid var(--accent-primary);
+  color: var(--text-primary);
+  font-size: var(--text-sm);
+}
+
+.detector-summary-card {
+  margin-bottom: var(--space-3);
+  padding: var(--space-4);
+  border-radius: var(--radius-md);
+  background-color: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  box-shadow: var(--shadow-card);
+}
+
+.detector-cctv-heading {
+  margin: 0 0 6px;
+  font-size: var(--text-lg);
+  font-weight: 700;
+  color: var(--text-primary);
 }
 
 .detector-mode-meta {
-  font-size: var(--size-xs);
-  color: var(--green-theme);
-  font-weight: 500;
+  font-size: var(--text-sm);
+  color: var(--accent-primary);
+  font-weight: 600;
 }
 
 .detector-sync-meta {
-  font-size: var(--size-xs);
-  opacity: 0.75;
+  margin-top: 2px;
+  font-size: var(--text-caption);
+  color: var(--text-secondary);
 }
 
 .canvasw {
-  background-color: var(--color-secondary);
+  background-color: var(--bg-surface);
   display: none;
-  border-radius: 10px;
+  border-radius: var(--radius-md);
   width: 100%;
   height: auto;
+}
+
+@media screen and (max-width: 1023px) {
+  .video-detector-layout {
+    grid-template-columns: 1fr;
+  }
 }
 </style>

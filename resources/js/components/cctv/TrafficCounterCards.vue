@@ -1,27 +1,30 @@
 <template>
-  <el-col :span="24" :xs="24">
-    <div class="veh-info-card motor">
+  <el-col :span="24" :xs="24" class="counter-cards-stack">
+    <div class="veh-info-card">
       <div class="veh-content">
         <div class="veh">Light Vehicle (LV)</div>
         <div id="result-car" class="total">{{ lvCount }}</div>
       </div>
     </div>
-    <div class="veh-info-card motor">
+    <div class="veh-info-card">
       <div class="veh-content">
         <div class="veh">Heavy Vehicle (HV)</div>
         <div id="result-truck" class="total">{{ hvCount }}</div>
       </div>
     </div>
-    <div class="veh-info-card motor" style="margin-top: 20px">
+    <div class="veh-info-card">
       <div class="veh-content">
         <div class="veh">Motorcycle (MC)</div>
         <div id="result-motor" class="total">{{ mcCount }}</div>
       </div>
     </div>
-    <div class="veh-info-card motor" style="margin-top: 20px">
-      <div class="veh-content">
-        <div class="veh">Traffic Condition</div>
-        <div id="result-kendaraan" class="veh">{{ conditionLabel }}</div>
+    <div class="veh-info-card veh-info-card--condition">
+      <div class="veh-content veh-content--row">
+        <div>
+          <div class="veh">Traffic Condition</div>
+          <div id="result-kendaraan" class="total total--condition">{{ conditionLabel }}</div>
+        </div>
+        <TrafficGradeBadge :status="conditionLabel" />
       </div>
     </div>
   </el-col>
@@ -52,75 +55,58 @@ export default {
 </script>
 
 <style>
+.counter-cards-stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
 .veh-info-card {
   position: relative;
   cursor: default;
-  background-color: var(--color-secondary);
-  color: var(--text-color);
-  height: 100px;
-  border-radius: 10px;
+  background-color: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-bottom: 4px solid var(--accent-primary);
+  color: var(--text-primary);
+  min-height: 88px;
+  border-radius: var(--radius-md);
   display: flex;
-  justify-content: flex-start;
   align-items: center;
-  margin-bottom: 20px;
-  box-shadow: 0 10px 20px rgba(29, 29, 29, 0.2);
-  -webkit-box-shadow: 0 10px 20px rgba(29, 29, 29, 0.2);
-  -moz-box-shadow: 0 10px 20px rgba(29, 29, 29, 0.2);
+  box-shadow: var(--shadow-card);
+  transition: transform 0.15s ease, border-color 0.15s ease;
 }
 
-.veh-info-card:before {
-  content: "";
-  position: absolute;
-  left: 50%;
-  transform: translate(-50%);
-  bottom: -0.3em;
-  height: 20px;
-  width: 80%;
-  border-radius: 0px 0px 20px 20px;
-  z-index: -2;
-  background: var(--green-theme);
-  box-shadow: 0 10px 20px rgba(29, 29, 29, 0.2);
-  -webkit-box-shadow: 0 10px 20px rgba(29, 29, 29, 0.2);
-  -moz-box-shadow: 0 10px 20px rgba(29, 29, 29, 0.2);
-  transition: 0.5s;
-}
-
-.veh-info-card:hover:before {
-  width: 95%;
+.veh-info-card:hover {
+  transform: translateY(-1px);
 }
 
 .veh-content {
-  position: relative;
-  left: 0;
-  padding: 40px;
+  width: 100%;
+  padding: 16px 20px;
+}
+
+.veh-content--row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
 }
 
 .veh {
-  font-size: var(--size-lg);
-}
-
-.veh-info-card:hover .total {
-  color: var(--green-theme);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--text-secondary);
 }
 
 .total {
-  font-size: var(--size-xl);
-  font-weight: 500;
-  color: var(--text-color);
-  transition: 0.5s;
+  margin-top: 4px;
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--text-primary);
 }
 
-@media screen and (max-width: 992px) {
-  .veh-content {
-    position: relative;
-    left: 0;
-    padding: 20px;
-  }
-}
-
-@media screen and (max-width: 600px) {
-  .veh-info-card.motor {
-    margin-top: 30px;
-  }
+.total--condition {
+  font-size: var(--text-lg);
+  color: var(--accent-primary);
 }
 </style>

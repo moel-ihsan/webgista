@@ -1,23 +1,23 @@
 <template>
-  <div>
-    <el-card :body-style="{ padding: '0px' }" class="cardOffice">
-      <div class="imgBox">
-        <img class="imgCont" :src="avatarSrc" />
+  <el-card :body-style="{ padding: '0px' }" class="cardOffice">
+    <div class="imgBox">
+      <img
+        class="imgCont"
+        :src="avatarSrc"
+        :alt="users.name ? `Foto instansi ${users.name}` : 'Foto instansi pengelola'"
+      />
+    </div>
+    <div class="officeContent">
+      <h2 class="officeName">{{ users.name }}</h2>
+      <div class="officeAddress">{{ users.address }}</div>
+      <div class="officeCoordinate">{{ users.longitude }} E {{ users.lattitude }} N</div>
+      <p class="officeDesc">{{ users.description }}</p>
+      <div class="recent">
+        <h3 class="recentTitle">Recently Updated</h3>
+        <RecentCctvCarousel />
       </div>
-      <div style="padding-top: 14px">
-        <div class="officeName">{{ users.name }}</div>
-        <div class="officeAddress">{{ users.address }}</div>
-        <div class="officeCoordinate">{{ users.longitude }} E {{ users.lattitude }} N</div>
-        <div class="officeDesc">{{ users.description }}</div>
-        <div class="recent">
-          Recently Updated
-          <el-row :gutter="10" class="recentRow">
-            <RecentCctvCarousel />
-          </el-row>
-        </div>
-      </div>
-    </el-card>
-  </div>
+    </div>
+  </el-card>
 </template>
 
 <script>
@@ -45,80 +45,74 @@ export default {
 
 <style>
 .cardOffice {
-  background-color: var(--color-secondary);
-  padding: 15px;
-  border-radius: 10px;
-  border: none;
-  overflow: hidden;
-  position: relative;
-  cursor: default;
-  transition: all 0.5s ease;
+  background-color: var(--bg-surface);
+  padding: var(--space-4);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border-subtle);
+  box-shadow: var(--shadow-card);
+  color: var(--text-primary);
 }
 
 .imgBox {
-  border-radius: 10px;
-  border: none;
+  border-radius: var(--radius-md);
   height: 200px;
   overflow: hidden;
-  box-shadow: 0 10px 20px rgba(29, 29, 29, 0.2);
-  -webkit-box-shadow: 0 10px 20px rgba(29, 29, 29, 0.2);
-  -moz-box-shadow: 0 10px 20px rgba(29, 29, 29, 0.2);
+  box-shadow: var(--shadow-card);
   position: relative;
-  transition: all 0.5s ease;
+  background-color: var(--bg-surface-subtle);
 }
 
 .imgBox .imgCont {
-  top: 0;
-  left: 0;
   width: 100%;
   height: 100%;
-  -o-object-fit: cover;
   object-fit: cover;
-  position: absolute;
-  transition: all 0.5s ease;
+  display: block;
 }
 
-.imgBox:hover {
-  transform: scale(0.98);
-  z-index: 1;
-}
-
-.imgBox:hover .imgCont {
-  transform: scale(1.25);
+.officeContent {
+  padding-top: var(--space-4);
 }
 
 .officeName {
-  font-size: var(--size-md);
-  font-weight: 500;
-  color: var(--text-color);
+  margin: 0 0 4px;
+  font-size: var(--text-lg);
+  font-weight: 700;
+  color: var(--text-primary);
 }
 
 .officeAddress {
-  font-size: var(--size-xs);
-  color: var(--text-color);
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
 }
 
 .officeCoordinate {
-  font-size: var(--size-xs);
-  color: var(--green-theme);
-  margin-bottom: 1.5em;
+  font-size: var(--text-caption);
+  font-weight: 700;
+  color: var(--accent-primary);
+  margin: 6px 0 14px;
 }
 
 .officeDesc {
-  font-size: var(--size-xs);
-  color: var(--text-color);
+  margin: 0;
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
   line-height: 1.5;
 }
 
 .recent {
-  color: var(--text-color);
-  font-size: var(--size-md);
-  margin-top: 1.5em;
+  margin-top: var(--space-5);
+}
+
+.recentTitle {
+  margin: 0 0 8px;
+  font-size: var(--text-base);
+  font-weight: 700;
+  color: var(--text-primary);
 }
 
 @media screen and (max-width: 992px) {
   .cardOffice {
-    margin-top: 30px;
+    margin-top: var(--space-4);
   }
 }
 </style>

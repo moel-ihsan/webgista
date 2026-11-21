@@ -1,20 +1,44 @@
 <template>
-  <div>
-    <flickity ref="flickity" :options="flickityOptions">
-      <div v-for="item in items" :key="item.id">
-        <a :href="'/detail/' + item.id">
-          <div class="carousel-cell">
-            <el-card :body-style="{ padding: '0px' }" style="background: transparent">
-              <img :src="item.imageUrl" class="imageRecent" />
+  <div class="recent-carousel-wrap">
+    <div v-if="items.length" class="recent-desktop-carousel">
+      <flickity ref="flickity" :options="flickityOptions">
+        <div v-for="item in items" :key="'desk-' + item.id" class="carousel-slide">
+          <a
+            :href="'/detail/' + item.id"
+            class="carousel-cell-link"
+            :aria-label="`Lihat detail ${item.name}`"
+          >
+            <div class="carousel-cell">
+              <img :src="item.imageUrl" :alt="`Pratinjau ${item.name}`" class="imageRecent" />
+              <div class="carousel-scrim" aria-hidden="true" />
               <div class="contentRecent">
                 <div class="nameRecent">{{ item.name }}</div>
                 <div class="timeRecent">{{ item.time }}</div>
               </div>
-            </el-card>
+            </div>
+          </a>
+        </div>
+      </flickity>
+    </div>
+
+    <div v-if="items.length" class="recent-mobile-grid">
+      <a
+        v-for="item in items"
+        :key="'mob-' + item.id"
+        :href="'/detail/' + item.id"
+        class="carousel-cell-link"
+        :aria-label="`Lihat detail ${item.name}`"
+      >
+        <div class="carousel-cell carousel-cell--fluid">
+          <img :src="item.imageUrl" :alt="`Pratinjau ${item.name}`" class="imageRecent" />
+          <div class="carousel-scrim" aria-hidden="true" />
+          <div class="contentRecent">
+            <div class="nameRecent">{{ item.name }}</div>
+            <div class="timeRecent">{{ item.time }}</div>
           </div>
-        </a>
-      </div>
-    </flickity>
+        </div>
+      </a>
+    </div>
   </div>
 </template>
 
@@ -62,104 +86,102 @@ export default {
 </script>
 
 <style>
-.carousel-cell {
-  margin-top: 10px;
-  width: 150px;
-  height: 80px;
+.recent-carousel-wrap {
+  width: 100%;
   overflow: hidden;
-  margin-right: 10px;
-  border-radius: 10px;
-  position: relative;
-  background-color: transparent;
-  transition: all 0.15s ease;
 }
 
-.carousel-cell:before {
-  content: "";
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  height: 60%;
+.recent-desktop-carousel {
+  display: block;
+}
+
+.recent-mobile-grid {
+  display: none;
+}
+
+.carousel-slide {
+  padding-right: 10px;
+}
+
+.carousel-cell-link {
+  display: inline-block;
+  border-radius: var(--radius-md);
+}
+
+.carousel-cell {
+  width: 148px;
+  height: 92px;
+  overflow: hidden;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-subtle);
+  position: relative;
+  background-color: var(--bg-surface-subtle);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.carousel-cell--fluid {
   width: 100%;
-  z-index: 1;
-  background: linear-gradient(180deg, rgba(13, 13, 13, 0) 0%, rgba(7, 7, 7, 1) 100%);
-  mix-blend-mode: multiply;
-  transition: all 0.5s ease;
 }
 
 .carousel-cell:hover {
-  transform: translateY(2px);
-  z-index: 1;
-  cursor: pointer;
-  box-shadow: 0 10px 20px rgba(29, 29, 29, 0.2);
-  -webkit-box-shadow: 0 10px 20px rgba(29, 29, 29, 0.2);
-  -moz-box-shadow: 0 10px 20px rgba(29, 29, 29, 0.2);
-}
-
-.carousel-cell:hover:before {
-  height: 100%;
-}
-
-.carousel-cell:hover .contentRecent {
-  margin-bottom: 0.2px;
-  cursor: pointer;
-}
-
-.carousel-cell:hover .timeRecent {
-  color: #32e18c;
-  opacity: 1;
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-card);
 }
 
 .imageRecent {
   width: 100%;
   height: 100%;
-  border-radius: 10px;
-  -o-object-fit: cover;
   object-fit: cover;
-  transition: all 0.5s ease;
+  display: block;
+}
+
+.carousel-scrim {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(15, 23, 42, 0.08) 15%, rgba(15, 23, 42, 0.88) 100%);
+  pointer-events: none;
 }
 
 .contentRecent {
   position: absolute;
-  bottom: 0px;
-  padding: 5px;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: 8px;
   z-index: 1;
-  cursor: default;
-  transition: 0.5s;
 }
 
 .nameRecent {
-  color: white;
-  font-size: var(--size-xs);
+  color: #ffffff;
+  font-size: var(--text-caption);
+  font-weight: 700;
+  line-height: 1.25;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .timeRecent {
-  color: white;
-  opacity: 0.5;
-  font-style: italic;
-  font-size: var(--size-xs);
-  transition: 0.5s;
+  color: #e2e8f0;
+  font-size: 11px;
+  font-weight: 500;
+  margin-top: 2px;
 }
 
-.flickity-enabled {
-  position: relative;
-  display: flex;
-  overflow: auto;
-  -ms-overflow-style: none;
-  scrollbar-width: none;
-}
+@media screen and (max-width: 767px) {
+  .recent-desktop-carousel {
+    display: none;
+  }
 
-.flickity-enabled::-webkit-scrollbar {
-  width: 5px;
-}
+  .recent-mobile-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
 
-.flickity-enabled::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-.flickity-enabled::-webkit-scrollbar-thumb {
-  background-color: rgba(var(--green-theme), 0.8);
-  border-radius: 20px;
-  border: none;
+  .carousel-cell-link {
+    display: block;
+    width: 100%;
+  }
 }
 </style>

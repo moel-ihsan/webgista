@@ -1,7 +1,7 @@
 <template>
   <div>
     <el-card :body-style="{ padding: '0px' }" class="cardCCTV">
-      <div id="map" />
+      <div id="map" ref="dashboardMap" />
       <MapLegend title="CCTV Category" :items="legendItems" />
     </el-card>
   </div>
@@ -18,6 +18,7 @@ import {
 } from "../../config/map";
 import { fetchAll as fetchCctvPoints } from "../../services/api/cctvApi";
 import { fetchAll as fetchMapSettings } from "../../services/api/mapSettingApi";
+import { isDarkTheme, subscribeTheme } from "../../services/theme";
 import { escapeHtml } from "../../utils/formatters";
 
 export default {
@@ -29,23 +30,50 @@ export default {
     return {
       map: null,
       flyTimers: [],
+      resizeObserver: null,
+      unsubscribeTheme: null,
       legendItems: [
-        { label: "Analytic", color: "yellow" },
-        { label: "Regular", color: "green" }
+        { label: "Analytic", color: "#facc15" },
+        { label: "Regular", color: "#15803d" }
       ]
     };
   },
   mounted() {
     this.initDashboardMap();
+    this.bindResizeObserver();
+    this.unsubscribeTheme = subscribeTheme(({ isDark }) => {
+      if (this.map && typeof this.map.setStyle === "function") {
+        this.map.setStyle(getMapStyle(isDark ? "dark" : "streets"), { diff: false });
+      }
+    });
   },
   beforeDestroy() {
     this.flyTimers.forEach((timerId) => clearTimeout(timerId));
     this.flyTimers = [];
+    if (this.resizeObserver && typeof this.resizeObserver.disconnect === "function") {
+      this.resizeObserver.disconnect();
+      this.resizeObserver = null;
+    }
+    if (typeof this.unsubscribeTheme === "function") {
+      this.unsubscribeTheme();
+      this.unsubscribeTheme = null;
+    }
     if (this.map && typeof this.map.remove === "function") {
       this.map.remove();
     }
   },
   methods: {
+    bindResizeObserver() {
+      if (typeof ResizeObserver === "undefined" || !this.$refs.dashboardMap) {
+        return;
+      }
+      this.resizeObserver = new ResizeObserver(() => {
+        if (this.map && typeof this.map.resize === "function") {
+          this.map.resize();
+        }
+      });
+      this.resizeObserver.observe(this.$refs.dashboardMap);
+    },
     initDashboardMap() {
       fetchMapSettings()
         .then((settings) => {
@@ -57,7 +85,7 @@ export default {
 
           this.map = new maplibregl.Map({
             container: "map",
-            style: getMapStyle("streets"),
+            style: getMapStyle(isDarkTheme() ? "dark" : "streets"),
             center,
             minZoom: 2,
             zoom,
@@ -70,6 +98,13 @@ export default {
           map.on("style.load", () => {
             this.loadCctvPoints(map);
           });
+          if (typeof window !== "undefined" && typeof window.requestAnimationFrame === "function") {
+            window.requestAnimationFrame(() => {
+              if (this.map && typeof this.map.resize === "function") {
+                this.map.resize();
+              }
+            });
+          }
         })
         .catch(() => {});
     },
@@ -85,7 +120,7 @@ export default {
               properties: {
                 pointID: String(row.id),
                 traffic: `${row.category}`,
-                flyLoc: `<h1 id="isi" style="font-weight:600">${safeName}</h1><br/>Status : ${safeCategory}`
+                flyLoc: `<div id="isi" class="dashboard-popup-title">${safeName}</div><div class="dashboard-popup-meta">Status: ${safeCategory}</div>`
               },
               geometry: {
                 type: "Point",
@@ -156,21 +191,24 @@ export default {
               filter: ["!", ["has", "point_count"]],
               layout: { visibility: "visible" },
               paint: {
-                "circle-radius": 10,
-                "circle-stroke-width": 1,
-                "circle-stroke-color": "#fff",
+                "circle-radius": 11,
+                "circle-stroke-width": 2,
+                "circle-stroke-color": isDarkTheme() ? "#1E1E2E" : "#FFFFFF",
                 "circle-color": [
                   "match",
                   ["get", "traffic"],
                   "Regular",
-                  "green",
+                  "#15803d",
                   "Analytic",
-                  "yellow",
-                  "red"
+                  "#facc15",
+                  "#dc2626"
                 ]
               }
             });
           }
+
+          this.flyTimers.forEach((id) => clearTimeout(id));
+          this.flyTimers = [];
 
           geojson.features.forEach((geo, index) => {
             const timerId = setTimeout(() => {
@@ -183,7 +221,7 @@ export default {
               if (popUps[0]) {
                 popUps[0].remove();
               }
-              new maplibregl.Popup({ closeOnClick: true, offset: 10 })
+              new maplibregl.Popup({ closeOnClick: true, offset: 12 })
                 .setLngLat(geo.geometry.coordinates)
                 .setHTML(geo.properties.flyLoc)
                 .addTo(map);
@@ -199,49 +237,40 @@ export default {
 
 <style>
 .cardCCTV {
-  border-radius: 10px;
-  margin-bottom: 50px;
-  border: none;
+  border-radius: var(--radius-lg);
+  margin-bottom: var(--space-4);
+  border: 1px solid var(--border-subtle);
+  background-color: var(--bg-surface);
   height: 450px;
   overflow: hidden;
   position: relative;
-  transition: all 0.5s ease;
+  box-shadow: var(--shadow-card);
 }
 
-.is-always-shadow {
-  border: none;
-  box-shadow: 0 10px 20px rgba(29, 29, 29, 1);
-  -webkit-box-shadow: 0 10px 20px rgba(29, 29, 29, 1);
-  -moz-box-shadow: 0 10px 20px rgba(29, 29, 29, 1);
-}
-
-.image {
-  top: 0;
-  left: 0;
+.cardCCTV #map {
+  position: absolute;
+  inset: 0;
   width: 100%;
   height: 100%;
-  -o-object-fit: cover;
-  object-fit: cover;
-  position: absolute;
-  transition: all 0.5s ease;
 }
 
-.content {
-  position: absolute;
-  bottom: 0px;
-  padding: 30px;
-  z-index: 1;
-  transition: 0.5s;
+.dashboard-popup-title {
+  font-size: var(--text-base);
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 4px;
+  padding-right: 32px;
 }
 
-.nameCCTV {
-  color: white;
-  font-size: var(--size-lg);
-  font-weight: 500;
+.dashboard-popup-meta {
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
 }
 
-.addressCCTV {
-  color: #32e18c;
-  font-size: var(--size-sm);
+@media screen and (max-width: 767px) {
+  .cardCCTV {
+    height: 360px;
+    margin-bottom: 0;
+  }
 }
 </style>
