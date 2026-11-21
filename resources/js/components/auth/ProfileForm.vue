@@ -1,84 +1,66 @@
 <template>
-  <div>
-    <div class="profile-page-container">
-      <div class="profile-container">
-        <div class="title-center-set-map" style="margin-bottom: 20px">Edit Profile</div>
+  <div class="profile-page-container">
+    <div class="profile-split-card">
+      <div class="profile-form-panel">
+        <h2 class="form-card-heading">Edit Profile</h2>
+
         <el-form
           ref="formLabelAlign"
           class="setting-form"
-          :label-position="labelPosition"
-          label-width="100px"
+          label-position="top"
           :model="formLabelAlign"
           :rules="rules"
         >
-          <el-row>
-            <el-col :span="12" :xs="24">
-              <el-form-item label="Name" prop="name">
-                <el-input v-model="formLabelAlign.name" />
-              </el-form-item>
-            </el-col>
-          </el-row>
-          <el-row>
-            <el-col :span="12" :xs="24">
-              <el-form-item label="Address" prop="address">
-                <el-input v-model="formLabelAlign.address" />
-              </el-form-item>
-            </el-col>
-          </el-row>
-          <el-row>
-            <el-col :span="12" :xs="24">
-              <el-form-item label="Lattitude (N)" prop="lattitude">
-                <el-input v-model="formLabelAlign.lattitude" />
-              </el-form-item>
-            </el-col>
-          </el-row>
-          <el-row>
-            <el-col :span="12" :xs="24">
-              <el-form-item label="Longitude (E)" prop="longitude">
-                <el-input v-model="formLabelAlign.longitude" />
-              </el-form-item>
-            </el-col>
-          </el-row>
-          <el-row>
-            <el-col :span="12" :xs="24">
-              <el-form-item label="Description" prop="description">
-                <el-input v-model="formLabelAlign.description" type="textarea" />
-              </el-form-item>
-            </el-col>
-          </el-row>
-          <el-row>
-            <el-col :span="12" :xs="24">
-              <el-form-item>
-                <div class="btn-form-submit">
-                  <el-button type="info" @click="handleCancel">Discard</el-button>
-                  <el-button :loading="loading" type="primary" @click="onSubmit('formLabelAlign')">
-                    Update
-                  </el-button>
-                </div>
-              </el-form-item>
-            </el-col>
-          </el-row>
-          <div class="set-img-profiles">
-            <el-upload
-              :show-file-list="false"
-              :auto-upload="false"
-              action=""
-              :on-change="onHandleUpload"
-              :multiple="false"
-            >
-              <el-button
-                class="upload-img-profile"
-                type="info"
-                style="padding: 10px; border-radius: 100px"
-              >
-                <ion-icon name="pencil" />
-              </el-button>
-              <span>{{ imageUrl }}</span>
-            </el-upload>
+          <el-form-item label="Name" prop="name">
+            <el-input id="name" v-model="formLabelAlign.name" />
+          </el-form-item>
 
-            <img class="imgCont profilePhoto" :src="profileImageSrc" />
+          <el-form-item label="Address" prop="address">
+            <el-input id="address" v-model="formLabelAlign.address" />
+          </el-form-item>
+
+          <div class="form-grid-two">
+            <el-form-item label="Latitude (N)" prop="lattitude">
+              <el-input id="lattitude" v-model="formLabelAlign.lattitude" />
+            </el-form-item>
+
+            <el-form-item label="Longitude (E)" prop="longitude">
+              <el-input id="longitude" v-model="formLabelAlign.longitude" />
+            </el-form-item>
+          </div>
+
+          <el-form-item label="Description" prop="description">
+            <el-input id="description" v-model="formLabelAlign.description" type="textarea" />
+          </el-form-item>
+
+          <div class="btn-form-submit">
+            <el-button type="info" @click="handleCancel">Discard</el-button>
+            <el-button :loading="loading" type="primary" @click="onSubmit('formLabelAlign')">
+              Update
+            </el-button>
           </div>
         </el-form>
+      </div>
+
+      <div class="set-img-profiles">
+        <img
+          class="imgCont profilePhoto"
+          :src="profileImageSrc"
+          :alt="formLabelAlign.name ? `Foto profil ${formLabelAlign.name}` : 'Foto profil instansi'"
+        />
+        <div class="profile-photo-scrim" aria-hidden="true" />
+        <el-upload
+          class="upload-img-profile"
+          :show-file-list="false"
+          :auto-upload="false"
+          action=""
+          :on-change="onHandleUpload"
+          :multiple="false"
+        >
+          <button type="button" class="profile-edit-photo-btn" aria-label="Ubah foto profil">
+            <AppIcon name="pencil" :size="18" />
+          </button>
+        </el-upload>
       </div>
     </div>
   </div>
@@ -102,7 +84,6 @@ export default {
   },
   data() {
     return {
-      labelPosition: "top",
       formLabelAlign: {
         name: "",
         address: "",
@@ -210,131 +191,83 @@ export default {
 </script>
 
 <style>
-.profile-container {
-  position: relative;
-  padding: 40px;
-  background-color: var(--color-secondary);
-  border-radius: 10px;
-  box-shadow: 0 10px 20px rgba(29, 29, 29, 0.2);
-  -webkit-box-shadow: 0 10px 20px rgba(29, 29, 29, 0.2);
-  -moz-box-shadow: 0 10px 20px rgba(29, 29, 29, 0.2);
+.profile-split-card {
+  display: grid;
+  grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr);
+  background-color: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  box-shadow: var(--shadow-card);
 }
 
-.el-form-item__label {
-  color: var(--text-color);
-  opacity: 0.5;
-  margin-bottom: -15px;
-}
-
-.el-form-item__content .el-input .el-input__inner {
-  box-shadow: none;
-  border: 1px solid var(--green-theme-30);
-}
-
-.el-form-item__content .el-input .el-input__inner:hover,
-.el-form-item__content .el-input .el-input__inner:focus {
-  border-color: var(--green-theme);
-}
-
-.setting-form .el-input__inner,
-.setting-form .el-select {
-  width: 100%;
-}
-
-.el-input {
-  font-size: 12px;
-}
-
-.profile-container .el-form-item {
-  width: 100%;
-  margin-bottom: 10px;
-  padding-right: 30px;
-}
-
-.btn-form-submit {
-  margin-top: 20px;
-  display: flex;
-  justify-content: flex-end;
+.profile-form-panel {
+  padding: var(--space-6);
+  min-width: 0;
 }
 
 .set-img-profiles {
-  position: absolute;
-  background: white;
-  display: flex;
-  align-items: center;
-  border-radius: 10px;
+  position: relative;
+  min-height: 440px;
+  border-left: 1px solid var(--border-subtle);
+  background-color: var(--bg-surface-subtle);
   overflow: hidden;
-  height: 100%;
-  width: 50%;
-  top: 0;
-  right: 0;
-  box-shadow: -10px 0 20px rgba(29, 29, 29, 0.2);
-  -webkit-box-shadow: -10px 0 20px rgba(29, 29, 29, 0.2);
-  -moz-box-shadow: -10px 0 20px rgba(29, 29, 29, 0.2);
-  transition: all 0.5s ease;
-}
-
-.set-img-profiles:before {
-  content: "";
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  height: 20%;
-  width: 100%;
-  z-index: 1;
-  background: linear-gradient(180deg, rgba(13, 13, 13, 0) 0%, rgba(7, 7, 7, 1) 100%);
-  mix-blend-mode: multiply;
-  transition: all 0.5s ease;
-}
-
-.set-img-profiles:hover:before {
-  height: 60%;
 }
 
 .set-img-profiles .imgCont {
-  top: 0;
-  left: 0;
   width: 100%;
   height: 100%;
-  -o-object-fit: cover;
   object-fit: cover;
+  display: block;
+}
+
+.profile-photo-scrim {
   position: absolute;
-  transition: all 0.5s ease;
-}
-
-.el-textarea__inner:hover,
-.el-textarea__inner:focus {
-  border-color: var(--green-theme);
-}
-
-.el-textarea__inner {
-  font-size: 12px;
-  color: var(--text-color);
-  background-color: var(--color-secondary);
-  border: 1px solid var(--green-theme-30);
-  border-radius: 10px;
-  transition: border-color 0.2s cubic-bezier(0.645, 0.045, 0.355, 1);
+  inset: 0;
+  background: linear-gradient(180deg, rgba(15, 23, 42, 0) 55%, rgba(15, 23, 42, 0.55) 100%);
+  pointer-events: none;
 }
 
 .upload-img-profile {
   position: absolute;
-  z-index: 10;
-  bottom: 20px;
-  right: 20px;
+  bottom: 16px;
+  right: 16px;
+  z-index: 5;
 }
 
-@media screen and (max-width: 600px) {
-  .profile-container {
-    padding-right: 10px;
+.profile-edit-photo-btn {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: 2px solid var(--bg-surface);
+  background-color: var(--accent-primary);
+  color: var(--accent-on-fill);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: var(--shadow-float);
+}
+
+.profile-edit-photo-btn:hover {
+  background-color: var(--accent-primary-hover);
+}
+
+@media screen and (max-width: 1023px) {
+  .profile-split-card {
+    grid-template-columns: 1fr;
+  }
+
+  .profile-form-panel {
+    padding: var(--space-4);
   }
 
   .set-img-profiles {
-    top: 102%;
-    width: 100%;
-    left: 0;
-    box-shadow: 0px -10px 20px rgba(29, 29, 29, 0.2);
-    -webkit-box-shadow: 0px -10px 20px rgba(29, 29, 29, 0.2);
-    -moz-box-shadow: 0px -10px 20px rgba(29, 29, 29, 0.2);
+    order: -1;
+    min-height: 220px;
+    max-height: 260px;
+    border-left: 0;
+    border-bottom: 1px solid var(--border-subtle);
   }
 }
 </style>

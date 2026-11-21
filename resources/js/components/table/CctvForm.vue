@@ -1,119 +1,104 @@
 <template>
-  <div>
-    <div class="add-page-container">
-      <div class="add-container">
-        <div class="title-center-set-map">
-          {{ isEdit ? "Edit New CCTV" : "Add New CCTV" }}
-        </div>
+  <div class="add-page-container">
+    <div class="cctv-split-card">
+      <div class="cctv-form-panel">
+        <h2 class="form-card-heading">
+          {{ isEdit ? "Edit CCTV" : "Add New CCTV" }}
+        </h2>
 
         <el-form
           ref="formLabelAlign"
           class="setting-form"
-          :label-position="labelPosition"
-          label-width="100px"
+          label-position="top"
           :model="formLabelAlign"
           :rules="rules"
         >
-          <el-row>
-            <el-col :span="6" :xs="24">
-              <el-form-item label="Name" prop="name">
-                <el-input v-model="formLabelAlign.name" />
-              </el-form-item>
-            </el-col>
-            <el-col :span="6" :xs="24">
-              <el-form-item label="Category" prop="category">
-                <el-select
-                  v-model="formLabelAlign.category"
-                  placeholder="Select"
-                  @change="handleCategory"
-                >
-                  <el-option
-                    v-for="item in catList"
-                    :key="item.catValue"
-                    :label="item.label"
-                    :value="item.catValue"
-                  />
-                </el-select>
-              </el-form-item>
-            </el-col>
-          </el-row>
-          <el-row>
-            <el-col :span="12" :xs="24">
-              <el-form-item label="Address" prop="address">
-                <el-input v-model="formLabelAlign.address" />
-              </el-form-item>
-            </el-col>
-          </el-row>
-          <el-row>
-            <el-col :span="6" :xs="24">
-              <el-form-item label="Lattitude (N)" prop="lattitude">
-                <el-input id="lat" v-model.number="formLabelAlign.lattitude" />
-              </el-form-item>
-            </el-col>
-            <el-col :span="6" :xs="24">
-              <el-form-item label="Longitude (E)" prop="longitude">
-                <el-input id="long" v-model.number="formLabelAlign.longitude" />
-              </el-form-item>
-            </el-col>
-          </el-row>
-          <el-row>
-            <el-col :span="6" :xs="24">
-              <el-form-item label="Agency" prop="agency">
-                <el-select v-model="formLabelAlign.agency" placeholder="Select">
-                  <el-option
-                    v-for="item in agenList"
-                    :key="item.agenValue"
-                    :label="item.label"
-                    :value="item.agenValue"
-                  />
-                </el-select>
-              </el-form-item>
-            </el-col>
-            <el-col :span="6" :xs="24">
-              <el-form-item label="Image" prop="image">
-                <el-upload
-                  :show-file-list="false"
-                  :auto-upload="false"
-                  action=""
-                  :on-change="onHandleUpload"
-                  :multiple="false"
-                >
+          <div class="form-grid-two">
+            <el-form-item label="Name" prop="name">
+              <el-input id="name" v-model="formLabelAlign.name" />
+            </el-form-item>
+
+            <el-form-item label="Category" prop="category">
+              <el-select
+                id="category"
+                v-model="formLabelAlign.category"
+                placeholder="Select"
+                @change="handleCategory"
+              >
+                <el-option
+                  v-for="item in catList"
+                  :key="item.catValue"
+                  :label="item.label"
+                  :value="item.catValue"
+                />
+              </el-select>
+            </el-form-item>
+          </div>
+
+          <el-form-item label="Address" prop="address">
+            <el-input id="address" v-model="formLabelAlign.address" />
+          </el-form-item>
+
+          <div class="form-grid-two">
+            <el-form-item label="Latitude (N)" prop="lattitude">
+              <el-input id="lattitude" v-model.number="formLabelAlign.lattitude" />
+            </el-form-item>
+
+            <el-form-item label="Longitude (E)" prop="longitude">
+              <el-input id="longitude" v-model.number="formLabelAlign.longitude" />
+            </el-form-item>
+          </div>
+
+          <div class="form-grid-two">
+            <el-form-item label="Agency" prop="agency">
+              <el-select id="agency" v-model="formLabelAlign.agency" placeholder="Select">
+                <el-option
+                  v-for="item in agenList"
+                  :key="item.agenValue"
+                  :label="item.label"
+                  :value="item.agenValue"
+                />
+              </el-select>
+            </el-form-item>
+
+            <el-form-item label="Image" prop="image">
+              <el-upload
+                :show-file-list="false"
+                :auto-upload="false"
+                action=""
+                :on-change="onHandleUpload"
+                :multiple="false"
+              >
+                <div class="upload-field-row">
                   <el-button size="small" type="primary">Click to upload</el-button>
-                  <span>{{ imageUrl }}</span>
-                </el-upload>
-              </el-form-item>
-            </el-col>
-          </el-row>
-          <el-row v-if="showUrl">
-            <el-col :span="12" :xs="24">
-              <el-form-item label="URL" prop="url">
-                <el-input v-model="formLabelAlign.url" />
-              </el-form-item>
-            </el-col>
-          </el-row>
-          <el-row>
-            <el-col :span="12" :xs="24">
-              <el-form-item>
-                <div class="btn-form-submit">
-                  <el-button type="info" @click="handleCancel">Cancel</el-button>
-                  <el-button :loading="loading" type="primary" @click="onSubmit('formLabelAlign')">
-                    Submit
-                  </el-button>
+                  <span v-if="imageUrl" class="upload-filename">{{ imageUrl }}</span>
                 </div>
-              </el-form-item>
-            </el-col>
-          </el-row>
+              </el-upload>
+            </el-form-item>
+          </div>
+
+          <el-form-item v-if="showUrl" label="URL" prop="url">
+            <el-input id="url" v-model="formLabelAlign.url" />
+          </el-form-item>
+
+          <div class="btn-form-submit">
+            <el-button type="info" @click="handleCancel">Cancel</el-button>
+            <el-button :loading="loading" type="primary" @click="onSubmit('formLabelAlign')">
+              Submit
+            </el-button>
+          </div>
         </el-form>
-        <div class="set-map-container">
-          <CoordinatePickerMap
-            :latitude="formLabelAlign.lattitude || defaultCenter[1]"
-            :longitude="formLabelAlign.longitude || defaultCenter[0]"
-            :zoom="12"
-            :selectable="true"
-            :popup-html="previewPopupHtml"
-            @select-coordinate="onMapCoordinateSelected"
-          />
-        </div>
+      </div>
+
+      <div class="cctv-map-panel" aria-label="Peta pemilih koordinat CCTV">
+        <CoordinatePickerMap
+          :latitude="formLabelAlign.lattitude || defaultCenter[1]"
+          :longitude="formLabelAlign.longitude || defaultCenter[0]"
+          :zoom="12"
+          :selectable="true"
+          :popup-html="previewPopupHtml"
+          @select-coordinate="onMapCoordinateSelected"
+        />
       </div>
     </div>
   </div>
@@ -144,7 +129,6 @@ export default {
   },
   data() {
     return {
-      labelPosition: "top",
       defaultCenter: DEFAULT_MAP_CENTER,
       formLabelAlign: {
         name: "",
@@ -181,12 +165,12 @@ export default {
     },
     previewPopupHtml() {
       if (this.previewObjectUrl) {
-        return `<img class='popup-img' src='${escapeHtml(this.previewObjectUrl)}'>`;
+        return `<img class='popup-img' src='${escapeHtml(this.previewObjectUrl)}' alt='Pratinjau foto CCTV'>`;
       }
       if (this.isEdit && this.cctv.path_image) {
-        return `<img class='popup-img' src='${escapeHtml(resolveCctvImagePath(this.cctv.path_image))}'>`;
+        return `<img class='popup-img' src='${escapeHtml(resolveCctvImagePath(this.cctv.path_image))}' alt='Foto CCTV terpilih'>`;
       }
-      return "<img class='popup-img' src='/assets/tmp.png'>";
+      return "<div class='popup-empty-note'>Klik peta untuk memilih titik koordinat CCTV</div>";
     }
   },
   created() {
@@ -282,102 +266,98 @@ export default {
 </script>
 
 <style>
-.title-center-set-map {
-  margin-bottom: 20px;
-  font-size: var(--size-md);
-  font-weight: 500;
+.cctv-split-card {
+  display: grid;
+  grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr);
+  background-color: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  box-shadow: var(--shadow-card);
 }
 
-.add-container {
-  position: relative;
-  padding: 40px;
-  background-color: var(--color-secondary);
-  border-radius: 10px;
-  box-shadow: 0 10px 20px rgba(29, 29, 29, 0.2);
-  -webkit-box-shadow: 0 10px 20px rgba(29, 29, 29, 0.2);
-  -moz-box-shadow: 0 10px 20px rgba(29, 29, 29, 0.2);
+.cctv-form-panel {
+  padding: var(--space-6);
+  min-width: 0;
 }
 
-.el-form-item__label {
-  color: var(--text-color);
-  opacity: 0.5;
-  margin-bottom: -15px;
+.form-card-heading {
+  margin: 0 0 var(--space-4);
+  font-size: var(--text-lg);
+  font-weight: 700;
+  color: var(--text-primary);
 }
 
-.el-form-item__content .el-input .el-input__inner {
-  box-shadow: none;
-  border: 1px solid var(--green-theme-30);
+.form-grid-two {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-3);
 }
 
-.el-form-item__content .el-input .el-input__inner:hover,
-.el-form-item__content .el-input .el-input__inner:focus {
-  border-color: var(--green-theme);
+.upload-field-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
 }
 
-.setting-form .el-input__inner,
-.setting-form .el-select {
-  width: 100%;
-}
-
-.el-input {
-  font-size: var(--size-sm);
-}
-
-.add-container .el-form-item {
-  width: 100%;
-  margin-bottom: 10px;
-  padding-right: 30px;
+.upload-filename {
+  font-size: var(--text-caption);
+  color: var(--text-secondary);
+  word-break: break-all;
 }
 
 .btn-form-submit {
-  margin-top: 20px;
+  margin-top: var(--space-4);
   display: flex;
+  flex-wrap: wrap;
   justify-content: flex-end;
+  gap: 10px;
 }
 
-.set-map-container {
-  position: absolute;
-  background: white;
-  display: flex;
-  align-items: center;
-  border-radius: 10px;
-  height: 100%;
-  width: 50%;
-  top: 0;
-  right: 0;
-  box-shadow: -10px 0 20px rgba(29, 29, 29, 0.2);
-  -webkit-box-shadow: -10px 0 20px rgba(29, 29, 29, 0.2);
-  -moz-box-shadow: -10px 0 20px rgba(29, 29, 29, 0.2);
+.cctv-map-panel {
+  position: relative;
+  min-height: 460px;
+  border-left: 1px solid var(--border-subtle);
+  background-color: var(--bg-surface-subtle);
 }
 
-#map {
-  position: absolute;
-  top: 0;
-  border-radius: 10px;
-  bottom: 0;
-  width: 100%;
+.popup-empty-note {
+  font-size: var(--text-caption);
+  font-weight: 600;
+  color: var(--text-primary);
+  padding: 4px 22px 4px 4px;
 }
 
-@media screen and (max-width: 600px) {
-  .add-container {
-    padding-right: 10px;
+@media screen and (max-width: 1023px) {
+  .cctv-split-card {
+    grid-template-columns: 1fr;
   }
 
-  .set-map-container {
-    top: 102%;
-    width: 100%;
-    left: 0;
-    box-shadow: 0px -10px 20px rgba(29, 29, 29, 0.2);
-    -webkit-box-shadow: 0px -10px 20px rgba(29, 29, 29, 0.2);
-    -moz-box-shadow: 0px -10px 20px rgba(29, 29, 29, 0.2);
+  .cctv-form-panel {
+    padding: var(--space-4);
   }
 
-  #map {
-    position: absolute;
-    top: 0;
-    border-radius: 10px;
-    left: 0;
-    width: 100%;
+  .cctv-map-panel {
+    border-left: 0;
+    border-top: 1px solid var(--border-subtle);
+    min-height: 360px;
+    height: 360px;
+  }
+}
+
+@media screen and (max-width: 639px) {
+  .form-grid-two {
+    grid-template-columns: 1fr;
+  }
+
+  .btn-form-submit {
+    justify-content: stretch;
+  }
+
+  .btn-form-submit .el-button {
+    flex: 1;
+    margin-left: 0 !important;
   }
 }
 </style>

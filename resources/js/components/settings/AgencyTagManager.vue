@@ -1,24 +1,31 @@
 <template>
   <div class="tag-container-settings">
-    <el-tag
-      v-for="tag in dynamicTags"
-      :key="tag.id || tag.agency"
-      closable
-      :disable-transitions="false"
-      @close="handleClose(tag)"
-    >
-      {{ tag.agency }}
-    </el-tag>
-    <el-input
-      v-if="inputVisible"
-      ref="saveTagInput"
-      v-model="inputValue"
-      class="input-new-tag"
-      size="mini"
-      @keyup.enter.native="handleInputConfirm"
-      @blur="handleInputConfirm"
-    />
-    <el-button v-else class="button-new-tag" size="small" @click="showInput"> + New Tag </el-button>
+    <div v-for="tag in dynamicTags" :key="tag.id || tag.agency" class="agency-chip">
+      <span>{{ tag.agency }}</span>
+      <button
+        type="button"
+        class="agency-chip-remove"
+        :aria-label="`Hapus agency ${tag.agency}`"
+        @click="handleClose(tag)"
+      >
+        <AppIcon name="close" :size="14" />
+      </button>
+    </div>
+
+    <div v-if="inputVisible" class="agency-input-wrap">
+      <label for="new-agency-input" class="sr-only">Nama agency baru</label>
+      <el-input
+        id="new-agency-input"
+        ref="saveTagInput"
+        v-model="inputValue"
+        class="input-new-tag"
+        placeholder="Nama agency"
+        aria-label="Nama agency baru"
+        @keyup.enter.native="handleInputConfirm"
+        @blur="handleInputConfirm"
+      />
+    </div>
+    <el-button v-else class="button-new-tag" @click="showInput">+ New Tag</el-button>
   </div>
 </template>
 
@@ -102,81 +109,60 @@ export default {
 
 <style>
 .tag-container-settings {
-  width: 50%;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
 }
 
-.tag-container-settings .el-tag {
-  background-color: transparent;
-  border-color: var(--green-theme);
-  color: var(--green-theme);
-  border-radius: 100px;
+.agency-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 44px;
+  padding: 0 6px 0 14px;
+  border-radius: var(--radius-pill);
+  background-color: var(--accent-soft-bg);
+  color: var(--accent-soft-text);
+  border: 1px solid var(--accent-soft-border);
+  font-size: var(--text-sm);
+  font-weight: 600;
 }
 
-.el-tag .el-tag__close {
-  color: var(--green-theme-30);
+.agency-chip-remove {
+  width: 32px;
+  height: 32px;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--accent-soft-text);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
 }
 
-.el-tag .el-tag__close:hover {
-  color: var(--green-theme);
-  background-color: transparent;
-}
-
-.el-tag + .el-tag {
-  margin-left: 10px;
-  margin-bottom: 10px;
+.agency-chip-remove:hover {
+  background-color: var(--bg-surface);
+  color: var(--danger-text);
 }
 
 .button-new-tag {
-  margin-left: 10px;
-  height: 32px;
-  line-height: 30px;
-  padding-top: 0;
-  padding-bottom: 0;
+  min-height: 44px;
+  border-radius: var(--radius-pill) !important;
+  background: var(--bg-surface-subtle) !important;
+  border: 1px solid var(--border-input) !important;
+  color: var(--text-primary) !important;
+  font-weight: 600;
 }
 
-.input-new-tag {
-  width: 90px;
-  margin-left: 10px;
-  margin-bottom: 10px;
-  vertical-align: bottom;
+.button-new-tag:hover,
+.button-new-tag:focus {
+  border-color: var(--accent-primary) !important;
+  color: var(--accent-primary) !important;
 }
 
-.tag-container-settings .el-button--mini,
-.tag-container-settings .el-button--small {
-  border-radius: 100px;
-}
-
-.tag-container-settings .el-button {
-  background: transparent;
-  border: 1px solid var(--text-color);
-  color: var(--text-color);
-  transition: 0.5s;
-}
-
-.tag-container-settings .el-button:hover,
-.tag-container-settings .el-button:focus {
-  background: transparent;
-  border: 1px solid var(--green-theme);
-  color: var(--green-theme);
-}
-
-.tag-container-settings .el-input__inner {
-  border-radius: 100px;
-}
-
-.tag-container-settings .el-input .el-input__inner {
-  box-shadow: none;
-  border: 1px solid var(--green-theme-30);
-}
-
-.tag-container-settings .el-input .el-input__inner:hover,
-.tag-container-settings .el-input .el-input__inner:focus {
-  border-color: var(--green-theme);
-}
-
-@media screen and (max-width: 992px) {
-  .tag-container-settings {
-    width: 50%;
-  }
+.agency-input-wrap {
+  min-width: 150px;
 }
 </style>

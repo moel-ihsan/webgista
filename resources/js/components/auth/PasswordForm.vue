@@ -1,53 +1,43 @@
 <template>
-  <div>
-    <div class="password-page-container">
-      <div class="password-container">
-        <div class="title-center-set-map" style="margin-bottom: 20px">Change Password</div>
+  <div class="password-page-container">
+    <div class="password-split-card">
+      <div class="password-form-panel">
+        <h2 class="form-card-heading">Change Password</h2>
+
         <el-form
           ref="formLabelAlign"
           class="setting-form"
-          :label-position="labelPosition"
-          label-width="100px"
+          label-position="top"
           :model="formLabelAlign"
           :rules="rules"
         >
-          <el-row>
-            <el-col :span="12" :xs="24">
-              <el-form-item label="Current Password" prop="curPas">
-                <el-input v-model="formLabelAlign.curPas" type="password" />
-              </el-form-item>
-            </el-col>
-          </el-row>
-          <el-row>
-            <el-col :span="12" :xs="24">
-              <el-form-item label="New Password" prop="newPas">
-                <el-input v-model="formLabelAlign.newPas" type="password" />
-              </el-form-item>
-            </el-col>
-          </el-row>
-          <el-row>
-            <el-col :span="12" :xs="24">
-              <el-form-item label="Confirm New Password" prop="confirm">
-                <el-input v-model="formLabelAlign.confirm" type="password" />
-              </el-form-item>
-            </el-col>
-          </el-row>
-          <el-row>
-            <el-col :span="12" :xs="24">
-              <el-form-item>
-                <div class="btn-form-submit">
-                  <el-button type="info" @click="handleCancel">Discard</el-button>
-                  <el-button :loading="loading" type="primary" @click="onSubmit('formLabelAlign')">
-                    Update
-                  </el-button>
-                </div>
-              </el-form-item>
-            </el-col>
-          </el-row>
+          <el-form-item label="Current Password" prop="curPas">
+            <el-input id="curPas" v-model="formLabelAlign.curPas" type="password" />
+          </el-form-item>
+
+          <el-form-item label="New Password" prop="newPas">
+            <el-input id="newPas" v-model="formLabelAlign.newPas" type="password" />
+          </el-form-item>
+
+          <el-form-item label="Confirm New Password" prop="confirm">
+            <el-input id="confirm" v-model="formLabelAlign.confirm" type="password" />
+          </el-form-item>
+
+          <div class="btn-form-submit">
+            <el-button type="info" @click="handleCancel">Discard</el-button>
+            <el-button :loading="loading" type="primary" @click="onSubmit('formLabelAlign')">
+              Update
+            </el-button>
+          </div>
         </el-form>
-        <div class="set-img-profile">
-          <img class="imgCont" :src="avatarSrc" />
-        </div>
+      </div>
+
+      <div class="set-img-profile">
+        <img
+          class="imgCont"
+          :src="avatarSrc"
+          alt="Ilustrasi akun dan kamera pengawas lalu lintas"
+        />
       </div>
     </div>
   </div>
@@ -71,7 +61,6 @@ export default {
   },
   data() {
     return {
-      labelPosition: "top",
       formLabelAlign: {
         curPas: "",
         newPas: "",
@@ -164,97 +153,51 @@ export default {
 </script>
 
 <style>
-.password-container {
-  position: relative;
-  padding: 40px;
-  background-color: var(--color-secondary);
-  border-radius: 10px;
-  box-shadow: 0 10px 20px rgba(29, 29, 29, 0.2);
-  -webkit-box-shadow: 0 10px 20px rgba(29, 29, 29, 0.2);
-  -moz-box-shadow: 0 10px 20px rgba(29, 29, 29, 0.2);
+.password-split-card {
+  display: grid;
+  grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr);
+  background-color: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  box-shadow: var(--shadow-card);
 }
 
-.el-form-item__label {
-  color: var(--text-color);
-  opacity: 0.5;
-  margin-bottom: -15px;
-}
-
-.el-form-item__content .el-input .el-input__inner {
-  box-shadow: none;
-  border: 1px solid var(--green-theme-30);
-}
-
-.el-form-item__content .el-input .el-input__inner:hover,
-.el-form-item__content .el-input .el-input__inner:focus {
-  border-color: var(--green-theme);
-}
-
-.setting-form .el-input__inner,
-.setting-form .el-select {
-  width: 100%;
-}
-
-.el-input {
-  font-size: 12px;
-}
-
-.password-container .el-form-item {
-  width: 100%;
-  margin-bottom: 10px;
-  padding-right: 30px;
-}
-
-.btn-form-submit {
-  margin-top: 20px;
-  display: flex;
-  justify-content: flex-end;
+.password-form-panel {
+  padding: var(--space-6);
+  min-width: 0;
 }
 
 .set-img-profile {
-  position: absolute;
-  background: white;
-  display: flex;
-  align-items: center;
-  border-radius: 10px;
+  position: relative;
+  min-height: 400px;
+  border-left: 1px solid var(--border-subtle);
+  background-color: var(--bg-surface-subtle);
   overflow: hidden;
-  height: 100%;
-  width: 50%;
-  top: 0;
-  right: 0;
-  box-shadow: -10px 0 20px rgba(29, 29, 29, 0.2);
-  -webkit-box-shadow: -10px 0 20px rgba(29, 29, 29, 0.2);
-  -moz-box-shadow: -10px 0 20px rgba(29, 29, 29, 0.2);
-  transition: all 0.5s ease;
 }
 
 .set-img-profile .imgCont {
-  top: 0;
-  left: 0;
   width: 100%;
   height: 100%;
-  -o-object-fit: cover;
   object-fit: cover;
-  position: absolute;
-  transition: all 0.5s ease;
+  display: block;
 }
 
-.set-img-profile:hover .imgCont {
-  transform: scale(1.25);
-}
+@media screen and (max-width: 1023px) {
+  .password-split-card {
+    grid-template-columns: 1fr;
+  }
 
-@media screen and (max-width: 600px) {
-  .password-container {
-    padding-right: 10px;
+  .password-form-panel {
+    padding: var(--space-4);
   }
 
   .set-img-profile {
-    top: 102%;
-    width: 100%;
-    left: 0;
-    box-shadow: 0px -10px 20px rgba(29, 29, 29, 0.2);
-    -webkit-box-shadow: 0px -10px 20px rgba(29, 29, 29, 0.2);
-    -moz-box-shadow: 0px -10px 20px rgba(29, 29, 29, 0.2);
+    order: -1;
+    min-height: 180px;
+    max-height: 220px;
+    border-left: 0;
+    border-bottom: 1px solid var(--border-subtle);
   }
 }
 </style>

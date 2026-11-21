@@ -1,41 +1,52 @@
 <template>
-  <div>
-    <div class="setting-container">
-      <div class="form-container">
-        <div class="title-center-set-map" style="margin-bottom: 20px">Center The Map</div>
+  <div class="setting-container">
+    <div class="settings-split-card">
+      <div class="settings-form-panel">
+        <h2 class="form-card-heading">Center The Map</h2>
         <el-form
           ref="settingform"
           class="setting-form"
-          :label-position="labelPosition"
-          label-width="100px"
+          label-position="top"
           :model="settingform"
           :rules="rules"
           :hide-required-asterisk="true"
         >
-          <el-form-item label="Lattitude (N)" prop="lattitude">
-            <el-input v-model.number="settingform.lattitude" @change="handleCoordinateChange" />
+          <el-form-item label="Latitude (N)" prop="lattitude">
+            <el-input
+              id="lattitude"
+              v-model.number="settingform.lattitude"
+              @change="handleCoordinateChange"
+            />
           </el-form-item>
           <el-form-item label="Longitude (E)" prop="longitude">
-            <el-input v-model.number="settingform.longitude" @change="handleCoordinateChange" />
+            <el-input
+              id="longitude"
+              v-model.number="settingform.longitude"
+              @change="handleCoordinateChange"
+            />
           </el-form-item>
           <el-form-item label="Zoom" prop="zoom">
-            <el-input v-model.number="settingform.zoom" @change="handleCoordinateChange" />
+            <el-input
+              id="zoom"
+              v-model.number="settingform.zoom"
+              @change="handleCoordinateChange"
+            />
           </el-form-item>
         </el-form>
 
-        <div class="title-center-set-map" style="margin: 20px 0">Add Agency List</div>
+        <h2 class="form-card-heading" style="margin-top: 24px">Add Agency List</h2>
         <AgencyTagManager />
+      </div>
 
-        <div class="set-map-container">
-          <CoordinatePickerMap
-            :longitude="settingform.longitude"
-            :latitude="settingform.lattitude"
-            :zoom="settingform.zoom"
-            :selectable="true"
-            popup-html="<h1 id='isi'>Center Point</h1>"
-            @select-coordinate="onMapCoordinateSelected"
-          />
-        </div>
+      <div class="settings-map-panel" aria-label="Peta pratinjau titik tengah">
+        <CoordinatePickerMap
+          :longitude="settingform.longitude"
+          :latitude="settingform.lattitude"
+          :zoom="settingform.zoom"
+          :selectable="true"
+          popup-html="<div id='isi' class='map-popup-title'>Center Point</div>"
+          @select-coordinate="onMapCoordinateSelected"
+        />
       </div>
     </div>
   </div>
@@ -64,7 +75,6 @@ export default {
   },
   data() {
     return {
-      labelPosition: "top",
       settingform: {
         lattitude: "",
         longitude: "",
@@ -116,99 +126,49 @@ export default {
 </script>
 
 <style>
-#isi {
-  font-weight: 500;
-  font-size: var(--size-md);
-  display: inline-block;
+.settings-split-card {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr);
+  background-color: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  box-shadow: var(--shadow-card);
 }
 
-.form-container {
+.settings-form-panel {
+  padding: var(--space-6);
+  min-width: 0;
+}
+
+.settings-map-panel {
   position: relative;
-  padding: 40px;
-  background-color: var(--color-secondary);
-  border-radius: 10px;
-  box-shadow: 0 10px 20px rgba(29, 29, 29, 0.2);
-  -webkit-box-shadow: 0 10px 20px rgba(29, 29, 29, 0.2);
-  -moz-box-shadow: 0 10px 20px rgba(29, 29, 29, 0.2);
+  min-height: 460px;
+  border-left: 1px solid var(--border-subtle);
+  background-color: var(--bg-surface-subtle);
 }
 
-.el-form-item__label {
-  color: var(--text-color);
-  opacity: 0.5;
-  margin-bottom: -15px;
+.map-popup-title {
+  font-weight: 700;
+  font-size: var(--text-sm);
+  color: var(--text-primary);
+  padding: 2px 24px 2px 2px;
 }
 
-.el-form-item__content .el-input .el-input__inner {
-  box-shadow: none;
-  border: 1px solid var(--green-theme-30);
-}
-
-.el-form-item__content .el-input .el-input__inner:hover,
-.el-form-item__content .el-input .el-input__inner:focus {
-  border-color: var(--green-theme);
-}
-
-.form-container .el-form-item {
-  width: 50%;
-  margin-bottom: 10px;
-  padding-right: 30px;
-}
-
-.el-form-item {
-  margin-bottom: 10px;
-}
-
-.set-map-container {
-  position: absolute;
-  background: white;
-  display: flex;
-  align-items: center;
-  border-radius: 10px;
-  height: 100%;
-  width: 50%;
-  top: 0;
-  right: 0;
-  box-shadow: -10px 0 20px rgba(29, 29, 29, 0.2);
-  -webkit-box-shadow: -10px 0 20px rgba(29, 29, 29, 0.2);
-  -moz-box-shadow: -10px 0 20px rgba(29, 29, 29, 0.2);
-}
-
-#map {
-  position: absolute;
-  top: 0;
-  border-radius: 10px;
-  bottom: 0;
-  width: 100%;
-}
-
-@media screen and (max-width: 992px) {
-  .form-container .el-form-item {
-    width: 50%;
-  }
-}
-
-@media screen and (max-width: 600px) {
-  .form-container .el-form-item {
-    width: 100%;
-    margin-bottom: 10px;
-    padding-right: 0;
+@media screen and (max-width: 1023px) {
+  .settings-split-card {
+    grid-template-columns: 1fr;
   }
 
-  .set-map-container {
-    top: 102%;
-    width: 100%;
-    left: 0;
-    box-shadow: 0px -10px 20px rgba(29, 29, 29, 0.2);
-    -webkit-box-shadow: 0px -10px 20px rgba(29, 29, 29, 0.2);
-    -moz-box-shadow: 0px -10px 20px rgba(29, 29, 29, 0.2);
+  .settings-form-panel {
+    padding: var(--space-4);
   }
 
-  #map {
-    position: absolute;
-    top: 0;
-    border-radius: 10px;
-    left: 0;
-    width: 100%;
+  .settings-map-panel {
+    border-left: 0;
+    border-top: 1px solid var(--border-subtle);
+    min-height: 360px;
+    height: 360px;
   }
 }
 </style>

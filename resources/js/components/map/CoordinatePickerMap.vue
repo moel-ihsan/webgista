@@ -1,10 +1,11 @@
 <template>
-  <div id="map" />
+  <div ref="pickerMap" class="coordinate-picker-root" />
 </template>
 
 <script>
 import maplibregl from "maplibre-gl";
 import { DEFAULT_MAP_CENTER, DEFAULT_MAP_ZOOM, getMapStyle } from "../../config/map";
+import { isDarkTheme, subscribeTheme } from "../../services/theme";
 import { createPulsingDot } from "../../utils/pulsingDot";
 
 export default {
@@ -39,7 +40,9 @@ export default {
     return {
       map: null,
       popup: null,
-      isLoaded: false
+      isLoaded: false,
+      resizeObserver: null,
+      unsubscribeTheme: null
     };
   },
   computed: {
@@ -74,7 +77,7 @@ export default {
   mounted() {
     const map = new maplibregl.Map({
       container: this.$el,
-      style: getMapStyle("streets"),
+      style: getMapStyle(isDarkTheme() ? "dark" : "streets"),
       center: this.centerCoords,
       minZoom: 2,
       zoom: this.numericZoom,
@@ -91,33 +94,8 @@ export default {
         .addTo(map);
     }
 
-    const pulsingDot = createPulsingDot(map);
-    map.on("load", () => {
-      this.isLoaded = true;
-      map.addImage("pulsing-dot", pulsingDot, { pixelRatio: 2 });
-      map.addSource("points", {
-        type: "geojson",
-        data: {
-          type: "FeatureCollection",
-          features: [
-            {
-              type: "Feature",
-              geometry: {
-                type: "Point",
-                coordinates: this.centerCoords
-              }
-            }
-          ]
-        }
-      });
-      map.addLayer({
-        id: "points",
-        type: "symbol",
-        source: "points",
-        layout: {
-          "icon-image": "pulsing-dot"
-        }
-      });
+    map.on("style.load", () => {
+      this.renderMarkerLayer(map);
     });
 
     if (this.selectable) {
@@ -129,13 +107,85 @@ export default {
         });
       });
     }
+
+    this.bindResizeObserver();
+    this.unsubscribeTheme = subscribeTheme(({ isDark }) => {
+      this.isLoaded = false;
+      if (this.map && typeof this.map.setStyle === "function") {
+        this.map.setStyle(getMapStyle(isDark ? "dark" : "streets"), { diff: false });
+      }
+    });
+
+    if (typeof window !== "undefined" && typeof window.requestAnimationFrame === "function") {
+      window.requestAnimationFrame(() => {
+        if (this.map && typeof this.map.resize === "function") {
+          this.map.resize();
+        }
+      });
+    }
   },
   beforeDestroy() {
+    if (this.resizeObserver && typeof this.resizeObserver.disconnect === "function") {
+      this.resizeObserver.disconnect();
+      this.resizeObserver = null;
+    }
+    if (typeof this.unsubscribeTheme === "function") {
+      this.unsubscribeTheme();
+      this.unsubscribeTheme = null;
+    }
     if (this.map && typeof this.map.remove === "function") {
       this.map.remove();
     }
   },
   methods: {
+    bindResizeObserver() {
+      if (typeof ResizeObserver === "undefined" || !this.$refs.pickerMap) {
+        return;
+      }
+      this.resizeObserver = new ResizeObserver(() => {
+        if (this.map && typeof this.map.resize === "function") {
+          this.map.resize();
+        }
+      });
+      this.resizeObserver.observe(this.$refs.pickerMap);
+    },
+    renderMarkerLayer(map) {
+      this.isLoaded = true;
+      const pulsingDot = createPulsingDot(map);
+      if (!map.hasImage("pulsing-dot")) {
+        map.addImage("pulsing-dot", pulsingDot, { pixelRatio: 2 });
+      }
+
+      const geojson = {
+        type: "FeatureCollection",
+        features: [
+          {
+            type: "Feature",
+            geometry: {
+              type: "Point",
+              coordinates: this.centerCoords
+            }
+          }
+        ]
+      };
+
+      if (!map.getSource("points")) {
+        map.addSource("points", { type: "geojson", data: geojson });
+      } else {
+        map.getSource("points").setData(geojson);
+      }
+
+      if (!map.getLayer("points")) {
+        map.addLayer({
+          id: "points",
+          type: "symbol",
+          source: "points",
+          layout: {
+            "icon-image": "pulsing-dot"
+          }
+        });
+      }
+    },
     syncMarker(coords, zoomValue) {
       if (!this.map) {
         return;
@@ -167,3 +217,11 @@ export default {
   }
 };
 </script>
+
+<style>
+.coordinate-picker-root {
+  width: 100%;
+  height: 100%;
+  min-height: 200px;
+}
+</style>
