@@ -3,11 +3,7 @@
     <div v-if="items.length" class="recent-desktop-carousel">
       <flickity ref="flickity" :options="flickityOptions">
         <div v-for="item in items" :key="'desk-' + item.id" class="carousel-slide">
-          <a
-            :href="'/detail/' + item.id"
-            class="carousel-cell-link"
-            :aria-label="`Lihat detail ${item.name}`"
-          >
+          <a :href="'/detail/' + item.id" class="carousel-cell-link">
             <div class="carousel-cell">
               <img :src="item.imageUrl" :alt="`Pratinjau ${item.name}`" class="imageRecent" />
               <div class="carousel-scrim" aria-hidden="true" />
@@ -27,7 +23,6 @@
         :key="'mob-' + item.id"
         :href="'/detail/' + item.id"
         class="carousel-cell-link"
-        :aria-label="`Lihat detail ${item.name}`"
       >
         <div class="carousel-cell carousel-cell--fluid">
           <img :src="item.imageUrl" :alt="`Pratinjau ${item.name}`" class="imageRecent" />
@@ -61,7 +56,8 @@ export default {
         freeScroll: true,
         contain: true,
         prevNextButtons: false,
-        pageDots: false
+        pageDots: false,
+        accessibility: false
       }
     };
   },
@@ -69,6 +65,14 @@ export default {
     this.loadRecentCctv();
   },
   methods: {
+    clearFlickityAriaHidden() {
+      if (typeof this.$el === "undefined" || typeof this.$el.querySelectorAll !== "function") {
+        return;
+      }
+      this.$el.querySelectorAll(".carousel-slide[aria-hidden]").forEach((el) => {
+        el.removeAttribute("aria-hidden");
+      });
+    },
     loadRecentCctv() {
       fetchCctvPoints()
         .then((rows) => {
@@ -78,6 +82,12 @@ export default {
             imageUrl: resolveCctvImagePath(row.path_image),
             time: time(new Date(Date.parse(row.updated_at)))
           }));
+          this.$nextTick(() => {
+            this.clearFlickityAriaHidden();
+            if (typeof setTimeout === "function") {
+              setTimeout(() => this.clearFlickityAriaHidden(), 250);
+            }
+          });
         })
         .catch(() => {});
     }

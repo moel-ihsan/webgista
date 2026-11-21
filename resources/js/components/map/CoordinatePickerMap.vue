@@ -88,7 +88,11 @@ export default {
     this.map = map;
 
     if (this.popupHtml) {
-      this.popup = new maplibregl.Popup({ closeOnClick: false, offset: 15 })
+      this.popup = new maplibregl.Popup({
+        closeOnClick: false,
+        focusAfterOpen: false,
+        offset: 15
+      })
         .setLngLat(this.centerCoords)
         .setHTML(this.popupHtml)
         .addTo(map);

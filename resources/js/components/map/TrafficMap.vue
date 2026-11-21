@@ -305,7 +305,10 @@ export default {
             coordinates[0] += e.lngLat.lng > coordinates[0] ? 360 : -360;
           }
 
-          new maplibregl.Popup().setLngLat(coordinates).setHTML(description).addTo(map);
+          new maplibregl.Popup({ focusAfterOpen: false })
+            .setLngLat(coordinates)
+            .setHTML(description)
+            .addTo(map);
         });
       });
 
@@ -591,7 +594,7 @@ export default {
         popUps[0].remove();
       }
 
-      new maplibregl.Popup({ closeOnClick: true, offset: 14 })
+      new maplibregl.Popup({ closeOnClick: true, focusAfterOpen: false, offset: 14 })
         .setLngLat(targetItem.latLong)
         .setHTML(
           this.buildPopupHtml({

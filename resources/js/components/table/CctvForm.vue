@@ -70,7 +70,7 @@
                 :multiple="false"
               >
                 <div class="upload-field-row">
-                  <el-button size="small" type="primary">Click to upload</el-button>
+                  <el-button type="primary">Click to upload</el-button>
                   <span v-if="imageUrl" class="upload-filename">{{ imageUrl }}</span>
                 </div>
               </el-upload>
@@ -326,7 +326,7 @@ export default {
   font-size: var(--text-caption);
   font-weight: 600;
   color: var(--text-primary);
-  padding: 4px 22px 4px 4px;
+  padding: 4px 42px 4px 4px;
 }
 
 @media screen and (max-width: 1023px) {

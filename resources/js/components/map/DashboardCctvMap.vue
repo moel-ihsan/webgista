@@ -221,7 +221,7 @@ export default {
               if (popUps[0]) {
                 popUps[0].remove();
               }
-              new maplibregl.Popup({ closeOnClick: true, offset: 12 })
+              new maplibregl.Popup({ closeOnClick: true, focusAfterOpen: false, offset: 12 })
                 .setLngLat(geo.geometry.coordinates)
                 .setHTML(geo.properties.flyLoc)
                 .addTo(map);
@@ -259,7 +259,7 @@ export default {
   font-weight: 700;
   color: var(--text-primary);
   margin-bottom: 4px;
-  padding-right: 32px;
+  padding-right: 44px;
 }
 
 .dashboard-popup-meta {

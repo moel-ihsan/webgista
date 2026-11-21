@@ -152,7 +152,7 @@ export default {
   font-weight: 700;
   font-size: var(--text-sm);
   color: var(--text-primary);
-  padding: 2px 24px 2px 2px;
+  padding: 4px 44px 4px 4px;
 }
 
 @media screen and (max-width: 1023px) {

@@ -130,8 +130,9 @@ export default {
 }
 
 .agency-chip-remove {
-  width: 32px;
-  height: 32px;
+  width: 44px;
+  height: 44px;
+  margin-right: -6px;
   border: 0;
   border-radius: 50%;
   background: transparent;

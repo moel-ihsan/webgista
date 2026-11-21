@@ -142,3 +142,55 @@ html.theme-dark .grade-chip--N {
   background: var(--danger-soft-bg);
   color: var(--danger-text);
 }
+
+/* Shared Theme Toggle Switch (used in AppHeader and LoginPage chunks) */
+.theme-switch-btn {
+  width: 60px;
+  height: 44px;
+  padding: 0 5px;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--border-input);
+  background-color: var(--bg-surface);
+  color: var(--text-primary);
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-start;
+  cursor: pointer;
+  box-shadow: var(--shadow-card);
+  transition: border-color 0.15s ease, background-color 0.15s ease;
+}
+
+.theme-switch-btn:hover {
+  border-color: var(--accent-primary);
+}
+
+html.theme-dark .theme-switch-btn {
+  justify-content: flex-end;
+}
+
+.theme-switch-thumb {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background-color: var(--accent-primary);
+  color: var(--accent-on-fill);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Shared Form Split Headings & Submit Bar */
+.form-card-heading {
+  margin: 0 0 var(--space-4);
+  font-size: var(--text-lg);
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.btn-form-submit {
+  margin-top: var(--space-4);
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 10px;
+}

@@ -25,12 +25,7 @@
         </div>
       </div>
 
-      <a
-        v-if="role === 'admin'"
-        href="/table/add"
-        class="table-add-btn"
-        aria-label="Tambah titik CCTV baru"
-      >
+      <a v-if="role === 'admin'" href="/table/add" class="table-add-btn">
         <AppIcon name="plus" :size="18" />
         <span>Add New</span>
       </a>
@@ -45,7 +40,7 @@
         :data="filteredRows"
         style="width: 100%"
       >
-        <el-table-column label="Name" prop="name" min-width="190" sortable>
+        <el-table-column label="Name" prop="name" min-width="160" sortable>
           <template slot-scope="scope">
             <div class="table-name-cell">
               <img
@@ -61,22 +56,22 @@
           </template>
         </el-table-column>
 
-        <el-table-column label="Address" prop="address" min-width="180" sortable>
+        <el-table-column label="Address" prop="address" min-width="145" sortable>
           <template slot-scope="scope">
-            <div v-if="scope.row.address.length > 26">
+            <div v-if="scope.row.address.length > 22">
               <el-tooltip placement="top">
                 <div slot="content">{{ scope.row.address }}</div>
-                <span class="taddress">{{ scope.row.address.substr(0, 26) }}…</span>
+                <span class="taddress">{{ scope.row.address.substr(0, 22) }}…</span>
               </el-tooltip>
             </div>
             <div v-else class="taddress">{{ scope.row.address }}</div>
           </template>
         </el-table-column>
 
-        <el-table-column label="Coordinate" prop="coordinate" min-width="175" sortable />
-        <el-table-column label="Agency" prop="agency" min-width="115" sortable />
+        <el-table-column label="Coordinate" prop="coordinate" min-width="150" sortable />
+        <el-table-column label="Agency" prop="agency" min-width="100" sortable />
 
-        <el-table-column label="Status" prop="status" sortable min-width="125">
+        <el-table-column label="Status" prop="status" sortable min-width="105">
           <template slot-scope="scope">
             <span
               class="table-status-pill"
@@ -91,7 +86,7 @@
           </template>
         </el-table-column>
 
-        <el-table-column label="Actions" align="center" min-width="150">
+        <el-table-column label="Actions" align="center" min-width="155">
           <template slot-scope="scope">
             <div class="action-table">
               <a
@@ -167,7 +162,7 @@
           <a
             :href="'/detail/' + row.id"
             class="action-icon-btn mobile-action-chip"
-            :aria-label="`Lihat detail ${row.name}`"
+            :aria-label="`Detail ${row.name}`"
           >
             <AppIcon name="eye" :size="18" />
             <span>Detail</span>
@@ -185,7 +180,7 @@
             v-if="role === 'admin'"
             type="button"
             class="action-icon-btn action-icon-btn--danger mobile-action-chip"
-            :aria-label="`Hapus ${row.name}`"
+            :aria-label="`Delete ${row.name}`"
             @click="deleteRow(0, row.id)"
           >
             <AppIcon name="close" :size="18" />
@@ -568,7 +563,7 @@ export default {
   color: var(--accent-on-fill);
 }
 
-@media screen and (max-width: 767px) {
+@media screen and (max-width: 1023px) {
   .table-container {
     padding: var(--space-4);
   }
