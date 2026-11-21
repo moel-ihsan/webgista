@@ -53,6 +53,7 @@ export default {
       items: [],
       flickityOptions: {
         initialIndex: 0,
+        cellAlign: "left",
         freeScroll: true,
         contain: true,
         prevNextButtons: false,
@@ -110,7 +111,7 @@ export default {
 }
 
 .carousel-slide {
-  padding-right: 10px;
+  padding: 4px 10px 4px 0;
 }
 
 .carousel-cell-link {

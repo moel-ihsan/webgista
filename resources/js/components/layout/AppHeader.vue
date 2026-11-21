@@ -204,6 +204,17 @@ export default {
   border-color: var(--accent-primary);
 }
 
+@media screen and (min-width: 768px) {
+  .header-left {
+    gap: var(--space-4);
+  }
+
+  /* Center 44px toggle button inside 68px collapsed sidebar track so page title aligns with main content */
+  .header-menu-btn {
+    margin-inline: 12px;
+  }
+}
+
 .page-title {
   margin: 0;
   font-size: var(--text-xl);

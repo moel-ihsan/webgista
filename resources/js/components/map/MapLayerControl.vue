@@ -15,9 +15,13 @@
         </el-radio>
       </el-radio-group>
       <div class="map-popover-section-title" style="margin-top: 12px">Layer</div>
-      <el-checkbox-group :value="checkedLayers" @input="$emit('update:checked-layers', $event)">
-        <el-checkbox label="cctv" @change="$emit('toggle-layer', 2)">CCTV</el-checkbox>
-        <el-checkbox id="state-fills" label="adm" @change="$emit('toggle-layer', 1)">
+      <el-checkbox-group
+        :value="checkedLayers"
+        class="checkbox-group-map"
+        @input="$emit('update:checked-layers', $event)"
+      >
+        <el-checkbox class="layer-item" label="cctv" @change="$emit('toggle-layer', 2)">CCTV</el-checkbox>
+        <el-checkbox id="state-fills" class="layer-item" label="adm" @change="$emit('toggle-layer', 1)">
           Banda Aceh ADM
         </el-checkbox>
       </el-checkbox-group>

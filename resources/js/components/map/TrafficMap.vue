@@ -815,15 +815,18 @@ export default {
   align-items: center;
 }
 
-.radio-group-map {
+.radio-group-map,
+.checkbox-group-map {
   display: flex;
   flex-direction: column;
   gap: 6px;
 }
 
-.style-item {
+.style-item,
+.layer-item {
+  margin-left: 0 !important;
   margin-right: 0 !important;
-  min-height: 36px;
+  min-height: 28px;
   display: flex;
   align-items: center;
 }
