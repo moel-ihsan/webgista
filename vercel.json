@@ -6,14 +6,13 @@
   "cleanUrls": true,
   "trailingSlash": false,
   "rewrites": [
-    { "source": "/detail/video/:id", "destination": "/videodetail.html" },
-    { "source": "/detail/:id", "destination": "/detail.html" },
-    { "source": "/table/add", "destination": "/add.html" },
-    { "source": "/table/edit/:id", "destination": "/edit.html" },
-    { "source": "/setting/:id", "destination": "/setting.html" },
-    { "source": "/profile/:id", "destination": "/profile.html" },
-    { "source": "/password", "destination": "/password.html" },
-    { "source": "/logout", "destination": "/logout.html" }
+    { "source": "/detail/video/:id", "destination": "/videodetail" },
+    { "source": "/detail/:id", "destination": "/detail" },
+    { "source": "/table/add", "destination": "/add" },
+    { "source": "/table/edit/:id", "destination": "/edit" },
+    { "source": "/setting/:id", "destination": "/setting" },
+    { "source": "/profile/:id", "destination": "/profile" },
+    { "source": "/logout", "destination": "/logout" }
   ],
   "headers": [
     {
