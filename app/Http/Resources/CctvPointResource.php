@@ -43,6 +43,7 @@ class CctvPointResource extends JsonResource
             'rec4y' => $this->rec4y,
             'rec5x' => $this->rec5x,
             'rec5y' => $this->rec5y,
+            'roi_polygon' => $this->roi_polygon,
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,
         ];

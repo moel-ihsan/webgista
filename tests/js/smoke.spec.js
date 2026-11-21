@@ -408,7 +408,7 @@ describe("Frontend smoke tests", () => {
     overlayEl.remove();
   });
 
-  it("allows editing the 5-point blue ROI on #canvasx via Manage Video and Done", async () => {
+  it("allows editing an arbitrary N >= 3 blue ROI polygon on #canvasx with undo/reset and Done", async () => {
     fetchAuthUser.mockResolvedValue({ user: { role: "admin" } });
     updateRoi.mockResolvedValue({});
     updateTrafficCondition.mockResolvedValue({});
@@ -473,28 +473,54 @@ describe("Frontend smoke tests", () => {
     });
 
     await wrapper.find("#btn-manage").trigger("click");
-    expect(wrapper.find("#roi-edit-hint").text()).toContain("0/5 titik");
+    expect(wrapper.find("#roi-edit-hint").text()).toContain("saat ini 0 titik");
 
-    const pts = [
-      [100, 100],
-      [400, 100],
-      [500, 300],
-      [300, 340],
-      [80, 300]
+    // Clicking Reset Titik clears draft points while staying in edit mode
+    await canvasx.trigger("mousedown", { clientX: 50, clientY: 50 });
+    expect(wrapper.vm.draftRoiPoints).toHaveLength(1);
+    await wrapper.find("#btn-reset-roi").trigger("click");
+    expect(wrapper.vm.draftRoiPoints).toHaveLength(0);
+    expect(wrapper.vm.areaVideo).toBe(false);
+
+    // Clicking fewer than 3 points + Done warns and keeps edit mode active
+    await canvasx.trigger("mousedown", { clientX: 100, clientY: 80 });
+    await canvasx.trigger("mousedown", { clientX: 250, clientY: 80 });
+    await wrapper.find("#btn-drop").trigger("click");
+    expect(wrapper.vm.areaVideo).toBe(false);
+    expect(updateRoi).not.toHaveBeenCalled();
+    expect(messageMock).toHaveBeenCalledWith(expect.objectContaining({ type: "warning" }));
+
+    // Add 5 more points (7 total), then Undo back to 6 points
+    const extraPts = [
+      [420, 70],
+      [540, 140],
+      [500, 290],
+      [260, 330],
+      [80, 240]
     ];
-    for (const [clientX, clientY] of pts) {
+    for (const [clientX, clientY] of extraPts) {
       await canvasx.trigger("mousedown", { clientX, clientY });
     }
+    expect(wrapper.vm.draftRoiPoints).toHaveLength(7);
+    expect(wrapper.find("#roi-edit-hint").text()).toContain("saat ini 7 titik");
 
-    expect(wrapper.vm.draftRoiPoints).toHaveLength(5);
-    expect(wrapper.find("#roi-edit-hint").text()).toContain("5/5 titik");
+    await wrapper.find("#btn-undo-roi").trigger("click");
+    expect(wrapper.vm.draftRoiPoints).toHaveLength(6);
+    expect(wrapper.find("#roi-edit-hint").text()).toContain("saat ini 6 titik");
 
     await wrapper.find("#btn-drop").trigger("click");
     await Promise.resolve();
 
     expect(wrapper.vm.areaVideo).toBe(true);
-    expect(wrapper.vm.roiPoints).toHaveLength(5);
+    expect(wrapper.vm.roiPoints).toHaveLength(6);
     expect(updateRoi).toHaveBeenCalledTimes(1);
+    expect(updateRoi).toHaveBeenCalledWith(1, {
+      points: expect.arrayContaining([
+        { x: 100, y: 80 },
+        { x: 260, y: 330 }
+      ])
+    });
+    expect(updateRoi.mock.calls[0][1].points).toHaveLength(6);
     expect(messageMock).toHaveBeenCalledWith(expect.objectContaining({ type: "success" }));
 
     wrapper.destroy();

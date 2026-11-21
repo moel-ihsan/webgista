@@ -164,13 +164,72 @@ class CctvApiTest extends TestCase
 
         $this->patchJson("/update/roi/{$cctv->id}", $roiPayload)
             ->assertOk()
-            ->assertJsonPath('data.rec4y', 190);
+            ->assertJsonPath('data.rec4y', 190)
+            ->assertJsonCount(5, 'data.roi_polygon');
 
         $this->assertDatabaseHas('cctv_points', [
             'id' => $cctv->id,
             'keterangan' => 'Terrible',
             'rec4y' => 190,
         ]);
+    }
+
+    public function test_admin_can_save_arbitrary_polygon_roi_and_reject_invalid_polygons(): void
+    {
+        $admin = User::factory()->admin()->create();
+        $cctv = CctvPoint::factory()->create([
+            'rec1x' => 10,
+            'rec1y' => 20,
+        ]);
+
+        $this->actingAs($admin);
+
+        // Reject fewer than 3 vertices
+        $this->patchJson("/update/roi/{$cctv->id}", [
+            'points' => [
+                ['x' => 10, 'y' => 10],
+                ['x' => 50, 'y' => 50],
+            ],
+        ])->assertStatus(422);
+
+        // Reject collinear zero-area vertices
+        $this->patchJson("/update/roi/{$cctv->id}", [
+            'points' => [
+                ['x' => 0, 'y' => 0],
+                ['x' => 20, 'y' => 0],
+                ['x' => 50, 'y' => 0],
+            ],
+        ])->assertStatus(422);
+
+        // Accept 3-point triangle and clear legacy 5-point columns
+        $triangle = [
+            ['x' => 50, 'y' => 40],
+            ['x' => 300, 'y' => 40],
+            ['x' => 180, 'y' => 240],
+        ];
+        $this->patchJson("/update/roi/{$cctv->id}", ['points' => $triangle])
+            ->assertOk()
+            ->assertJsonCount(3, 'data.roi_polygon')
+            ->assertJsonPath('data.rec1x', null);
+
+        $fresh = $cctv->fresh();
+        $this->assertCount(3, $fresh->roi_polygon);
+        $this->assertNull($fresh->rec1x);
+
+        // Accept 7-point polygon
+        $heptagon = [
+            ['x' => 100, 'y' => 50],
+            ['x' => 260, 'y' => 40],
+            ['x' => 420, 'y' => 90],
+            ['x' => 520, 'y' => 210],
+            ['x' => 440, 'y' => 320],
+            ['x' => 160, 'y' => 330],
+            ['x' => 60, 'y' => 190],
+        ];
+        $this->patchJson("/update/roi/{$cctv->id}", ['points' => $heptagon])
+            ->assertOk()
+            ->assertJsonCount(7, 'data.roi_polygon')
+            ->assertJsonPath('data.roi_polygon.6.x', 60);
     }
 
     public function test_upload_rejects_non_image_files(): void

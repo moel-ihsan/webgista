@@ -67,12 +67,24 @@
               Done
             </button>
             <button
+              id="btn-undo-roi"
+              type="button"
+              class="el-button el-button--warning"
+              :disabled="draftRoiPoints.length === 0"
+              @click="undoLastDraftPoint"
+            >
+              Undo Titik
+            </button>
+            <button
               id="btn-reset-roi"
               type="button"
               class="el-button el-button--info"
               @click="resetDraftRoi"
             >
               Reset Titik
+            </button>
+            <button id="btn-cancel-roi" type="button" class="el-button" @click="cancelEditRoi">
+              Batal
             </button>
           </template>
 
@@ -107,8 +119,8 @@
         </div>
 
         <div v-if="!areaVideo" id="roi-edit-hint" class="roi-edit-hint">
-          Mode Edit Area Deteksi: Klik 5 titik pada video ({{ draftRoiPoints.length }}/5 titik),
-          lalu klik Done.
+          Mode Edit Area Deteksi: Klik bebas titik pada video untuk membentuk poligon (minimal 3
+          titik, saat ini {{ draftRoiPoints.length }} titik), lalu klik Done.
         </div>
 
         <canvas id="canvasw" ref="canvasw" class="canvasw" />
@@ -144,6 +156,7 @@ import {
   getSynchronizedDetections
 } from "../../services/traffic/precomputedPlayer";
 import {
+  MIN_ROI_POINTS,
   drawRoiPolygon,
   extractRoiPoints,
   isValidRoi,
@@ -208,9 +221,9 @@ export default {
   created() {
     const sessionRoi = this.readSessionRoi();
     const dbRoi = extractRoiPoints(this.cctv);
-    if (sessionRoi.length === 5) {
+    if (isValidRoi(sessionRoi)) {
       this.roiPoints = sessionRoi;
-    } else if (dbRoi.length === 5) {
+    } else if (isValidRoi(dbRoi)) {
       this.roiPoints = dbRoi;
     } else {
       this.roiPoints = extractRoiPoints(this.cameraSimulation.defaultRoi);
@@ -308,10 +321,9 @@ export default {
         return;
       }
 
-      if (this.draftRoiPoints.length < 5) {
+      if (this.draftRoiPoints.length < MIN_ROI_POINTS) {
         this.$message({
-          message:
-            "Klik tepat 5 titik pada video untuk membentuk area biru (atau klik Reset Titik).",
+          message: "Klik minimal 3 titik pada video untuk membentuk poligon (atau klik Batal).",
           type: "warning"
         });
         return;
@@ -319,7 +331,8 @@ export default {
 
       if (!isValidRoi(this.draftRoiPoints)) {
         this.$message({
-          message: "5 titik belum membentuk poligon berluas valid. Silakan ulangi.",
+          message:
+            "Titik belum membentuk poligon berluas valid (tidak boleh segaris). Tambahkan atau ubah posisi titik.",
           type: "warning"
         });
         return;
@@ -329,7 +342,18 @@ export default {
       this.saveRoi(this.draftRoiPoints);
       this.draftRoiPoints = [];
     },
+    undoLastDraftPoint() {
+      if (this.draftRoiPoints.length > 0) {
+        this.draftRoiPoints.pop();
+        this.renderCanvasOverlays();
+      }
+    },
     resetDraftRoi() {
+      this.draftRoiPoints = [];
+      this.areaVideo = false;
+      this.renderCanvasOverlays();
+    },
+    cancelEditRoi() {
       this.draftRoiPoints = [];
       this.areaVideo = true;
       this.renderCanvasOverlays();
@@ -391,9 +415,6 @@ export default {
         objectFit
       });
 
-      if (this.draftRoiPoints.length >= 5) {
-        this.draftRoiPoints = [];
-      }
       this.draftRoiPoints.push(point);
       this.renderCanvasOverlays();
     },
@@ -580,18 +601,45 @@ export default {
         return;
       }
 
+      if (this.draftRoiPoints.length >= MIN_ROI_POINTS && isValidRoi(this.draftRoiPoints)) {
+        ctx.beginPath();
+        ctx.moveTo(this.draftRoiPoints[0].x, this.draftRoiPoints[0].y);
+        for (let i = 1; i < this.draftRoiPoints.length; i += 1) {
+          ctx.lineTo(this.draftRoiPoints[i].x, this.draftRoiPoints[i].y);
+        }
+        ctx.closePath();
+        ctx.fillStyle = "rgba(0, 123, 255, 0.14)";
+        ctx.fill();
+      }
+
       if (this.draftRoiPoints.length >= 2) {
-        if (this.draftRoiPoints.length === 5 && isValidRoi(this.draftRoiPoints)) {
-          drawRoiPolygon(ctx, this.draftRoiPoints, { strokeStyle: "blue", lineWidth: 4 });
-        } else {
-          ctx.beginPath();
-          ctx.moveTo(this.draftRoiPoints[0].x, this.draftRoiPoints[0].y);
-          for (let i = 1; i < this.draftRoiPoints.length; i += 1) {
-            ctx.lineTo(this.draftRoiPoints[i].x, this.draftRoiPoints[i].y);
-          }
-          ctx.lineWidth = 4;
-          ctx.strokeStyle = "blue";
-          ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(this.draftRoiPoints[0].x, this.draftRoiPoints[0].y);
+        for (let i = 1; i < this.draftRoiPoints.length; i += 1) {
+          ctx.lineTo(this.draftRoiPoints[i].x, this.draftRoiPoints[i].y);
+        }
+        ctx.lineWidth = 4;
+        ctx.strokeStyle = "blue";
+        ctx.stroke();
+      }
+
+      if (this.draftRoiPoints.length >= MIN_ROI_POINTS && isValidRoi(this.draftRoiPoints)) {
+        const first = this.draftRoiPoints[0];
+        const last = this.draftRoiPoints[this.draftRoiPoints.length - 1];
+        if (typeof ctx.save === "function") {
+          ctx.save();
+        }
+        if (typeof ctx.setLineDash === "function") {
+          ctx.setLineDash([6, 6]);
+        }
+        ctx.beginPath();
+        ctx.moveTo(last.x, last.y);
+        ctx.lineTo(first.x, first.y);
+        ctx.lineWidth = 3;
+        ctx.strokeStyle = "rgba(0, 123, 255, 0.85)";
+        ctx.stroke();
+        if (typeof ctx.restore === "function") {
+          ctx.restore();
         }
       }
 

@@ -44,6 +44,7 @@ class CctvPoint extends Model
         'rec4y',
         'rec5x',
         'rec5y',
+        'roi_polygon',
     ];
 
     /**
@@ -62,5 +63,6 @@ class CctvPoint extends Model
         'rec4y' => 'float',
         'rec5x' => 'float',
         'rec5y' => 'float',
+        'roi_polygon' => 'array',
     ];
 }

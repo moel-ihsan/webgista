@@ -81,15 +81,56 @@ class CctvPointService
     }
 
     /**
-     * Update the 5-point detection ROI coordinates for a CCTV point.
+     * Update the blue detection ROI polygon coordinates for a CCTV point.
+     * Supports arbitrary N >= 3 vertices as well as legacy rec1x..rec5y payloads.
      *
-     * @param  array<string, float|int>  $roi
+     * @param  array<int|string, mixed>  $roi
      */
     public function updateRoi(CctvPoint $cctvPoint, array $roi): CctvPoint
     {
-        $cctvPoint->update($roi);
+        $normalizedPoints = $this->normalizeRoiList($roi);
+        $attributes = [
+            'roi_polygon' => $normalizedPoints,
+        ];
+
+        $syncLegacy = count($normalizedPoints) === 5;
+        for ($idx = 1; $idx <= 5; $idx++) {
+            $point = $syncLegacy ? $normalizedPoints[$idx - 1] : null;
+            $attributes["rec{$idx}x"] = $point ? $point['x'] : null;
+            $attributes["rec{$idx}y"] = $point ? $point['y'] : null;
+        }
+
+        $cctvPoint->update($attributes);
 
         return $cctvPoint->fresh();
+    }
+
+    /**
+     * Normalize either legacy `rec1x..rec5y` map or list of `['x' => float, 'y' => float]`.
+     *
+     * @param  array<int|string, mixed>  $roi
+     * @return array<int, array{x: float, y: float}>
+     */
+    private function normalizeRoiList(array $roi): array
+    {
+        if (array_key_exists('rec1x', $roi)) {
+            $points = [];
+            for ($idx = 1; $idx <= 5; $idx++) {
+                $points[] = [
+                    'x' => round((float) ($roi["rec{$idx}x"] ?? 0), 2),
+                    'y' => round((float) ($roi["rec{$idx}y"] ?? 0), 2),
+                ];
+            }
+
+            return $points;
+        }
+
+        return array_values(array_map(function ($point) {
+            return [
+                'x' => round((float) ($point['x'] ?? 0), 2),
+                'y' => round((float) ($point['y'] ?? 0), 2),
+            ];
+        }, $roi));
     }
 
     /**

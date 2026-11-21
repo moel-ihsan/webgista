@@ -23,38 +23,100 @@ describe("roiGeometry", () => {
     rec5y: 100
   };
 
-  test("extracts all 5 vertices including rec4y (fixing legacy rec4x typo)", () => {
-    const points = extractRoiPoints(sampleRecord);
-    expect(points).toHaveLength(5);
-    expect(points[3]).toEqual({ x: 60, y: 160 });
+  const trianglePoints = [
+    { x: 50, y: 40 },
+    { x: 250, y: 40 },
+    { x: 150, y: 200 }
+  ];
+
+  const quadPoints = [
+    { x: 20, y: 20 },
+    { x: 220, y: 20 },
+    { x: 240, y: 180 },
+    { x: 10, y: 180 }
+  ];
+
+  const heptagonPoints = [
+    { x: 100, y: 40 },
+    { x: 220, y: 30 },
+    { x: 340, y: 80 },
+    { x: 380, y: 180 },
+    { x: 290, y: 270 },
+    { x: 120, y: 260 },
+    { x: 60, y: 140 }
+  ];
+
+  test("extracts legacy 5 vertices and prioritizes arbitrary roi_polygon arrays", () => {
+    const legacy = extractRoiPoints(sampleRecord);
+    expect(legacy).toHaveLength(5);
+    expect(legacy[3]).toEqual({ x: 60, y: 160 });
+
+    const withPolygon = extractRoiPoints({
+      ...sampleRecord,
+      roi_polygon: heptagonPoints
+    });
+    expect(withPolygon).toEqual(heptagonPoints);
+    expect(extractRoiPoints(trianglePoints)).toEqual(trianglePoints);
+    expect(extractRoiPoints(quadPoints)).toEqual(quadPoints);
   });
 
   test("returns empty array when any vertex is missing or invalid", () => {
     expect(extractRoiPoints({})).toEqual([]);
     expect(extractRoiPoints({ ...sampleRecord, rec4y: null })).toEqual([]);
     expect(extractRoiPoints({ ...sampleRecord, rec2x: -5 })).toEqual([]);
+    expect(
+      extractRoiPoints({
+        roi_polygon: [
+          { x: 10, y: 10 },
+          { x: 20, y: 30 }
+        ]
+      })
+    ).toEqual([]);
+    expect(
+      extractRoiPoints({
+        roi_polygon: [
+          { x: 10, y: 10 },
+          { x: -1, y: 20 },
+          { x: 40, y: 50 }
+        ]
+      })
+    ).toEqual([]);
   });
 
-  test("validates polygon area and rejects degenerate shapes", () => {
-    const valid = extractRoiPoints(sampleRecord);
-    expect(isValidRoi(valid)).toBe(true);
-    expect(polygonArea(valid)).toBeGreaterThan(0);
+  test("validates N >= 3 polygon areas and rejects degenerate shapes", () => {
+    expect(isValidRoi(trianglePoints)).toBe(true);
+    expect(isValidRoi(quadPoints)).toBe(true);
+    expect(isValidRoi(extractRoiPoints(sampleRecord))).toBe(true);
+    expect(isValidRoi(heptagonPoints)).toBe(true);
+    expect(polygonArea(trianglePoints)).toBeGreaterThan(0);
 
     const collinear = [
       { x: 0, y: 0 },
       { x: 10, y: 0 },
       { x: 20, y: 0 },
-      { x: 30, y: 0 },
-      { x: 40, y: 0 }
+      { x: 30, y: 0 }
     ];
     expect(isValidRoi(collinear)).toBe(false);
+    expect(isValidRoi([])).toBe(false);
     expect(isValidRoi([{ x: 0, y: 0 }])).toBe(false);
+    expect(
+      isValidRoi([
+        { x: 0, y: 0 },
+        { x: 50, y: 50 }
+      ])
+    ).toBe(false);
   });
 
-  test("serializes 5 vertices to API payload and draws/clips canvas context", () => {
-    const points = extractRoiPoints(sampleRecord);
-    expect(serializeRoiPoints(points)).toEqual(sampleRecord);
+  test("serializes arbitrary N >= 3 vertices to points payload and draws/clips canvas", () => {
+    expect(serializeRoiPoints(heptagonPoints)).toEqual({ points: heptagonPoints });
+    expect(serializeRoiPoints(trianglePoints)).toEqual({ points: trianglePoints });
     expect(() => serializeRoiPoints([])).toThrow();
+    expect(() =>
+      serializeRoiPoints([
+        { x: 0, y: 0 },
+        { x: 10, y: 10 }
+      ])
+    ).toThrow();
 
     const ctx = {
       beginPath: jest.fn(),
@@ -65,29 +127,28 @@ describe("roiGeometry", () => {
       clip: jest.fn()
     };
 
-    expect(drawRoiPolygon(ctx, points, { strokeStyle: "blue", lineWidth: 5 })).toBe(true);
-    expect(ctx.moveTo).toHaveBeenCalledWith(10, 20);
-    expect(ctx.lineTo).toHaveBeenCalledWith(60, 160);
+    expect(drawRoiPolygon(ctx, heptagonPoints, { strokeStyle: "blue", lineWidth: 5 })).toBe(true);
+    expect(ctx.moveTo).toHaveBeenCalledWith(100, 40);
+    expect(ctx.lineTo).toHaveBeenCalledWith(60, 140);
     expect(ctx.stroke).toHaveBeenCalledTimes(1);
 
-    expect(drawRoiPolygon(ctx, points, { clip: true })).toBe(true);
+    expect(drawRoiPolygon(ctx, trianglePoints, { clip: true })).toBe(true);
     expect(ctx.clip).toHaveBeenCalledTimes(1);
   });
 
-  test("filters detections by polygon containment using bbox center", () => {
-    const polygon = extractRoiPoints(sampleRecord);
-    expect(isPointInPolygon({ x: 60, y: 80 }, polygon)).toBe(true);
-    expect(isPointInPolygon({ x: 200, y: 80 }, polygon)).toBe(false);
-
+  test("filters detections inside N-point polygons (3-point & 7-point) using bbox center", () => {
     const detections = [
-      { class: "car", bbox: [40, 60, 40, 40] },
-      { class: "motorcycle", bbox: [180, 70, 30, 30] }
+      { class: "car", bbox: [130, 80, 40, 40] },
+      { class: "motorcycle", bbox: [320, 180, 30, 30] }
     ];
 
-    const filtered = filterDetectionsByRoi(detections, polygon);
-    expect(filtered).toHaveLength(1);
-    expect(filtered[0].class).toBe("car");
+    const filteredTri = filterDetectionsByRoi(detections, trianglePoints);
+    expect(filteredTri).toHaveLength(1);
+    expect(filteredTri[0].class).toBe("car");
 
+    expect(isPointInPolygon({ x: 200, y: 150 }, heptagonPoints)).toBe(true);
+    expect(isPointInPolygon({ x: 10, y: 10 }, heptagonPoints)).toBe(false);
+    expect(filterDetectionsByRoi(detections, heptagonPoints)).toHaveLength(2);
     expect(filterDetectionsByRoi(detections, [])).toHaveLength(2);
   });
 

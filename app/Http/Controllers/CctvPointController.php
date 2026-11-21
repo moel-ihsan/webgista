@@ -125,11 +125,11 @@ class CctvPointController extends Controller
     }
 
     /**
-     * Update the 5-point blue detection ROI polygon coordinates.
+     * Update the blue detection ROI polygon coordinates (>= 3 vertices or legacy 5 points).
      */
     public function updateRoi(UpdateCctvRoiRequest $request, CctvPoint $cctvPoint): JsonResponse
     {
-        $updated = $this->service->updateRoi($cctvPoint, $request->validated());
+        $updated = $this->service->updateRoi($cctvPoint, $request->normalizedPoints());
 
         return response()->json([
             'message' => 'ROI updated',

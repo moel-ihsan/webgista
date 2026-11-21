@@ -1,21 +1,24 @@
-const ROI_INDICES = [1, 2, 3, 4, 5];
+export const MIN_ROI_POINTS = 3;
+const LEGACY_ROI_INDICES = [1, 2, 3, 4, 5];
 
 /**
- * Extract 5 ROI polygon vertices from a CCTV record (`rec1x`..`rec5y`).
+ * Normalize an arbitrary array of coordinate objects into valid non-negative `{ x, y }` vertices.
  *
- * @param {Record<string, unknown> | null | undefined} cctv
+ * @param {unknown} rawPoints
  * @returns {Array<{ x: number, y: number }>}
  */
-export function extractRoiPoints(cctv) {
-  if (!cctv || typeof cctv !== "object") {
+function normalizePoints(rawPoints) {
+  if (!Array.isArray(rawPoints)) {
     return [];
   }
 
   const points = [];
-  for (const idx of ROI_INDICES) {
-    const rawX = cctv[`rec${idx}x`];
-    const rawY = cctv[`rec${idx}y`];
-
+  for (const pt of rawPoints) {
+    if (!pt || typeof pt !== "object") {
+      return [];
+    }
+    const rawX = pt.x;
+    const rawY = pt.y;
     if (
       rawX === null ||
       rawX === undefined ||
@@ -36,7 +39,58 @@ export function extractRoiPoints(cctv) {
     points.push({ x, y });
   }
 
-  return isValidRoi(points) ? points : [];
+  return points;
+}
+
+/**
+ * Extract ROI polygon vertices from a CCTV record (`roi_polygon` or legacy `rec1x`..`rec5y`).
+ *
+ * @param {Record<string, unknown> | Array<{ x: number, y: number }> | null | undefined} cctv
+ * @returns {Array<{ x: number, y: number }>}
+ */
+export function extractRoiPoints(cctv) {
+  if (Array.isArray(cctv)) {
+    const direct = normalizePoints(cctv);
+    return isValidRoi(direct) ? direct : [];
+  }
+
+  if (!cctv || typeof cctv !== "object") {
+    return [];
+  }
+
+  if (Array.isArray(cctv.roi_polygon)) {
+    const polygonPoints = normalizePoints(cctv.roi_polygon);
+    if (isValidRoi(polygonPoints)) {
+      return polygonPoints;
+    }
+  }
+
+  const legacyPoints = [];
+  for (const idx of LEGACY_ROI_INDICES) {
+    const rawX = cctv[`rec${idx}x`];
+    const rawY = cctv[`rec${idx}y`];
+
+    if (
+      rawX === null ||
+      rawX === undefined ||
+      rawX === "" ||
+      rawY === null ||
+      rawY === undefined ||
+      rawY === ""
+    ) {
+      return [];
+    }
+
+    const x = Number(rawX);
+    const y = Number(rawY);
+    if (!Number.isFinite(x) || !Number.isFinite(y) || x < 0 || y < 0) {
+      return [];
+    }
+
+    legacyPoints.push({ x, y });
+  }
+
+  return isValidRoi(legacyPoints) ? legacyPoints : [];
 }
 
 /**
@@ -61,55 +115,45 @@ export function polygonArea(points) {
 }
 
 /**
- * Validate that an ROI consists of 5 non-negative numeric vertices forming a non-zero area.
+ * Validate that an ROI consists of at least 3 non-negative numeric vertices forming a non-zero area.
  *
  * @param {Array<{ x: number, y: number }>} points
  * @returns {boolean}
  */
 export function isValidRoi(points) {
-  if (!Array.isArray(points) || points.length !== 5) {
+  if (!Array.isArray(points) || points.length < MIN_ROI_POINTS) {
     return false;
   }
 
-  const allCoordsValid = points.every(
-    (pt) =>
-      pt &&
-      typeof pt === "object" &&
-      Number.isFinite(Number(pt.x)) &&
-      Number.isFinite(Number(pt.y)) &&
-      Number(pt.x) >= 0 &&
-      Number(pt.y) >= 0
-  );
-
-  if (!allCoordsValid) {
+  const normalized = normalizePoints(points);
+  if (normalized.length !== points.length) {
     return false;
   }
 
-  return polygonArea(points) > 0;
+  return polygonArea(normalized) > 0;
 }
 
 /**
- * Serialize 5 polygon vertices into the backend column payload (`rec1x`..`rec5y`).
+ * Serialize N >= 3 polygon vertices into the backend payload (`{ points: [...] }`).
  *
  * @param {Array<{ x: number, y: number }>} points
- * @returns {Record<string, number>}
+ * @returns {{ points: Array<{ x: number, y: number }> }}
  */
 export function serializeRoiPoints(points) {
   if (!isValidRoi(points)) {
-    throw new Error("ROI requires 5 valid points forming a non-zero area");
+    throw new Error("ROI requires at least 3 valid points forming a non-zero area");
   }
 
-  const payload = {};
-  ROI_INDICES.forEach((idx, arrayIndex) => {
-    payload[`rec${idx}x`] = Math.round(Number(points[arrayIndex].x) * 100) / 100;
-    payload[`rec${idx}y`] = Math.round(Number(points[arrayIndex].y) * 100) / 100;
-  });
-
-  return payload;
+  return {
+    points: points.map((pt) => ({
+      x: Math.round(Number(pt.x) * 100) / 100,
+      y: Math.round(Number(pt.y) * 100) / 100
+    }))
+  };
 }
 
 /**
- * Trace and optionally clip or stroke the 5-point ROI polygon onto a 2D canvas context.
+ * Trace and optionally clip or stroke the ROI polygon onto a 2D canvas context.
  *
  * @param {CanvasRenderingContext2D} ctx
  * @param {Array<{ x: number, y: number }>} points
