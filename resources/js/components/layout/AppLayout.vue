@@ -13,7 +13,6 @@
         @close-mobile="closeMobileNav"
       />
       <main id="main-content" class="app-main" :class="mainClass" :style="mainStyle" tabindex="-1">
-        <SimulationBanner />
         <slot />
       </main>
     </div>
@@ -23,14 +22,12 @@
 <script>
 import AppHeader from "./AppHeader.vue";
 import AppSidebar from "./AppSidebar.vue";
-import SimulationBanner from "./SimulationBanner.vue";
 
 export default {
   name: "AppLayout",
   components: {
     AppHeader,
-    AppSidebar,
-    SimulationBanner
+    AppSidebar
   },
   props: {
     title: {

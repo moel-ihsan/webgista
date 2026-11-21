@@ -704,7 +704,7 @@ export default {
 .basemap {
   position: relative;
   width: 100%;
-  height: clamp(500px, calc(100vh - 170px), 760px);
+  height: clamp(520px, calc(100vh - 104px), 800px);
   border-radius: var(--radius-lg);
   border: 1px solid var(--border-subtle);
   background-color: var(--bg-surface);
