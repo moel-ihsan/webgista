@@ -36,6 +36,7 @@ import {
 } from "../../config/mapbox";
 import { fetchAll as fetchCctvPoints } from "../../services/api/cctvApi";
 import { fetchAll as fetchMapSettings } from "../../services/api/mapSettingApi";
+import { resolveCameraSimulation } from "../../config/simulation";
 import { NO_DATA_LEVEL, TRAFFIC_LEVELS } from "../../services/traffic/ihcmClassifier";
 import { escapeHtml, formatCoordinate, resolveCctvImagePath } from "../../utils/formatters";
 
@@ -80,9 +81,9 @@ export default {
       const q = this.filterState.toLowerCase();
       return this.items.filter(
         (item) =>
-          item.name.toLowerCase().includes(q) ||
-          item.address.toLowerCase().includes(q) ||
-          item.status.toLowerCase().includes(q)
+          (item.name || "").toLowerCase().includes(q) ||
+          (item.address || "").toLowerCase().includes(q) ||
+          (item.status || "").toLowerCase().includes(q)
       );
     }
   },
@@ -116,9 +117,12 @@ export default {
       };
     },
     buildPopupHtml(row) {
-      if (row.url) {
-        const safeUrl = escapeHtml(row.url);
-        return `<video id="my-video" class="popup-img vidcctv" controls autoplay><source src="${safeUrl}" type="video/mp4" /></video><br/>`;
+      const category = row.status || row.category;
+      const resolvedUrl =
+        row.url || (category === "Analytic" ? resolveCameraSimulation(row).videoUrl : "");
+      if (resolvedUrl) {
+        const safeUrl = escapeHtml(resolvedUrl);
+        return `<video id="my-video" class="popup-img vidcctv" controls autoplay muted loop playsinline><source src="${safeUrl}" type="video/mp4" /></video><br/>`;
       }
       const imageSource = escapeHtml(resolveCctvImagePath(row.path_image));
       return `<img id="my-img" class="popup-img vidcctv" src="${imageSource}" /><br/>`;
@@ -218,6 +222,39 @@ export default {
         map.on("mouseleave", layerId, () => {
           map.getCanvas().style.cursor = "";
         });
+      });
+
+      const overlay = document.getElementById("map-overlay");
+
+      map.on("mousemove", "state-fills", (e) => {
+        if (!e.features || !e.features.length) {
+          return;
+        }
+        if (this.hoveredStateId) {
+          map.setFeatureState({ source: "bandaaceh", id: this.hoveredStateId }, { hover: false });
+        }
+        this.hoveredStateId = e.features[0].id;
+        map.setFeatureState({ source: "bandaaceh", id: this.hoveredStateId }, { hover: true });
+        if (overlay) {
+          overlay.innerHTML = "";
+          const title = document.createElement("strong");
+          title.textContent = e.features[0].properties.KECAMATAN;
+          const large = document.createElement("div");
+          large.textContent = `Total large: ${e.features[0].properties.Luas} ha`;
+          overlay.appendChild(title);
+          overlay.appendChild(large);
+          overlay.style.display = "block";
+        }
+      });
+
+      map.on("mouseleave", "state-fills", () => {
+        if (this.hoveredStateId) {
+          map.setFeatureState({ source: "bandaaceh", id: this.hoveredStateId }, { hover: false });
+          if (overlay) {
+            overlay.style.display = "none";
+          }
+        }
+        this.hoveredStateId = null;
       });
     },
     loadCctvLayer(map) {
@@ -348,7 +385,6 @@ export default {
     },
     loadBoundaryLayer(map) {
       const admVisibility = this.cities[0].vis;
-      const overlay = document.getElementById("map-overlay");
 
       if (!map.getSource("bandaaceh")) {
         map.addSource("bandaaceh", {
@@ -384,37 +420,6 @@ export default {
           }
         });
       }
-
-      map.on("mousemove", "state-fills", (e) => {
-        if (!e.features || !e.features.length) {
-          return;
-        }
-        if (this.hoveredStateId) {
-          map.setFeatureState({ source: "bandaaceh", id: this.hoveredStateId }, { hover: false });
-        }
-        this.hoveredStateId = e.features[0].id;
-        map.setFeatureState({ source: "bandaaceh", id: this.hoveredStateId }, { hover: true });
-        if (overlay) {
-          overlay.innerHTML = "";
-          const title = document.createElement("strong");
-          title.textContent = e.features[0].properties.KECAMATAN;
-          const large = document.createElement("div");
-          large.textContent = `Total large: ${e.features[0].properties.Luas} ha`;
-          overlay.appendChild(title);
-          overlay.appendChild(large);
-          overlay.style.display = "block";
-        }
-      });
-
-      map.on("mouseleave", "state-fills", () => {
-        if (this.hoveredStateId) {
-          map.setFeatureState({ source: "bandaaceh", id: this.hoveredStateId }, { hover: false });
-          if (overlay) {
-            overlay.style.display = "none";
-          }
-        }
-        this.hoveredStateId = null;
-      });
     },
     handleStyleChange(styleItem) {
       this.style = styleItem.label;
@@ -457,7 +462,14 @@ export default {
 
       new mapboxgl.Popup({ closeOnClick: true, offset: 10 })
         .setLngLat(targetItem.latLong)
-        .setHTML(this.buildPopupHtml({ url: targetItem.url, path_image: targetItem.source }))
+        .setHTML(
+          this.buildPopupHtml({
+            name: targetItem.name,
+            status: targetItem.status,
+            url: targetItem.url,
+            path_image: targetItem.source
+          })
+        )
         .addTo(this.map);
     },
     zoomHome() {
