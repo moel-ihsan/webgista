@@ -17,19 +17,20 @@ class CctvPointFactory extends Factory
     /**
      * Define the model's default state.
      *
-     * @return array
+     * @return array<string, mixed>
      */
     public function definition()
     {
         return [
-            'name' => $this->faker->name,
+            'name' => $this->faker->streetName,
             'category' => $this->faker->randomElement(['Analytic', 'Regular']),
-            'address' => $this->faker->state,
-            'lattitude' => $this->faker->latitude(5, 6),
-            'longitude' => $this->faker->longitude(95, 96),
-            'agency' => $this->faker->randomElement(['Diskominfotik', 'Dishub', 'Diskominfo']),
+            'address' => $this->faker->address,
+            'lattitude' => (string) $this->faker->latitude(5.5, 5.6),
+            'longitude' => (string) $this->faker->longitude(95.3, 95.4),
+            'agency' => $this->faker->randomElement(['Diskominfotik', 'Dishub']),
+            'keterangan' => 'Great',
             'path_image' => $this->faker->randomElement(['tf1.jpg', 'tf2.jpg', 'tf3.jpg', 'tf4.jpg', 'tf5.jpg']),
-            'url' => $this->faker->url,
+            'url' => null,
         ];
     }
 }

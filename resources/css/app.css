@@ -1,3 +1,256 @@
-@import 'tailwindcss/base';
-@import 'tailwindcss/components';
-@import 'tailwindcss/utilities';
+@import "./fonts.css";
+@import "./tokens.css";
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    font-family: var(--font-sans);
+    font-size: 16px;
+    line-height: 1.5;
+    background-color: var(--bg-canvas);
+    color: var(--text-primary);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  body {
+    margin: 0;
+    padding: 0;
+    font-family: var(--font-sans);
+    font-size: var(--text-base);
+    line-height: 1.5;
+    background-color: var(--bg-canvas);
+    color: var(--text-primary);
+    transition: background-color 0.2s ease, color 0.2s ease;
+    overflow-x: hidden;
+  }
+
+  a {
+    color: inherit;
+    text-decoration: none;
+  }
+
+  button,
+  input,
+  select,
+  textarea {
+    font-family: inherit;
+  }
+
+  h1,
+  h2,
+  h3 {
+    letter-spacing: -0.02em;
+  }
+
+  button:focus-visible,
+  a:focus-visible,
+  input:focus-visible,
+  select:focus-visible,
+  textarea:focus-visible,
+  [tabindex]:focus-visible {
+    outline: 3px solid var(--focus-ring);
+    outline-offset: 2px;
+  }
+}
+
+/* Global accessible IHCM 1997 traffic grade chips (color + letter + high-contrast ring) */
+.grade-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 28px;
+  height: 28px;
+  padding: 0 7px;
+  border-radius: var(--radius-pill);
+  font-size: var(--text-caption);
+  font-weight: 800;
+  line-height: 1;
+  border: 2px solid transparent;
+  flex-shrink: 0;
+}
+
+.grade-chip--sm {
+  min-width: 24px;
+  height: 24px;
+  padding: 0 6px;
+  font-size: 11px;
+}
+
+.grade-chip--A {
+  background-color: #98fb98;
+  color: #0f2e1a;
+  border-color: #1b6e2d;
+}
+
+.grade-chip--B {
+  background-color: #0b6623;
+  color: #ffffff;
+  border-color: #1b6e2d;
+}
+
+html.theme-dark .grade-chip--B {
+  border-color: #4ade80;
+}
+
+.grade-chip--C {
+  background-color: #ffff00;
+  color: #241f00;
+  border-color: #856404;
+}
+
+.grade-chip--D {
+  background-color: #d4a328;
+  color: #1f1500;
+  border-color: #7a5908;
+}
+
+.grade-chip--E {
+  background-color: #ff5f00;
+  color: #1f0b00;
+  border-color: #b44100;
+}
+
+.grade-chip--F {
+  background-color: #dc2626;
+  color: #ffffff;
+  border-color: #991b1b;
+}
+
+html.theme-dark .grade-chip--F {
+  border-color: #fca5a5;
+}
+
+.grade-chip--N {
+  background-color: #2563eb;
+  color: #ffffff;
+  border-color: #1d4ed8;
+}
+
+html.theme-dark .grade-chip--N {
+  border-color: #93c5fd;
+}
+
+.grade-chip--R {
+  background-color: #6d28d9;
+  color: #ffffff;
+  border-color: #5b21b6;
+}
+
+html.theme-dark .grade-chip--R {
+  border-color: #c4b5fd;
+}
+
+.ui-state-box {
+  border: 1px dashed var(--border-input);
+  border-radius: var(--radius-md);
+  background: var(--bg-surface-subtle);
+  color: var(--text-secondary);
+  padding: var(--space-6);
+  text-align: center;
+  font-size: var(--text-sm);
+}
+
+.ui-state-box--error {
+  border-color: var(--danger-soft-border);
+  background: var(--danger-soft-bg);
+  color: var(--danger-text);
+}
+
+/* Shared Theme Toggle Switch (used in AppHeader and LoginPage chunks) */
+.theme-switch-btn {
+  width: 60px;
+  height: 44px;
+  padding: 0 5px;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--border-input);
+  background-color: var(--bg-surface);
+  color: var(--text-primary);
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-start;
+  cursor: pointer;
+  box-shadow: var(--shadow-card);
+  transition: border-color 0.15s ease, background-color 0.15s ease;
+}
+
+.theme-switch-btn:hover {
+  border-color: var(--accent-primary);
+}
+
+html.theme-dark .theme-switch-btn {
+  justify-content: flex-end;
+}
+
+.theme-switch-thumb {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background-color: var(--accent-primary);
+  color: var(--accent-on-fill);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Shared Form Split Headings & Submit Bar */
+.form-card-heading {
+  margin: 0 0 var(--space-4);
+  font-size: var(--text-lg);
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.btn-form-submit {
+  margin-top: var(--space-4);
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+/* Shared Rounded Image Frame + v1 Subtle Zoom-on-Hover */
+.imgBox {
+  border-radius: var(--radius-md);
+  height: 200px;
+  overflow: hidden;
+  border: 1px solid var(--border-subtle);
+  box-shadow: var(--shadow-card);
+  position: relative;
+  background-color: var(--bg-surface-subtle);
+  transition: transform 0.35s ease;
+}
+
+.imgBox .imgCont {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  transition: transform 0.45s ease;
+}
+
+.imgBox:hover {
+  transform: scale(0.99);
+}
+
+.imgBox:hover .imgCont {
+  transform: scale(1.15);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .imgBox,
+  .imgBox .imgCont,
+  .detail-regular-image,
+  .imageRecent,
+  .search-img,
+  .imgCont {
+    transition: none !important;
+  }
+
+  .imgBox:hover,
+  .imgBox:hover .imgCont {
+    transform: none !important;
+  }
+}

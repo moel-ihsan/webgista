@@ -30,4 +30,10 @@ return [
         'region' => env('AWS_DEFAULT_REGION', 'us-east-1'),
     ],
 
+    'map' => [
+        'provider' => env('MAP_PROVIDER', 'auto'),
+        'maptiler_key' => env('MAPTILER_API_KEY', ''),
+        'stadia_key' => env('STADIA_API_KEY', ''),
+    ],
+
 ];

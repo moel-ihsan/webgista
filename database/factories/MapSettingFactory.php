@@ -24,7 +24,7 @@ class MapSettingFactory extends Factory
         return [
             'lattitude' => $this->faker->latitude(5, 6),
             'longitude' => $this->faker->longitude(95, 96),
-            'zoom' => 12       
+            'zoom' => 12,
         ];
     }
 }

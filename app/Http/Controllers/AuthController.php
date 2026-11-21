@@ -2,117 +2,136 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\ChangePasswordRequest;
+use App\Http\Requests\LoginRequest;
+use App\Http\Requests\UpdateProfileRequest;
+use App\Http\Requests\UploadImageRequest;
+use App\Http\Resources\AuthUserResource;
+use App\Http\Resources\PublicOfficeProfileResource;
 use App\Models\User;
+use App\Services\UserProfileService;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Storage;
+use Illuminate\View\View;
 
 class AuthController extends Controller
 {
-    public function init()
+    /**
+     * @var UserProfileService
+     */
+    private $profileService;
+
+    public function __construct(UserProfileService $profileService)
     {
-        return response()->json(['user' => User::first()], 200);
+        $this->profileService = $profileService;
     }
-    public function authUser()
+
+    /**
+     * Return sanitized public office profile metadata for the dashboard.
+     */
+    public function init(): JsonResponse
     {
-        return response()->json(['user' => Auth::guard('web')->user()], 200);
+        $user = $this->profileService->getPublicOfficeProfile();
+
+        return response()->json([
+            'user' => $user ? (new PublicOfficeProfileResource($user))->resolve() : null,
+        ], 200);
     }
-    public function login()
+
+    /**
+     * Return the currently authenticated web session user, if any.
+     */
+    public function authUser(): JsonResponse
+    {
+        $user = Auth::guard('web')->user();
+
+        return response()->json([
+            'user' => $user ? (new AuthUserResource($user))->resolve() : null,
+        ], 200);
+    }
+
+    /**
+     * Display the login page.
+     */
+    public function login(): View
     {
         return view('login');
     }
-    public function auth(Request $request)
-    {
-        // Validate the form data
-        $data = $request->validate([
-            'email' => ['required'],
-            'password' => ['required']
-        ]);
 
-        // return response()->json(['status' => $data]);
-        if (Auth::attempt($data))
+    /**
+     * Authenticate an administrator via email and password.
+     */
+    public function auth(LoginRequest $request): JsonResponse
+    {
+        if (Auth::attempt($request->validated())) {
+            $request->session()->regenerate();
+
             return response()->json(['status' => 'Berhasil login', 'isAuth' => true]);
+        }
 
         return response()->json(['status' => 'Wrong Email / Password', 'isAuth' => false]);
     }
 
-    public function logout()
+    /**
+     * Log out the current user and invalidate the session.
+     */
+    public function logout(Request $request): RedirectResponse
     {
         Auth::logout();
+        $request->session()->invalidate();
+        $request->session()->regenerateToken();
+
         return redirect()->route('home');
     }
 
-    public function edit(User $user)
+    /**
+     * Display the edit profile page for the authenticated user.
+     */
+    public function edit(Request $request, User $user): View
     {
+        abort_unless((int) $request->user()->id === (int) $user->id, 403);
+
         return view('profile', compact('user'));
     }
 
-    public function update(User $user)
+    /**
+     * Update the authenticated user's office profile metadata.
+     */
+    public function update(UpdateProfileRequest $request, User $user): JsonResponse
     {
-        $valid = request()->validate([
-            'name' => ['required'],
-            'address' => ['required'],
-            'lattitude' => ['required'],
-            'longitude' => ['required'],
-            'description' => ['required'],
-            'profile_photo_path',
+        $validated = $request->validated();
+        $updated = $this->profileService->updateProfile($user, $validated);
 
+        return response()->json([
+            'image' => $request->file('image'),
+            'valid' => $validated,
+            'user' => (new PublicOfficeProfileResource($updated))->resolve(),
         ]);
-
-        $user->update($valid);
-        return response()->json(['image' => request()->file('image'), 'valid' => $valid]);
     }
 
-    public function upload(Request $request)
+    /**
+     * Replace the authenticated user's profile avatar image.
+     */
+    public function uploadEdit(UploadImageRequest $request, User $user): JsonResponse
     {
-        $file = $request->file('image');
-        if (Storage::exists('public/user/image/avatar.jpg'))
-            Storage::delete('public/user/image/avatar.jpg');
-        return response()->json(['image' => $file->storeAs('public/user/image', 'avatar.jpg')]);
+        $path = $this->profileService->replaceAvatar($user, $request->file('image'));
+
+        return response()->json(['image' => $path]);
     }
 
-    public function uploadEdit(User $user)
+    /**
+     * Verify current password and persist the new password hash.
+     */
+    public function changePassword(ChangePasswordRequest $request, User $user): JsonResponse
     {
-        $file = request()->file('image');
-        if (Storage::exists($user->profile_photo_path))
-            Storage::delete($user->profile_photo_path);
-        $profile_photo_path = uniqid() . '.jpg';
-        $user->update([
-            'profile_photo_path' => 'user/image/' . $profile_photo_path
-        ]);
-        return response()->json(['image' => $file->storeAs('public/user/image', $profile_photo_path)]);
-    }
+        $data = $request->validated();
 
-    //     // tes admin user
-    //     public function register()
-    //     {
-    //         return view('auth/register');
-    //     }
-
-    //     public function store(Request $request)
-    //     {
-    //         User::create([
-    //             'nama' => $request->nama,
-    //             'email' => $request->email,
-    //             'nipnim' => $request->nik,
-    //             'password' => bcrypt($request->password),
-    //         ]);
-
-    //         return redirect()->route('auth.login');
-    //     }
-    public function changePassword(User $user)
-    {
-        $valid = request()->validate([
-            'curPas' => ['required'],
-            'newPas' => ['required'],
-            'confirm' => ['required'],
-        ]);
-
-        if (password_verify($valid['curPas'], $user['password'])) {
-            $user->update(['password' => bcrypt($valid['newPas'])]);
-            Auth::attempt(['email' => $user['email'], 'password' => $user['password']]);
+        if ($this->profileService->changePassword($user, $data['curPas'], $data['newPas'])) {
             return response()->json(['message' => 'password berhasil diubah', 'status' => 200]);
         }
+
         return response()->json(['message' => 'password sekarang tidak sama', 'status' => 404]);
     }
 }

@@ -2,103 +2,68 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\SaveMapSettingRequest;
+use App\Http\Resources\MapSettingResource;
 use App\Models\MapSetting;
-use Illuminate\Http\Request;
+use App\Services\MapSettingService;
+use Illuminate\Http\JsonResponse;
+use Illuminate\View\View;
 
 class MapSettingController extends Controller
 {
     /**
-     * Display a listing of the resource.
-     *
-     * @return \Illuminate\Http\Response
+     * @var MapSettingService
      */
-    public function index()
+    private $service;
+
+    public function __construct(MapSettingService $service)
+    {
+        $this->service = $service;
+    }
+
+    /**
+     * Display the map settings view.
+     */
+    public function index(): View
     {
         return view('setting');
     }
 
-    public function table_setting()
+    /**
+     * Return all map settings as a JSON array.
+     */
+    public function table_setting(): JsonResponse
     {
-        $all = MapSetting::latest()->get();
-        return response()->json($all);
+        $settings = $this->service->listAll();
+
+        return response()->json(MapSettingResource::collection($settings)->resolve());
     }
 
     /**
-     * Show the form for creating a new resource.
-     *
-     * @return \Illuminate\Http\Response
+     * Store a new map setting configuration.
      */
-    public function create()
+    public function store(SaveMapSettingRequest $request): JsonResponse
     {
-        //
+        $setting = $this->service->create($request->validated());
+
+        return response()->json((new MapSettingResource($setting))->resolve(), 201);
     }
 
     /**
-     * Store a newly created resource in storage.
-     *
-     * @param  \Illuminate\Http\Request  $request
-     * @return \Illuminate\Http\Response
+     * Show the form for editing the specified map setting.
      */
-    public function store(Request $request)
-    {
-        $valid = $request->validate([
-            'lattitude' => ['required'],
-            'longitude' => ['required'],
-            'zoom' => ['required'],
-        ]);
-
-        MapSetting::create($valid);
-    }
-
-    /**
-     * Display the specified resource.
-     *
-     * @param  \App\Models\MapSetting  $mapSetting
-     * @return \Illuminate\Http\Response
-     */
-    public function show(MapSetting $mapSetting)
-    {
-        // return view('detail', compact('mapSetting'));
-    }
-
-    /**
-     * Show the form for editing the specified resource.
-     *
-     * @param  MapSetting  $mapSetting
-     * @return \Illuminate\Http\Response
-     */
-    public function edit(MapSetting $mapSetting)
+    public function edit(MapSetting $mapSetting): View
     {
         return view('setting', compact('mapSetting'));
     }
 
     /**
-     * Update the specified resource in storage.
-     *
-     * @param  \Illuminate\Http\Request  $request
-     * @param  \App\Models\MapSetting  $mapSetting
-     * @return \Illuminate\Http\Response
+     * Update the specified map setting configuration.
      */
-    public function update(Request $request, MapSetting $mapSetting)
+    public function update(SaveMapSettingRequest $request, MapSetting $mapSetting): JsonResponse
     {
-        $valid = request()->validate([
-            'lattitude' => ['required'],
-            'longitude' => ['required'],
-            'zoom' => ['required'],
+        $updated = $this->service->update($mapSetting, $request->validated());
 
-        ]);
-
-        $mapSetting->update($valid);
-    }
-
-    /**
-     * Remove the specified resource from storage.
-     *
-     * @param  \App\Models\MapSetting  $mapSetting
-     * @return \Illuminate\Http\Response
-     */
-    public function destroy(MapSetting $mapSetting)
-    {
-        //
+        return response()->json((new MapSettingResource($updated))->resolve());
     }
 }

@@ -2,6 +2,7 @@
 
 namespace Database\Seeders;
 
+use App\Models\AgencyList;
 use Illuminate\Database\Seeder;
 
 class AgencyListSeeder extends Seeder
@@ -13,6 +14,8 @@ class AgencyListSeeder extends Seeder
      */
     public function run()
     {
-        //
+        foreach (['Dishub', 'Diskominfotik'] as $agency) {
+            AgencyList::firstOrCreate(['agency' => $agency]);
+        }
     }
 }

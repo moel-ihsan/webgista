@@ -1,0 +1,272 @@
+export const STATIC_ADMIN_USER = {
+  id: 1,
+  name: "Diskominfotik Kota Banda Aceh",
+  email: "admin@webgista.test",
+  address: "Jl. T. Nyak Arief No. 1, Banda Aceh",
+  lattitude: "5.552874",
+  longitude: "95.327801",
+  description: "Sistem Pemetaan Real-Time Kondisi Lalu Lintas Persimpangan Kota Banda Aceh.",
+  profile_photo_path: null,
+  role: "admin"
+};
+
+export const STATIC_MAP_SETTINGS = [
+  {
+    id: 1,
+    lattitude: "5.552874",
+    longitude: "95.327801",
+    zoom: "13"
+  }
+];
+
+export const STATIC_AGENCIES = [
+  { id: 1, agency: "Dishub" },
+  { id: 2, agency: "Diskominfotik" }
+];
+
+const SEED_TIMESTAMP = "2026-11-22T02:00:00.000Z";
+
+export const STATIC_CCTV_POINTS = [
+  {
+    id: 15,
+    name: "Simpang Peunayong",
+    category: "Regular",
+    address: "Jl. Ahmad Yani (Jembatan Peunayong)",
+    lattitude: "5.560800",
+    longitude: "95.317400",
+    agency: "Dishub",
+    keterangan: "No Data",
+    path_image: "tf5.jpg",
+    url: null,
+    roi_polygon: null,
+    updated_at: SEED_TIMESTAMP
+  },
+  {
+    id: 14,
+    name: "Simpang Keutapang",
+    category: "Regular",
+    address: "Jl. Soekarno-Hatta (Ketapang)",
+    lattitude: "5.537200",
+    longitude: "95.304600",
+    agency: "Diskominfotik",
+    keterangan: "No Data",
+    path_image: "tf4.jpg",
+    url: null,
+    roi_polygon: null,
+    updated_at: SEED_TIMESTAMP
+  },
+  {
+    id: 13,
+    name: "Simpang Lampineung",
+    category: "Regular",
+    address: "Jl. T. Nyak Arief (Polda Aceh)",
+    lattitude: "5.565600",
+    longitude: "95.351900",
+    agency: "Dishub",
+    keterangan: "No Data",
+    path_image: "tf3.jpg",
+    url: null,
+    roi_polygon: null,
+    updated_at: SEED_TIMESTAMP
+  },
+  {
+    id: 12,
+    name: "Simpang BPKP",
+    category: "Regular",
+    address: "Jl. T. Panglima Nyak Makam (Lambhuk)",
+    lattitude: "5.552300",
+    longitude: "95.342600",
+    agency: "Diskominfotik",
+    keterangan: "No Data",
+    path_image: "tf2.jpg",
+    url: null,
+    roi_polygon: null,
+    updated_at: SEED_TIMESTAMP
+  },
+  {
+    id: 11,
+    name: "Simpang Ulee Kareng",
+    category: "Regular",
+    address: "Jl. T. Iskandar (Pasar Ulee Kareng)",
+    lattitude: "5.555100",
+    longitude: "95.360200",
+    agency: "Dishub",
+    keterangan: "No Data",
+    path_image: "tf1.jpg",
+    url: null,
+    roi_polygon: null,
+    updated_at: SEED_TIMESTAMP
+  },
+  {
+    id: 10,
+    name: "Simpang Seutui",
+    category: "Regular",
+    address: "Jl. Sultan Iskandar Muda (Seutui)",
+    lattitude: "5.548400",
+    longitude: "95.308200",
+    agency: "Diskominfotik",
+    keterangan: "No Data",
+    path_image: "tf5.jpg",
+    url: null,
+    roi_polygon: null,
+    updated_at: SEED_TIMESTAMP
+  },
+  {
+    id: 9,
+    name: "Simpang Batoh",
+    category: "Regular",
+    address: "Jl. Dr. Mr. Mohd Hasan (Terminal Batoh)",
+    lattitude: "5.534900",
+    longitude: "95.331900",
+    agency: "Dishub",
+    keterangan: "No Data",
+    path_image: "tf4.jpg",
+    url: null,
+    roi_polygon: null,
+    updated_at: SEED_TIMESTAMP
+  },
+  {
+    id: 8,
+    name: "Simpang Neusu",
+    category: "Regular",
+    address: "Jl. Tgk. Chik Ditiro (Neusu Jaya)",
+    lattitude: "5.545800",
+    longitude: "95.317500",
+    agency: "Dishub",
+    keterangan: "No Data",
+    path_image: "tf3.jpg",
+    url: null,
+    roi_polygon: null,
+    updated_at: SEED_TIMESTAMP
+  },
+  {
+    id: 7,
+    name: "Simpang Dodik",
+    category: "Regular",
+    address: "Jl. Pocut Baren (Kuta Alam)",
+    lattitude: "5.555300",
+    longitude: "95.323700",
+    agency: "Diskominfotik",
+    keterangan: "No Data",
+    path_image: "tf2.jpg",
+    url: null,
+    roi_polygon: null,
+    updated_at: SEED_TIMESTAMP
+  },
+  {
+    id: 6,
+    name: "Simpang Lamnyong",
+    category: "Regular",
+    address: "Jl. T. Hasan Krueng Kalee (Jembatan Lamnyong)",
+    lattitude: "5.573400",
+    longitude: "95.349200",
+    agency: "Dishub",
+    keterangan: "No Data",
+    path_image: "tf1.jpg",
+    url: null,
+    roi_polygon: null,
+    updated_at: SEED_TIMESTAMP
+  },
+  {
+    id: 5,
+    name: "Simpang Mesra",
+    category: "Regular",
+    address: "Jl. Teuku Nyak Arief (Bundaran Mesra)",
+    lattitude: "5.570100",
+    longitude: "95.357400",
+    agency: "Diskominfotik",
+    keterangan: "No Data",
+    path_image: "tf5.jpg",
+    url: null,
+    roi_polygon: null,
+    updated_at: SEED_TIMESTAMP
+  },
+  {
+    id: 4,
+    name: "Simpang Surabaya",
+    category: "Regular",
+    address: "Jl. Tgk. Imum Lueng Bata (Arah Terminal)",
+    lattitude: "5.542600",
+    longitude: "95.324800",
+    agency: "Dishub",
+    keterangan: "No Data",
+    path_image: "tf4.jpg",
+    url: null,
+    roi_polygon: null,
+    updated_at: SEED_TIMESTAMP
+  },
+  {
+    id: 3,
+    name: "Simpang Lima Banda Aceh",
+    category: "Regular",
+    address: "Jl. Tgk. Chik Ditiro (Pusat Kota)",
+    lattitude: "5.552900",
+    longitude: "95.326300",
+    agency: "Dishub",
+    keterangan: "No Data",
+    path_image: "tf3.jpg",
+    url: null,
+    roi_polygon: null,
+    updated_at: SEED_TIMESTAMP
+  },
+  {
+    id: 2,
+    name: "Simpang Jambo Tape",
+    category: "Analytic",
+    address: "Jl. T. Daud Beureueh (Arah Simpang Lima)",
+    lattitude: "5.558700",
+    longitude: "95.331500",
+    agency: "Diskominfotik",
+    keterangan: "Average",
+    path_image: "tf2.jpg",
+    url: "/demo/videos/simpang-jambo-tape.mp4",
+    rec1x: 250.0,
+    rec1y: 38.0,
+    rec2x: 450.0,
+    rec2y: 48.0,
+    rec3x: 625.0,
+    rec3y: 230.0,
+    rec4x: 390.0,
+    rec4y: 352.0,
+    rec5x: 10.0,
+    rec5y: 330.0,
+    roi_polygon: [
+      { x: 250.0, y: 38.0 },
+      { x: 450.0, y: 48.0 },
+      { x: 625.0, y: 230.0 },
+      { x: 390.0, y: 352.0 },
+      { x: 10.0, y: 330.0 }
+    ],
+    updated_at: SEED_TIMESTAMP
+  },
+  {
+    id: 1,
+    name: "Simpang PDAM",
+    category: "Analytic",
+    address: "Jl. Teuku Nyak Arief (Arah Darussalam)",
+    lattitude: "5.561200",
+    longitude: "95.344800",
+    agency: "Dishub",
+    keterangan: "Great",
+    path_image: "tf1.jpg",
+    url: "/demo/videos/simpang-pdam.mp4",
+    rec1x: 195.0,
+    rec1y: 148.0,
+    rec2x: 475.0,
+    rec2y: 148.0,
+    rec3x: 625.0,
+    rec3y: 255.0,
+    rec4x: 595.0,
+    rec4y: 352.0,
+    rec5x: 55.0,
+    rec5y: 352.0,
+    roi_polygon: [
+      { x: 195.0, y: 148.0 },
+      { x: 475.0, y: 148.0 },
+      { x: 625.0, y: 255.0 },
+      { x: 595.0, y: 352.0 },
+      { x: 55.0, y: 352.0 }
+    ],
+    updated_at: SEED_TIMESTAMP
+  }
+];

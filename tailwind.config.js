@@ -1,23 +1,29 @@
-const defaultTheme = require('tailwindcss/defaultTheme');
+const defaultTheme = require("tailwindcss/defaultTheme");
 
 module.exports = {
-    purge: [
-        './vendor/laravel/jetstream/**/*.blade.php',
-        './storage/framework/views/*.php',
-        './resources/views/**/*.blade.php',
-    ],
+  darkMode: "class",
+  purge: [
+    "./resources/views/**/*.blade.php",
+    "./resources/js/**/*.vue",
+    "./resources/js/**/*.js"
+  ],
 
-    theme: {
-        extend: {
-            fontFamily: {
-                sans: ['Nunito', ...defaultTheme.fontFamily.sans],
-            },
-        },
-    },
+  theme: {
+    extend: {
+      fontFamily: {
+        sans: ['"Plus Jakarta Sans"', ...defaultTheme.fontFamily.sans]
+      }
+    }
+  },
 
-    variants: {
-        opacity: ['responsive', 'hover', 'focus', 'disabled'],
-    },
+  variants: {
+    extend: {
+      opacity: ["disabled"],
+      backgroundColor: ["dark", "hover", "focus", "active"],
+      textColor: ["dark", "hover", "focus"],
+      borderColor: ["dark", "hover", "focus"]
+    }
+  },
 
-    plugins: [require('@tailwindcss/ui')],
+  plugins: []
 };

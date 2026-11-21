@@ -1,0 +1,25 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "buildCommand": "npm run build:static",
+  "outputDirectory": "dist",
+  "cleanUrls": true,
+  "trailingSlash": false,
+  "rewrites": [
+    { "source": "/detail/video/:id", "destination": "/videodetail.html" },
+    { "source": "/detail/:id", "destination": "/detail.html" },
+    { "source": "/table/add", "destination": "/add.html" },
+    { "source": "/table/edit/:id", "destination": "/edit.html" },
+    { "source": "/setting/:id", "destination": "/setting.html" },
+    { "source": "/profile/:id", "destination": "/profile.html" },
+    { "source": "/password", "destination": "/password.html" },
+    { "source": "/logout", "destination": "/logout.html" }
+  ],
+  "headers": [
+    {
+      "source": "/(js|css|fonts)/(.*)",
+      "headers": [
+        { "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }
+      ]
+    }
+  ]
+}
