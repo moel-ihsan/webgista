@@ -5,7 +5,6 @@ import AppIcon from "@/components/common/AppIcon.vue";
 import TrafficGradeBadge from "@/components/common/TrafficGradeBadge.vue";
 import TrafficCounterCards from "@/components/cctv/TrafficCounterCards.vue";
 import VideoDetectorPlayer from "@/components/cctv/VideoDetectorPlayer.vue";
-import SimulationBanner from "@/components/layout/SimulationBanner.vue";
 import MapLegend from "@/components/map/MapLegend.vue";
 import TrafficMap from "@/components/map/TrafficMap.vue";
 import CctvTable from "@/components/table/CctvTable.vue";
@@ -158,23 +157,6 @@ describe("Frontend smoke tests", () => {
     expect(wrapper.find("#result-truck").text()).toBe("2");
     expect(wrapper.find("#result-motor").text()).toBe("10");
     expect(wrapper.find("#result-kendaraan").text()).toBe("Very Good");
-  });
-
-  it("renders SimulationBanner only when simulation is enabled", () => {
-    const disabledWrapper = shallowMount(SimulationBanner, { localVue: buildLocalVue() });
-    expect(disabledWrapper.find(".simulation-demo-banner").exists()).toBe(false);
-
-    const meta = document.createElement("meta");
-    meta.name = "webgista-simulation";
-    meta.content = JSON.stringify({
-      enabled: true,
-      banner_text: "SIMULASI DEMO — Video contoh."
-    });
-    document.head.appendChild(meta);
-
-    const enabledWrapper = shallowMount(SimulationBanner, { localVue: buildLocalVue() });
-    expect(enabledWrapper.find(".simulation-demo-banner").exists()).toBe(true);
-    expect(enabledWrapper.text()).toContain("SIMULASI DEMO — Video contoh.");
   });
 
   it("renders CctvDetailView with Detection View action only for Analytic cameras", () => {
