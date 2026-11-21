@@ -20,31 +20,45 @@ Vue.component("TrafficGradeBadge", TrafficGradeBadge);
 
 /* eslint-disable vue/component-definition-name-casing */
 Vue.component("login", () => import(/* webpackChunkName: "page-login" */ "./pages/LoginPage.vue"));
-Vue.component("dashboard", () =>
-  import(/* webpackChunkName: "page-dashboard" */ "./pages/DashboardPage.vue")
+Vue.component(
+  "dashboard",
+  () => import(/* webpackChunkName: "page-dashboard" */ "./pages/DashboardPage.vue")
 );
-Vue.component("mapview", () => import(/* webpackChunkName: "page-map" */ "./pages/MapViewPage.vue"));
-Vue.component("tableview", () =>
-  import(/* webpackChunkName: "page-table" */ "./pages/TableViewPage.vue")
+Vue.component(
+  "mapview",
+  () => import(/* webpackChunkName: "page-map" */ "./pages/MapViewPage.vue")
 );
-Vue.component("add", () => import(/* webpackChunkName: "page-cctv-add" */ "./pages/CctvAddPage.vue"));
-Vue.component("edit", () =>
-  import(/* webpackChunkName: "page-cctv-edit" */ "./pages/CctvEditPage.vue")
+Vue.component(
+  "tableview",
+  () => import(/* webpackChunkName: "page-table" */ "./pages/TableViewPage.vue")
 );
-Vue.component("detail", () =>
-  import(/* webpackChunkName: "page-cctv-detail" */ "./pages/CctvDetailPage.vue")
+Vue.component(
+  "add",
+  () => import(/* webpackChunkName: "page-cctv-add" */ "./pages/CctvAddPage.vue")
 );
-Vue.component("videodetail", () =>
-  import(/* webpackChunkName: "page-video-detail" */ "./pages/VideoDetailPage.vue")
+Vue.component(
+  "edit",
+  () => import(/* webpackChunkName: "page-cctv-edit" */ "./pages/CctvEditPage.vue")
 );
-Vue.component("settings", () =>
-  import(/* webpackChunkName: "page-settings" */ "./pages/SettingsPage.vue")
+Vue.component(
+  "detail",
+  () => import(/* webpackChunkName: "page-cctv-detail" */ "./pages/CctvDetailPage.vue")
 );
-Vue.component("profile", () =>
-  import(/* webpackChunkName: "page-profile" */ "./pages/ProfilePage.vue")
+Vue.component(
+  "videodetail",
+  () => import(/* webpackChunkName: "page-video-detail" */ "./pages/VideoDetailPage.vue")
 );
-Vue.component("password", () =>
-  import(/* webpackChunkName: "page-password" */ "./pages/PasswordPage.vue")
+Vue.component(
+  "settings",
+  () => import(/* webpackChunkName: "page-settings" */ "./pages/SettingsPage.vue")
+);
+Vue.component(
+  "profile",
+  () => import(/* webpackChunkName: "page-profile" */ "./pages/ProfilePage.vue")
+);
+Vue.component(
+  "password",
+  () => import(/* webpackChunkName: "page-password" */ "./pages/PasswordPage.vue")
 );
 /* eslint-enable vue/component-definition-name-casing */
 

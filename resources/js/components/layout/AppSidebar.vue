@@ -128,7 +128,9 @@ export default {
   border-radius: var(--radius-lg);
   padding: var(--space-3) var(--space-2);
   box-shadow: var(--shadow-float);
-  transition: width 0.2s ease, transform 0.2s ease;
+  transition:
+    width 0.2s ease,
+    transform 0.2s ease;
 }
 
 .sidebar-nav--expanded {
@@ -165,7 +167,9 @@ export default {
   gap: var(--space-3);
   font-size: var(--text-sm);
   font-weight: 600;
-  transition: background-color 0.15s ease, color 0.15s ease;
+  transition:
+    background-color 0.15s ease,
+    color 0.15s ease;
 }
 
 .sidebar-nav--expanded .sidebar-link {

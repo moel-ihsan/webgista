@@ -10,7 +10,12 @@
           aria-label="Jumlah baris per halaman"
           @change="handleFilter"
         >
-          <el-option v-for="item in pages" :key="item.value" :label="item.label" :value="item.value" />
+          <el-option
+            v-for="item in pages"
+            :key="item.value"
+            :label="item.label"
+            :value="item.value"
+          />
         </el-select>
 
         <div class="table-search-wrap">
@@ -136,7 +141,9 @@
           <span
             class="table-status-pill"
             :class="
-              row.status === 'Regular' ? 'table-status-pill--regular' : 'table-status-pill--analytic'
+              row.status === 'Regular'
+                ? 'table-status-pill--regular'
+                : 'table-status-pill--analytic'
             "
           >
             {{ row.status }}
@@ -480,7 +487,10 @@ export default {
   justify-content: center;
   gap: 6px;
   cursor: pointer;
-  transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+  transition:
+    background-color 0.15s ease,
+    color 0.15s ease,
+    border-color 0.15s ease;
 }
 
 .action-icon-btn:hover {

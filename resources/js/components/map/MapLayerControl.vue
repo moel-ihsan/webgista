@@ -20,8 +20,15 @@
         class="checkbox-group-map"
         @input="$emit('update:checked-layers', $event)"
       >
-        <el-checkbox class="layer-item" label="cctv" @change="$emit('toggle-layer', 2)">CCTV</el-checkbox>
-        <el-checkbox id="state-fills" class="layer-item" label="adm" @change="$emit('toggle-layer', 1)">
+        <el-checkbox class="layer-item" label="cctv" @change="$emit('toggle-layer', 2)"
+          >CCTV</el-checkbox
+        >
+        <el-checkbox
+          id="state-fills"
+          class="layer-item"
+          label="adm"
+          @change="$emit('toggle-layer', 1)"
+        >
           Banda Aceh ADM
         </el-checkbox>
       </el-checkbox-group>

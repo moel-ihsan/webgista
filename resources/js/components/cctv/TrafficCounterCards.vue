@@ -73,7 +73,9 @@ export default {
   display: flex;
   align-items: center;
   box-shadow: var(--shadow-card);
-  transition: transform 0.15s ease, border-color 0.15s ease;
+  transition:
+    transform 0.15s ease,
+    border-color 0.15s ease;
 }
 
 .veh-info-card:hover {

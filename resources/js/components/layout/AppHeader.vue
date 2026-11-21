@@ -59,7 +59,11 @@
             </a>
           </li>
           <li role="none">
-            <a href="/logout" class="profile-dropdown-link profile-dropdown-link--danger" role="menuitem">
+            <a
+              href="/logout"
+              class="profile-dropdown-link profile-dropdown-link--danger"
+              role="menuitem"
+            >
               <AppIcon name="log-out" :size="18" />
               <span>Log Out</span>
             </a>
@@ -196,7 +200,9 @@ export default {
   cursor: pointer;
   flex-shrink: 0;
   box-shadow: var(--shadow-card);
-  transition: background-color 0.15s ease, border-color 0.15s ease;
+  transition:
+    background-color 0.15s ease,
+    border-color 0.15s ease;
 }
 
 .header-menu-btn:hover {
@@ -247,7 +253,9 @@ export default {
   justify-content: flex-start;
   cursor: pointer;
   box-shadow: var(--shadow-card);
-  transition: border-color 0.15s ease, background-color 0.15s ease;
+  transition:
+    border-color 0.15s ease,
+    background-color 0.15s ease;
 }
 
 .theme-switch-btn:hover {
@@ -281,7 +289,9 @@ html.theme-dark .theme-switch-btn {
   align-items: center;
   justify-content: center;
   box-shadow: var(--shadow-card);
-  transition: background-color 0.15s ease, transform 0.15s ease;
+  transition:
+    background-color 0.15s ease,
+    transform 0.15s ease;
 }
 
 .header-login-btn:hover {

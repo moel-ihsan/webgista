@@ -127,7 +127,9 @@ export default {
   border: 1px solid var(--border-subtle);
   position: relative;
   background-color: var(--bg-surface-subtle);
-  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  transition:
+    transform 0.15s ease,
+    box-shadow 0.15s ease;
 }
 
 .carousel-cell--fluid {

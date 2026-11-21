@@ -731,7 +731,10 @@ export default {
   top: 64px;
   right: 12px;
   max-height: calc(100% - 76px);
-  transition: transform 0.3s ease, opacity 0.25s ease, visibility 0.3s ease;
+  transition:
+    transform 0.3s ease,
+    opacity 0.25s ease,
+    visibility 0.3s ease;
   z-index: 15;
   width: min(320px, calc(100% - 24px));
   display: flex;
@@ -767,7 +770,9 @@ export default {
   color: var(--text-primary);
   cursor: pointer;
   padding: 0;
-  transition: background-color 0.15s ease, color 0.15s ease;
+  transition:
+    background-color 0.15s ease,
+    color 0.15s ease;
 }
 
 /* Aligned cleanly right below Navigation (3x44+2=134) + Geolocate (44+2=46) with 12px edge & 10px gaps */

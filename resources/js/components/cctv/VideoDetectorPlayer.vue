@@ -18,11 +18,7 @@
           crossorigin="anonymous"
           style="display: none"
         >
-          <source
-            v-if="host === 'www.youtube.com'"
-            :src="resolvedVideoUrl"
-            type="video/youtube"
-          />
+          <source v-if="host === 'www.youtube.com'" :src="resolvedVideoUrl" type="video/youtube" />
           <source v-else-if="resolvedVideoUrl" :src="resolvedVideoUrl" type="video/mp4" />
         </video>
         <canvas

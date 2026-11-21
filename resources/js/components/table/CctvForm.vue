@@ -77,11 +77,7 @@
             </el-form-item>
           </div>
 
-          <el-form-item
-            label="Video URL"
-            prop="url"
-            :class="{ 'is-required': isUrlRequired }"
-          >
+          <el-form-item label="Video URL" prop="url" :class="{ 'is-required': isUrlRequired }">
             <el-input
               id="url"
               v-model="formLabelAlign.url"
@@ -172,7 +168,10 @@ export default {
         url: [
           {
             validator: (_rule, value, callback) => {
-              if (this.formLabelAlign.category === "Analytic" && (!value || !String(value).trim())) {
+              if (
+                this.formLabelAlign.category === "Analytic" &&
+                (!value || !String(value).trim())
+              ) {
                 callback(new Error("Video URL wajib diisi untuk kategori Analytic"));
                 return;
               }
@@ -221,7 +220,10 @@ export default {
   },
   methods: {
     handleCategory() {
-      if (this.$refs.formLabelAlign && typeof this.$refs.formLabelAlign.clearValidate === "function") {
+      if (
+        this.$refs.formLabelAlign &&
+        typeof this.$refs.formLabelAlign.clearValidate === "function"
+      ) {
         this.$refs.formLabelAlign.clearValidate("url");
       }
     },

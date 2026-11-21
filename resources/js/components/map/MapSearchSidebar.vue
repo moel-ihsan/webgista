@@ -93,7 +93,10 @@ export default {
   methods: {
     formatMetaLine(item) {
       const rawAddress = (item && item.address) || "";
-      const street = rawAddress.replace(/\s*\([^)]*\)\s*/g, " ").replace(/\s+/g, " ").trim();
+      const street = rawAddress
+        .replace(/\s*\([^)]*\)\s*/g, " ")
+        .replace(/\s+/g, " ")
+        .trim();
       const cond = (item && item.cond) || "No Data";
       return street ? `${street} · ${cond}` : cond;
     }
@@ -117,7 +120,10 @@ export default {
   font-weight: 700;
   color: var(--text-primary);
   cursor: pointer;
-  transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+  transition:
+    background-color 0.15s ease,
+    color 0.15s ease,
+    border-color 0.15s ease;
 }
 
 .map-search-pill:hover {
@@ -177,7 +183,10 @@ export default {
   gap: 12px;
   cursor: pointer;
   min-height: 70px;
-  transition: border-color 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
+  transition:
+    border-color 0.15s ease,
+    transform 0.15s ease,
+    box-shadow 0.15s ease;
 }
 
 .search-info-card:hover {
