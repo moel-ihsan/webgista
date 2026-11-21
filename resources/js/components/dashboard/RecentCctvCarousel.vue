@@ -144,6 +144,11 @@ export default {
   height: 100%;
   object-fit: cover;
   display: block;
+  transition: transform 0.45s ease;
+}
+
+.carousel-cell:hover .imageRecent {
+  transform: scale(1.15);
 }
 
 .carousel-scrim {

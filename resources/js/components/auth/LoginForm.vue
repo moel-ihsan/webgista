@@ -189,6 +189,7 @@ export default {
 .set-img-profile {
   position: relative;
   min-height: 420px;
+  overflow: hidden;
   background-color: var(--bg-surface-subtle);
 }
 
@@ -197,6 +198,11 @@ export default {
   height: 100%;
   object-fit: cover;
   display: block;
+  transition: transform 0.55s ease;
+}
+
+.set-img-profile:hover .imgCont {
+  transform: scale(1.08);
 }
 
 @media screen and (max-width: 767px) {

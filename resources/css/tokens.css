@@ -3,7 +3,7 @@
 :root,
 html.theme-normal {
   /* Typography */
-  --font-sans: "Montserrat", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-sans: "Plus Jakarta Sans", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   --text-caption: 0.75rem;   /* 12px minimum caption */
   --text-sm: 0.875rem;       /* 14px UI controls & labels */
   --text-base: 1rem;         /* 16px body base */

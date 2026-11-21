@@ -77,7 +77,6 @@ export default {
       ];
       if (this.role === "admin") {
         items.push({ id: "settings", href: "/setting/1", icon: "settings", label: "Map Settings" });
-        items.push({ id: "logout", href: "/logout", icon: "log-out", label: "Log Out" });
       }
       return items;
     }

@@ -136,6 +136,11 @@ export default {
   height: 100%;
   object-fit: cover;
   display: block;
+  transition: transform 0.45s ease;
+}
+
+.cardVideoCCTV:hover .detail-regular-image {
+  transform: scale(1.06);
 }
 
 .detail-info-card {

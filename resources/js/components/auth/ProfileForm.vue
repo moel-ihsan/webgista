@@ -219,6 +219,11 @@ export default {
   height: 100%;
   object-fit: cover;
   display: block;
+  transition: transform 0.55s ease;
+}
+
+.set-img-profiles:hover .imgCont {
+  transform: scale(1.08);
 }
 
 .profile-photo-scrim {

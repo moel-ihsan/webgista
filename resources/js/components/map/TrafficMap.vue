@@ -3,6 +3,7 @@
     <div id="map">
       <MapSearchSidebar
         :items="filteredItems"
+        :total-count="items.length"
         :filter-text.sync="filterState"
         :is-collapsed="rightCollapsed"
         @select="flyToCctv"
@@ -673,29 +674,23 @@ export default {
   box-shadow: var(--shadow-float);
 }
 
-.flex-center {
-  position: absolute;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-}
-
-.flex-center.right {
-  top: 12px;
-  bottom: 12px;
-  right: 12px;
-}
-
 .sidebar {
-  transition: transform 0.35s ease;
+  position: absolute;
+  top: 64px;
+  right: 12px;
+  max-height: calc(100% - 76px);
+  transition: transform 0.3s ease, opacity 0.25s ease, visibility 0.3s ease;
   z-index: 15;
-  width: min(320px, calc(100% - 80px));
+  width: min(320px, calc(100% - 24px));
+  display: flex;
+  flex-direction: column;
 }
 
 .sidebar-content {
   position: relative;
   width: 100%;
-  height: 100%;
+  flex: 1 1 auto;
+  min-height: 0;
   padding: 12px 8px 8px;
   display: flex;
   flex-direction: column;
@@ -703,7 +698,10 @@ export default {
 }
 
 .right.collapsed {
-  transform: translateX(calc(100% + 12px));
+  transform: translateX(calc(100% + 24px));
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
 }
 
 .sidebar-toggle {
@@ -718,12 +716,6 @@ export default {
   cursor: pointer;
   padding: 0;
   transition: background-color 0.15s ease, color 0.15s ease;
-}
-
-.sidebar-toggle.right {
-  top: -1px;
-  left: -57px;
-  z-index: 16;
 }
 
 /* Aligned cleanly right below Navigation (3x44+2=134) + Geolocate (44+2=46) with 12px edge & 10px gaps */

@@ -10,10 +10,10 @@ mix
   ])
   .copy(
     [
-      "node_modules/@fontsource/montserrat/files/montserrat-latin-400-normal.woff2",
-      "node_modules/@fontsource/montserrat/files/montserrat-latin-500-normal.woff2",
-      "node_modules/@fontsource/montserrat/files/montserrat-latin-600-normal.woff2",
-      "node_modules/@fontsource/montserrat/files/montserrat-latin-700-normal.woff2"
+      "node_modules/@fontsource/plus-jakarta-sans/files/plus-jakarta-sans-latin-400-normal.woff2",
+      "node_modules/@fontsource/plus-jakarta-sans/files/plus-jakarta-sans-latin-500-normal.woff2",
+      "node_modules/@fontsource/plus-jakarta-sans/files/plus-jakarta-sans-latin-600-normal.woff2",
+      "node_modules/@fontsource/plus-jakarta-sans/files/plus-jakarta-sans-latin-700-normal.woff2"
     ],
-    "public/fonts/montserrat"
+    "public/fonts/plus-jakarta-sans"
   );

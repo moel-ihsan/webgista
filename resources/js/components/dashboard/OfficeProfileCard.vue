@@ -53,22 +53,6 @@ export default {
   color: var(--text-primary);
 }
 
-.imgBox {
-  border-radius: var(--radius-md);
-  height: 200px;
-  overflow: hidden;
-  box-shadow: var(--shadow-card);
-  position: relative;
-  background-color: var(--bg-surface-subtle);
-}
-
-.imgBox .imgCont {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  display: block;
-}
-
 .officeContent {
   padding-top: var(--space-4);
 }

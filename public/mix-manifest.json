@@ -12,8 +12,8 @@
     "/js/page-profile.js": "/js/page-profile.js",
     "/js/page-password.js": "/js/page-password.js",
     "/css/app.css": "/css/app.css",
-    "/fonts/montserrat/montserrat-latin-400-normal.woff2": "/fonts/montserrat/montserrat-latin-400-normal.woff2",
-    "/fonts/montserrat/montserrat-latin-500-normal.woff2": "/fonts/montserrat/montserrat-latin-500-normal.woff2",
-    "/fonts/montserrat/montserrat-latin-600-normal.woff2": "/fonts/montserrat/montserrat-latin-600-normal.woff2",
-    "/fonts/montserrat/montserrat-latin-700-normal.woff2": "/fonts/montserrat/montserrat-latin-700-normal.woff2"
+    "/fonts/plus-jakarta-sans/plus-jakarta-sans-latin-400-normal.woff2": "/fonts/plus-jakarta-sans/plus-jakarta-sans-latin-400-normal.woff2",
+    "/fonts/plus-jakarta-sans/plus-jakarta-sans-latin-500-normal.woff2": "/fonts/plus-jakarta-sans/plus-jakarta-sans-latin-500-normal.woff2",
+    "/fonts/plus-jakarta-sans/plus-jakarta-sans-latin-600-normal.woff2": "/fonts/plus-jakarta-sans/plus-jakarta-sans-latin-600-normal.woff2",
+    "/fonts/plus-jakarta-sans/plus-jakarta-sans-latin-700-normal.woff2": "/fonts/plus-jakarta-sans/plus-jakarta-sans-latin-700-normal.woff2"
 }
