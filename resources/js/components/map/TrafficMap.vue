@@ -681,30 +681,29 @@ export default {
 }
 
 .flex-center.right {
-  top: 10px;
-  bottom: 10px;
-  right: 10px;
+  top: 12px;
+  bottom: 12px;
+  right: 12px;
 }
 
 .sidebar {
   transition: transform 0.35s ease;
   z-index: 15;
-  width: min(320px, calc(100vw - 74px));
-  height: calc(100% - 20px);
+  width: min(320px, calc(100% - 80px));
 }
 
 .sidebar-content {
   position: relative;
   width: 100%;
   height: 100%;
-  padding: 12px;
+  padding: 12px 8px 8px;
   display: flex;
   flex-direction: column;
   background-color: var(--bg-surface);
 }
 
 .right.collapsed {
-  transform: translateX(calc(100% + 20px));
+  transform: translateX(calc(100% + 12px));
 }
 
 .sidebar-toggle {
@@ -722,21 +721,21 @@ export default {
 }
 
 .sidebar-toggle.right {
-  top: 0;
-  left: -54px;
+  top: -1px;
+  left: -57px;
   z-index: 16;
 }
 
-/* Aligned cleanly right below Navigation (3x44=134) + Geolocate (44) */
+/* Aligned cleanly right below Navigation (3x44+2=134) + Geolocate (44+2=46) with 12px edge & 10px gaps */
 .sidebar-toggle.zoomHome {
-  left: 10px;
-  top: 210px;
+  left: 12px;
+  top: 212px;
   z-index: 10;
 }
 
 .sidebar-toggle.left {
-  left: 10px;
-  top: 264px;
+  left: 12px;
+  top: 266px;
   z-index: 10;
 }
 
@@ -756,8 +755,8 @@ export default {
   border-radius: var(--radius-md);
   position: absolute;
   max-width: 260px;
-  bottom: 44px;
-  left: 10px;
+  bottom: 48px;
+  left: 12px;
   padding: 10px 12px;
   z-index: 9;
   display: none;

@@ -96,7 +96,8 @@ export default {
 
 <style>
 .map-search-header {
-  margin-bottom: var(--space-2);
+  padding: 0 4px;
+  margin-bottom: 4px;
 }
 
 .map-search-label {
@@ -129,7 +130,7 @@ export default {
   display: flex;
   flex-direction: column;
   gap: 10px;
-  padding-right: 2px;
+  padding: 6px 4px 10px 4px;
 }
 
 .search-info-card {

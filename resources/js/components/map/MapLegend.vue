@@ -69,11 +69,11 @@ export default {
   background-color: var(--bg-surface);
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-md);
-  bottom: 36px;
+  bottom: 12px;
   box-shadow: var(--shadow-float);
   padding: 10px 12px;
   position: absolute;
-  right: 10px;
+  right: 12px;
   z-index: 10;
   color: var(--text-primary);
   min-width: 170px;
@@ -109,8 +109,8 @@ export default {
 .legend-items {
   display: grid;
   grid-template-columns: 1fr;
-  gap: 6px;
-  margin-top: 8px;
+  gap: 5px;
+  margin-top: 6px;
 }
 
 .legend-item {
@@ -137,9 +137,9 @@ export default {
 
 @media screen and (max-width: 767px) {
   .legend {
-    left: 10px;
-    right: 10px;
-    bottom: 44px;
+    left: 12px;
+    right: 12px;
+    bottom: 48px;
     min-width: 0;
     padding: 8px 10px;
   }
