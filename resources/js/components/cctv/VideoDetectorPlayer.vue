@@ -127,6 +127,7 @@
 
 <script>
 import { getSimulationConfig, resolveCameraSimulation } from "../../config/simulation";
+import { fetchAuthUser } from "../../services/api/authApi";
 import { updateRoi, updateTrafficCondition } from "../../services/api/cctvApi";
 import { loadCocoSsdModel } from "../../services/traffic/cocoSsdLoader";
 import { ANALYSIS_WINDOW_SECONDS } from "../../services/traffic/ihcmClassifier";
@@ -181,7 +182,8 @@ export default {
       conditionLabel: "No Data",
       tracker: new TrafficWindowTracker(ANALYSIS_WINDOW_SECONDS),
       isDetecting: false,
-      isDestroyed: false
+      isDestroyed: false,
+      isAdmin: false
     };
   },
   computed: {
@@ -203,6 +205,13 @@ export default {
       this.conditionLabel = this.cctv.keterangan;
     }
     this.parseUrl();
+    fetchAuthUser()
+      .then((data) => {
+        if (!this.isDestroyed) {
+          this.isAdmin = Boolean(data && data.user && data.user.role === "admin");
+        }
+      })
+      .catch(() => {});
   },
   mounted() {
     this.setupVideoDetection();
@@ -498,7 +507,7 @@ export default {
       this.lastMatchedDetections = step.frameCounts.matchedDetections;
       this.renderCanvasOverlays();
 
-      if (step.shouldPersist && this.cctv && this.cctv.id) {
+      if (this.isAdmin && step.shouldPersist && this.cctv && this.cctv.id) {
         updateTrafficCondition(this.cctv.id, step.classification.label).catch(() => {});
       }
     },

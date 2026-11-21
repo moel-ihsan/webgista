@@ -341,6 +341,10 @@ describe("Frontend smoke tests", () => {
     await Promise.resolve();
     await Promise.resolve();
 
+    // Sidebar items load immediately in created() even before map style.load completes
+    expect(wrapper.vm.items).toHaveLength(2);
+    expect(wrapper.vm.filteredItems).toHaveLength(2);
+
     const map = mapboxgl.__getInstance();
     expect(mapboxgl.Map).toHaveBeenCalledTimes(1);
     expect(map.__handlers["mousemove:state-fills"]).toHaveLength(1);

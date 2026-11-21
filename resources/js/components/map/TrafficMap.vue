@@ -87,6 +87,9 @@ export default {
       );
     }
   },
+  created() {
+    this.loadSidebarItems();
+  },
   mounted() {
     this.initMap();
   },
@@ -97,6 +100,13 @@ export default {
     }
   },
   methods: {
+    loadSidebarItems() {
+      fetchCctvPoints()
+        .then((rows) => {
+          this.items = rows.map((row) => this.mapRowToSidebarItem(row));
+        })
+        .catch(() => {});
+    },
     clearPolling() {
       if (this.pollTimer) {
         clearInterval(this.pollTimer);
