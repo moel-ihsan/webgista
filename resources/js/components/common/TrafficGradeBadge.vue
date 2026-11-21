@@ -8,7 +8,11 @@
 </template>
 
 <script>
-import { NO_DATA_LEVEL, TRAFFIC_LEVELS } from "../../services/traffic/ihcmClassifier";
+import {
+  NO_DATA_LEVEL,
+  REGULAR_CAMERA_LEVEL,
+  TRAFFIC_LEVELS
+} from "../../services/traffic/ihcmClassifier";
 
 export default {
   name: "TrafficGradeBadge",
@@ -35,6 +39,10 @@ export default {
       const normalizedGrade = (this.grade || "").trim().toUpperCase();
       const normalizedStatus = (this.status || "").trim().toLowerCase();
 
+      if (normalizedGrade === "R" || normalizedStatus === "regular") {
+        return REGULAR_CAMERA_LEVEL;
+      }
+
       const match = TRAFFIC_LEVELS.find(
         (level) =>
           (normalizedGrade && level.grade === normalizedGrade) ||
@@ -53,6 +61,9 @@ export default {
       return this.resolvedLevel.label;
     },
     accessibleLabel() {
+      if (this.resolvedLevel.grade === "R") {
+        return "CCTV Regular (Pantauan Non-Analitik)";
+      }
       return this.resolvedLevel.grade
         ? `Kondisi ${this.resolvedLevel.grade} ${this.resolvedLevel.label}`
         : `Kondisi ${this.resolvedLevel.label}`;

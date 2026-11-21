@@ -50,8 +50,9 @@ import { fetchAll as fetchMapSettings } from "../../services/api/mapSettingApi";
 import { resolveCameraSimulation } from "../../config/simulation";
 import { isDarkTheme, subscribeTheme } from "../../services/theme";
 import {
-  getGradeForCondition,
   NO_DATA_LEVEL,
+  REGULAR_CAMERA_LEVEL,
+  resolvePointStatus,
   TRAFFIC_LEVELS
 } from "../../services/traffic/ihcmClassifier";
 import { escapeHtml, formatCoordinate, resolveCctvImagePath } from "../../utils/formatters";
@@ -95,7 +96,7 @@ export default {
   },
   computed: {
     legendItems() {
-      return [...TRAFFIC_LEVELS].reverse().concat([NO_DATA_LEVEL]);
+      return [...TRAFFIC_LEVELS].reverse().concat([NO_DATA_LEVEL, REGULAR_CAMERA_LEVEL]);
     },
     filteredItems() {
       const q = this.filterState.toLowerCase();
@@ -166,7 +167,7 @@ export default {
       }
     },
     mapRowToSidebarItem(row) {
-      const condLabel = row.keterangan || NO_DATA_LEVEL.label;
+      const pointStatus = resolvePointStatus(row.category, row.keterangan);
       return {
         id: row.id,
         name: row.name,
@@ -174,8 +175,8 @@ export default {
         coordinate: `${formatCoordinate(row.longitude)} E ${formatCoordinate(row.lattitude)} N`,
         latLong: [Number(row.longitude), Number(row.lattitude)],
         status: row.category,
-        cond: condLabel,
-        grade: getGradeForCondition(condLabel),
+        cond: pointStatus.label,
+        grade: pointStatus.grade,
         source: row.path_image,
         imageUrl: resolveCctvImagePath(row.path_image),
         url: row.url
@@ -183,46 +184,79 @@ export default {
     },
     buildPopupHtml(row) {
       const category = row.status || row.category;
-      const condLabel = row.cond || row.keterangan || NO_DATA_LEVEL.label;
-      const grade = getGradeForCondition(condLabel);
-      const chipCode = grade === "?" ? "N" : grade;
+      const pointStatus = resolvePointStatus(category, row.cond || row.keterangan);
       const safeName = escapeHtml(row.name || "CCTV");
-      const safeCond = escapeHtml(condLabel);
+      const safeCond = escapeHtml(pointStatus.label);
       const safeDetailUrl = `/detail/${encodeURIComponent(String(row.id || ""))}`;
+      const fallbackImgUrl = escapeHtml(resolveCctvImagePath(row.path_image));
       const resolvedUrl =
         row.url || (category === "Analytic" ? resolveCameraSimulation(row).videoUrl : "");
 
       const mediaHtml = resolvedUrl
-        ? `<video id="my-video" class="popup-img vidcctv" controls autoplay muted loop playsinline aria-label="Video CCTV ${safeName}"><source src="${escapeHtml(resolvedUrl)}" type="video/mp4" /></video>`
-        : `<img id="my-img" class="popup-img vidcctv" src="${escapeHtml(resolveCctvImagePath(row.path_image))}" alt="Pratinjau CCTV ${safeName}" />`;
+        ? `<video id="my-video" class="popup-img vidcctv" controls autoplay muted loop playsinline data-fallback-src="${fallbackImgUrl}" data-fallback-alt="Pratinjau CCTV ${safeName}" aria-label="Video CCTV ${safeName}"><source src="${escapeHtml(resolvedUrl)}" type="video/mp4" /></video>`
+        : `<img id="my-img" class="popup-img vidcctv" src="${fallbackImgUrl}" alt="Pratinjau CCTV ${safeName}" />`;
+
+      const statusText = pointStatus.isRegular ? "Kategori: Regular" : `Status: ${safeCond}`;
 
       return `<div class="map-popup-card">
         <div class="map-popup-header">
           <strong class="map-popup-name">${safeName}</strong>
-          <span class="grade-chip grade-chip--sm grade-chip--${chipCode}" aria-label="Kondisi ${safeCond}">${escapeHtml(grade)}</span>
+          <span class="grade-chip grade-chip--sm grade-chip--${pointStatus.chipCode}" aria-label="${pointStatus.isRegular ? "CCTV Regular" : `Kondisi ${safeCond}`}">${escapeHtml(pointStatus.grade)}</span>
         </div>
         ${mediaHtml}
         <div class="map-popup-footer">
-          <span class="map-popup-status">Status: ${safeCond}</span>
+          <span class="map-popup-status">${statusText}</span>
           <a href="${safeDetailUrl}" class="map-popup-link">Detail →</a>
         </div>
       </div>`;
     },
-    toGeoJsonFeatures(rows) {
-      return rows.map((row) => ({
-        type: "Feature",
-        properties: {
-          pointID: String(row.id),
-          description: this.buildPopupHtml(row),
-          traffic: `${row.category}`,
-          cond: `${row.keterangan}`,
-          grade: getGradeForCondition(row.keterangan)
-        },
-        geometry: {
-          type: "Point",
-          coordinates: [Number(row.longitude), Number(row.lattitude)]
+    attachPopupMediaFallback(popup) {
+      if (!popup || typeof popup.getElement !== "function") {
+        return;
+      }
+      const el = popup.getElement();
+      if (!el) {
+        return;
+      }
+      const video = el.querySelector("video.popup-img");
+      if (!video) {
+        return;
+      }
+      const swapToImage = () => {
+        if (!video.parentNode) {
+          return;
         }
-      }));
+        const img = document.createElement("img");
+        img.id = "my-img";
+        img.className = "popup-img vidcctv";
+        img.src = video.getAttribute("data-fallback-src") || resolveCctvImagePath("");
+        img.alt = video.getAttribute("data-fallback-alt") || "Pratinjau CCTV";
+        video.parentNode.replaceChild(img, video);
+      };
+      video.addEventListener("error", swapToImage, { once: true });
+      const source = video.querySelector("source");
+      if (source) {
+        source.addEventListener("error", swapToImage, { once: true });
+      }
+    },
+    toGeoJsonFeatures(rows) {
+      return rows.map((row) => {
+        const pointStatus = resolvePointStatus(row.category, row.keterangan);
+        return {
+          type: "Feature",
+          properties: {
+            pointID: String(row.id),
+            description: this.buildPopupHtml(row),
+            traffic: `${row.category}`,
+            cond: pointStatus.label,
+            grade: pointStatus.grade
+          },
+          geometry: {
+            type: "Point",
+            coordinates: [Number(row.longitude), Number(row.lattitude)]
+          }
+        };
+      });
     },
     initMap() {
       fetchMapSettings()
@@ -306,10 +340,11 @@ export default {
             coordinates[0] += e.lngLat.lng > coordinates[0] ? 360 : -360;
           }
 
-          new maplibregl.Popup({ focusAfterOpen: false })
+          const popup = new maplibregl.Popup({ focusAfterOpen: false })
             .setLngLat(coordinates)
             .setHTML(description)
             .addTo(map);
+          this.attachPopupMediaFallback(popup);
         });
       });
 
@@ -441,6 +476,8 @@ export default {
                   "#FF5F00",
                   "Terrible",
                   "#DC2626",
+                  "Regular",
+                  "#6D28D9",
                   "#2563EB"
                 ]
               }
@@ -476,6 +513,8 @@ export default {
                   "#1F0B00",
                   "Terrible",
                   "#FFFFFF",
+                  "Regular",
+                  "#FFFFFF",
                   "#FFFFFF"
                 ]
               }
@@ -502,9 +541,12 @@ export default {
                   geojson.features.forEach((feature) => {
                     const matchedRow = rowById.get(feature.properties.pointID);
                     if (matchedRow) {
-                      const nextCond = `${matchedRow.keterangan}`;
-                      feature.properties.cond = nextCond;
-                      feature.properties.grade = getGradeForCondition(nextCond);
+                      const nextStatus = resolvePointStatus(
+                        matchedRow.category,
+                        matchedRow.keterangan
+                      );
+                      feature.properties.cond = nextStatus.label;
+                      feature.properties.grade = nextStatus.grade;
                       feature.properties.description = this.buildPopupHtml(matchedRow);
                     }
                   });
@@ -595,7 +637,7 @@ export default {
         popUps[0].remove();
       }
 
-      new maplibregl.Popup({ closeOnClick: true, focusAfterOpen: false, offset: 14 })
+      const popup = new maplibregl.Popup({ closeOnClick: true, focusAfterOpen: false, offset: 14 })
         .setLngLat(targetItem.latLong)
         .setHTML(
           this.buildPopupHtml({
@@ -608,6 +650,7 @@ export default {
           })
         )
         .addTo(this.map);
+      this.attachPopupMediaFallback(popup);
     },
     zoomHome() {
       fetchMapSettings()

@@ -4,6 +4,7 @@ import {
   DEFAULT_CAPACITY_PER_HOUR,
   NO_DATA_LEVEL,
   PCU_WEIGHTS,
+  REGULAR_CAMERA_LEVEL,
   TRAFFIC_LEVELS,
   calculatePcuVolume,
   calculateRoadCapacity,
@@ -13,7 +14,8 @@ import {
   convertWindowVolumeToHourly,
   countDetectionsByCategory,
   getColorForCondition,
-  mapCocoClassToCategory
+  mapCocoClassToCategory,
+  resolvePointStatus
 } from "../../resources/js/services/traffic/ihcmClassifier";
 
 describe("ihcmClassifier (IHCM 1997)", () => {
@@ -110,5 +112,30 @@ describe("ihcmClassifier (IHCM 1997)", () => {
     expect(terrible.grade).toBe("F");
     expect(terrible.label).toBe("Terrible");
     expect(calculateVcRatio({ lv: 40, hv: 0, mc: 0 })).toBeCloseTo(4800 / 4455, 6);
+  });
+
+  test("resolves Regular cameras cleanly without traffic detection and keeps Analytic No Data separate", () => {
+    expect(resolvePointStatus("Regular", "Great")).toEqual({
+      grade: REGULAR_CAMERA_LEVEL.grade,
+      chipCode: "R",
+      label: REGULAR_CAMERA_LEVEL.label,
+      color: REGULAR_CAMERA_LEVEL.color,
+      isRegular: true
+    });
+    expect(resolvePointStatus("Regular", "No Data").grade).toBe("R");
+
+    expect(resolvePointStatus("Analytic", "No Data")).toEqual({
+      grade: "?",
+      chipCode: "N",
+      label: "No Data",
+      color: NO_DATA_LEVEL.color,
+      isRegular: false
+    });
+    expect(resolvePointStatus("Analytic", "Poor")).toMatchObject({
+      grade: "D",
+      chipCode: "D",
+      label: "Poor",
+      isRegular: false
+    });
   });
 });

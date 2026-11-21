@@ -27,8 +27,10 @@ class CctvPointService
     public function create(array $data): CctvPoint
     {
         $url = ! empty($data['url']) ? $data['url'] : null;
+        $category = $data['category'] ?? 'Regular';
         $data['url'] = $url;
-        $data['keterangan'] = $url ? 'Great' : 'No Data';
+        // Regular monitoring cameras do not run traffic detection
+        $data['keterangan'] = ($category === 'Analytic' && $url) ? 'Great' : 'No Data';
 
         $disk = Storage::disk('public');
         $tempPath = 'cctv/image/tmp.jpg';
@@ -52,9 +54,10 @@ class CctvPointService
     public function update(CctvPoint $cctvPoint, array $data): CctvPoint
     {
         $url = ! empty($data['url']) ? $data['url'] : null;
+        $category = $data['category'] ?? $cctvPoint->category;
         $data['url'] = $url;
 
-        if (! $url) {
+        if ($category !== 'Analytic' || ! $url) {
             $data['keterangan'] = 'No Data';
         } elseif (
             in_array($cctvPoint->keterangan, CctvPoint::ALLOWED_CONDITIONS, true)

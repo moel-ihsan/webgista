@@ -2,7 +2,7 @@
   <div class="detail-grid-layout">
     <el-card :body-style="{ padding: '0px' }" class="cardVideoCCTV">
       <video
-        v-if="cctv.category === 'Analytic' && videoSrc"
+        v-if="videoSrc && !videoFailed"
         class="videoCCTV"
         controls
         autoplay
@@ -10,8 +10,9 @@
         loop
         playsinline
         :aria-label="`Video streaming CCTV ${cctv.name}`"
+        @error="onVideoError"
       >
-        <source :src="videoSrc" type="video/mp4" />
+        <source :src="videoSrc" type="video/mp4" @error="onVideoError" />
       </video>
       <img
         v-else
@@ -90,6 +91,11 @@ export default {
       required: true
     }
   },
+  data() {
+    return {
+      videoFailed: false
+    };
+  },
   computed: {
     thumbnailSrc() {
       return resolveCctvImagePath(this.cctv.path_image);
@@ -98,10 +104,21 @@ export default {
       if (this.cctv && this.cctv.url) {
         return this.cctv.url;
       }
-      return resolveCameraSimulation(this.cctv).videoUrl;
+      if (this.cctv && this.cctv.category === "Analytic") {
+        return resolveCameraSimulation(this.cctv).videoUrl;
+      }
+      return "";
+    }
+  },
+  watch: {
+    videoSrc() {
+      this.videoFailed = false;
     }
   },
   methods: {
+    onVideoError() {
+      this.videoFailed = true;
+    },
     handleCancel() {
       window.history.back();
     }

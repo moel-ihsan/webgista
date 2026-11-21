@@ -37,6 +37,12 @@ export const NO_DATA_LEVEL = {
   color: "#0000FF"
 };
 
+export const REGULAR_CAMERA_LEVEL = {
+  grade: "R",
+  label: "Regular",
+  color: "#6D28D9"
+};
+
 /**
  * Map a COCO-SSD class name into an IHCM vehicle category, or null if ignored.
  *
@@ -255,4 +261,34 @@ export function getGradeForCondition(label) {
   const normalized = typeof label === "string" ? label.trim().toLowerCase() : "";
   const matched = TRAFFIC_LEVELS.find((level) => level.label.toLowerCase() === normalized);
   return matched ? matched.grade : "?";
+}
+
+/**
+ * Resolve map & UI status metadata for both Regular monitoring cameras and Analytic traffic cameras.
+ * Regular cameras do not track traffic status and map to REGULAR_CAMERA_LEVEL instead of "No Data".
+ *
+ * @param {string | null | undefined} category
+ * @param {string | null | undefined} conditionLabel
+ * @returns {{ grade: string, chipCode: string, label: string, color: string, isRegular: boolean }}
+ */
+export function resolvePointStatus(category, conditionLabel) {
+  if (typeof category === "string" && category.trim().toLowerCase() === "regular") {
+    return {
+      grade: REGULAR_CAMERA_LEVEL.grade,
+      chipCode: "R",
+      label: REGULAR_CAMERA_LEVEL.label,
+      color: REGULAR_CAMERA_LEVEL.color,
+      isRegular: true
+    };
+  }
+
+  const label = conditionLabel || NO_DATA_LEVEL.label;
+  const grade = getGradeForCondition(label);
+  return {
+    grade,
+    chipCode: grade === "?" ? "N" : grade,
+    label,
+    color: getColorForCondition(label),
+    isRegular: false
+  };
 }

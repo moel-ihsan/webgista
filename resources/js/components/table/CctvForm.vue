@@ -77,8 +77,23 @@
             </el-form-item>
           </div>
 
-          <el-form-item v-if="showUrl" label="URL" prop="url">
-            <el-input id="url" v-model="formLabelAlign.url" />
+          <el-form-item
+            label="Video URL"
+            prop="url"
+            :class="{ 'is-required': isUrlRequired }"
+          >
+            <el-input
+              id="url"
+              v-model="formLabelAlign.url"
+              placeholder="Contoh: /demo/videos/simpang-pdam.mp4 atau URL stream"
+            />
+            <div class="url-field-hint">
+              {{
+                isUrlRequired
+                  ? "Wajib diisi untuk CCTV Analytic (digunakan untuk deteksi lalu lintas)."
+                  : "Opsional untuk CCTV Regular (hanya pantauan; fallback ke thumbnail bila kosong atau error)."
+              }}
+            </div>
           </el-form-item>
 
           <div class="btn-form-submit">
@@ -139,7 +154,6 @@ export default {
         agency: "",
         url: ""
       },
-      showUrl: false,
       imageUrl: "",
       previewObjectUrl: "",
       catList: [
@@ -155,13 +169,27 @@ export default {
         lattitude: [{ required: true, type: "number", message: "Input number", trigger: "blur" }],
         longitude: [{ required: true, type: "number", message: "Input number", trigger: "blur" }],
         agency: [{ required: true, message: "Please input agency", trigger: "blur" }],
-        url: [{ required: false, message: "Please input url", trigger: "blur" }]
+        url: [
+          {
+            validator: (_rule, value, callback) => {
+              if (this.formLabelAlign.category === "Analytic" && (!value || !String(value).trim())) {
+                callback(new Error("Video URL wajib diisi untuk kategori Analytic"));
+                return;
+              }
+              callback();
+            },
+            trigger: "blur"
+          }
+        ]
       }
     };
   },
   computed: {
     isEdit() {
       return Boolean(this.cctv && this.cctv.id);
+    },
+    isUrlRequired() {
+      return this.formLabelAlign.category === "Analytic";
     },
     previewPopupHtml() {
       if (this.previewObjectUrl) {
@@ -184,7 +212,6 @@ export default {
       this.formLabelAlign.agency = this.cctv.agency;
       this.formLabelAlign.url = this.cctv.url || "";
       this.imageUrl = this.cctv.path_image || "";
-      this.showUrl = this.cctv.category === "Analytic";
     }
   },
   beforeDestroy() {
@@ -193,8 +220,10 @@ export default {
     }
   },
   methods: {
-    handleCategory(value) {
-      this.showUrl = value === "Analytic";
+    handleCategory() {
+      if (this.$refs.formLabelAlign && typeof this.$refs.formLabelAlign.clearValidate === "function") {
+        this.$refs.formLabelAlign.clearValidate("url");
+      }
     },
     loadAgencies() {
       fetchAgencies()
@@ -305,6 +334,13 @@ export default {
   font-size: var(--text-caption);
   color: var(--text-secondary);
   word-break: break-all;
+}
+
+.url-field-hint {
+  margin-top: 6px;
+  font-size: var(--text-caption);
+  color: var(--text-muted);
+  line-height: 1.4;
 }
 
 .btn-form-submit {

@@ -31,7 +31,7 @@ abstract class CctvPointRequest extends FormRequest
             'lattitude' => ['required', 'numeric', 'between:-90,90'],
             'longitude' => ['required', 'numeric', 'between:-180,180'],
             'agency' => ['required', 'string', 'max:255'],
-            'url' => ['nullable', 'string', 'max:2048'],
+            'url' => ['nullable', 'required_if:category,Analytic', 'string', 'max:2048'],
         ];
 
         foreach (UpdateCctvRoiRequest::ROI_FIELDS as $field) {

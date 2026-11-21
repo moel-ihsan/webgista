@@ -129,6 +129,41 @@ class CctvApiTest extends TestCase
         $this->assertDatabaseMissing('cctv_points', ['id' => $cctvId]);
     }
 
+    public function test_analytic_requires_video_url_while_regular_supports_optional_video_without_traffic_status(): void
+    {
+        $admin = User::factory()->admin()->create();
+        $this->actingAs($admin);
+
+        // Analytic without video URL must fail validation
+        $this->postJson('/store', [
+            'name' => 'Simpang Analitik Tanpa Video',
+            'category' => 'Analytic',
+            'address' => 'Jl. T. Nyak Arief',
+            'lattitude' => '5.560000',
+            'longitude' => '95.340000',
+            'agency' => 'Dishub',
+            'url' => null,
+        ])->assertStatus(422)->assertJsonValidationErrors(['url']);
+
+        // Regular with optional video URL succeeds without assigning a traffic grade
+        $regularRes = $this->postJson('/store', [
+            'name' => 'CCTV Pasar Aceh',
+            'category' => 'Regular',
+            'address' => 'Jl. KH Ahmad Dahlan',
+            'lattitude' => '5.553500',
+            'longitude' => '95.319500',
+            'agency' => 'Diskominfotik',
+            'url' => '/demo/videos/simpang-pdam.mp4',
+        ])->assertStatus(201);
+
+        $this->assertDatabaseHas('cctv_points', [
+            'id' => $regularRes->json('data.id'),
+            'category' => 'Regular',
+            'url' => '/demo/videos/simpang-pdam.mp4',
+            'keterangan' => 'No Data',
+        ]);
+    }
+
     public function test_admin_can_update_traffic_condition_and_roi_with_validation(): void
     {
         $admin = User::factory()->admin()->create();
