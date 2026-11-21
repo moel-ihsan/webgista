@@ -30,6 +30,22 @@ Implementasi pemulihan dan perapihan versi **v1** dari proyek riset *"Banda Aceh
 
 ---
 
+## Tampilan Antarmuka (Light, Dark, & Responsif)
+
+| Map View Light (`1440px`) | Map View Dark (`1440px`) |
+| --- | --- |
+| ![Map View Light](docs/screenshots/phase45_after/map_1440.png) | ![Map View Dark](docs/screenshots/phase45_after/map_1440_dark.png) |
+
+| Dashboard (`1440px`) | Video Detection & ROI (`1440px` Dark) |
+| --- | --- |
+| ![Dashboard](docs/screenshots/phase45_after/dashboard_1440.png) | ![Video Detection Dark](docs/screenshots/phase45_after/video_detail_1440_dark.png) |
+
+| Table View (`1440px`) | Map View Mobile (`360px`) |
+| --- | --- |
+| ![Table View](docs/screenshots/phase45_after/table_1440.png) | ![Map View Mobile](docs/screenshots/phase45_after/map_360.png) |
+
+---
+
 ## Instalasi & Menjalankan Secara Lokal
 
 Prasyarat: **Node.js `18.17.1`** (lihat [`.nvmrc`](.nvmrc)), **PHP `^8.2`**, dan **Composer** (peta default memakai OpenFreeMap + OpenTopoMap tanpa API key maupun kartu kredit).
@@ -63,4 +79,4 @@ npm run format:check
 - **Simpang PDAM (simulasi):** [`public/demo/videos/simpang-pdam.mp4`](public/demo/videos/simpang-pdam.mp4) diadaptasi (loop `30s`, `640x360`, H.264 tanpa audio) dari [File:A intersection with traffic in Chiang Mai, Thailand.ogv](https://commons.wikimedia.org/wiki/File:A_intersection_with_traffic_in_Chiang_Mai,_Thailand.ogv) oleh **Amada44** ([CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0)).
 - **Simpang Jambo Tape (simulasi):** [`public/demo/videos/simpang-jambo-tape.mp4`](public/demo/videos/simpang-jambo-tape.mp4) diadaptasi (trim `30s`, crop `640x360`, H.264 tanpa audio) dari [File:Changing lanes in Gothenburg ubt.ogv](https://commons.wikimedia.org/wiki/File:Changing_lanes_in_Gothenburg_ubt.ogv) oleh **Tomasz Sienicki (`User:tsca`)** ([CC BY 3.0](https://creativecommons.org/licenses/by/3.0) / GFDL 1.2+).
 
-Dokumentasi teknis lebih rinci tersedia pada [`docs/ANALYSIS.md`](docs/ANALYSIS.md) dan [`docs/SIMULATION_DEMO.md`](docs/SIMULATION_DEMO.md).
+Dokumentasi teknis & UI/UX tersedia pada [`docs/ANALYSIS.md`](docs/ANALYSIS.md), [`docs/SIMULATION_DEMO.md`](docs/SIMULATION_DEMO.md), [`docs/UIUX_AUDIT.md`](docs/UIUX_AUDIT.md), [`docs/DESIGN_PROPOSAL.md`](docs/DESIGN_PROPOSAL.md), [`docs/UIUX_RESULTS.md`](docs/UIUX_RESULTS.md), dan [`docs/BACKLOG.md`](docs/BACKLOG.md).
