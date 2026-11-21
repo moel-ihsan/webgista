@@ -3,8 +3,16 @@
     <el-row :gutter="30">
       <el-col :span="15" :xs="24" :md="24" :lg="15">
         <el-card :body-style="{ padding: '0px' }" class="cardVideoCCTV">
-          <video v-if="cctv.category === 'Analytic'" class="videoCCTV" controls autoplay>
-            <source :src="cctv.url" type="video/mp4" />
+          <video
+            v-if="cctv.category === 'Analytic' && videoSrc"
+            class="videoCCTV"
+            controls
+            autoplay
+            muted
+            loop
+            playsinline
+          >
+            <source :src="videoSrc" type="video/mp4" />
           </video>
           <div v-if="cctv.category === 'Regular'" class="cardVideoCCTV">
             <img :src="thumbnailSrc" height="100%" width="100%" style="object-fit: cover" />
@@ -39,6 +47,13 @@
             />
           </div>
           <div class="btn-form-submit back-btn">
+            <a
+              v-if="cctv.category === 'Analytic'"
+              :href="'/detail/video/' + cctv.id"
+              class="detail-detect-link"
+            >
+              <el-button type="primary">Detection View</el-button>
+            </a>
             <el-button type="info" @click="handleCancel">Back</el-button>
           </div>
         </el-card>
@@ -48,6 +63,7 @@
 </template>
 
 <script>
+import { resolveCameraSimulation } from "../../config/simulation";
 import CoordinatePickerMap from "../map/CoordinatePickerMap.vue";
 import { resolveCctvImagePath } from "../../utils/formatters";
 
@@ -65,6 +81,12 @@ export default {
   computed: {
     thumbnailSrc() {
       return resolveCctvImagePath(this.cctv.path_image);
+    },
+    videoSrc() {
+      if (this.cctv && this.cctv.url) {
+        return this.cctv.url;
+      }
+      return resolveCameraSimulation(this.cctv).videoUrl;
     }
   },
   methods: {
@@ -207,7 +229,14 @@ export default {
   z-index: 1;
 }
 
+.btn-form-submit.back-btn {
+  display: flex;
+  gap: 10px;
+}
+
+.btn-form-submit.back-btn .detail-detect-link,
 .btn-form-submit.back-btn .el-button {
+  flex: 1;
   width: 100%;
 }
 </style>

@@ -1,6 +1,8 @@
 import {
   drawRoiPolygon,
   extractRoiPoints,
+  filterDetectionsByRoi,
+  isPointInPolygon,
   isValidRoi,
   polygonArea,
   serializeRoiPoints
@@ -69,5 +71,22 @@ describe("roiGeometry", () => {
 
     expect(drawRoiPolygon(ctx, points, { clip: true })).toBe(true);
     expect(ctx.clip).toHaveBeenCalledTimes(1);
+  });
+
+  test("filters detections by polygon containment using bbox center", () => {
+    const polygon = extractRoiPoints(sampleRecord);
+    expect(isPointInPolygon({ x: 60, y: 80 }, polygon)).toBe(true);
+    expect(isPointInPolygon({ x: 200, y: 80 }, polygon)).toBe(false);
+
+    const detections = [
+      { class: "car", bbox: [40, 60, 40, 40] },
+      { class: "motorcycle", bbox: [180, 70, 30, 30] }
+    ];
+
+    const filtered = filterDetectionsByRoi(detections, polygon);
+    expect(filtered).toHaveLength(1);
+    expect(filtered[0].class).toBe("car");
+
+    expect(filterDetectionsByRoi(detections, [])).toHaveLength(2);
   });
 });

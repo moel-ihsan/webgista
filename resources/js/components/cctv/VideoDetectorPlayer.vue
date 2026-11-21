@@ -6,15 +6,25 @@
           <video
             id="my-video"
             ref="videoEl"
-            class="video-js vjs-default-skin vjs-big-play-centered videoCCTV"
+            :class="
+              host === 'www.youtube.com'
+                ? 'video-js vjs-default-skin vjs-big-play-centered videoCCTV'
+                : 'videoCCTV'
+            "
             preload="auto"
             autoplay
-            controls
-            data-setup="{}"
+            muted
+            loop
+            playsinline
+            crossorigin="anonymous"
             style="display: none"
           >
-            <source v-if="host === 'www.youtube.com'" :src="cctv.url" type="video/youtube" />
-            <source v-else :src="cctv.url" type="video/mp4" />
+            <source
+              v-if="host === 'www.youtube.com'"
+              :src="resolvedVideoUrl"
+              type="video/youtube"
+            />
+            <source v-else-if="resolvedVideoUrl" :src="resolvedVideoUrl" type="video/mp4" />
           </video>
           <canvas
             id="canvasx"
@@ -73,6 +83,16 @@
           >
             Hide Video
           </button>
+
+          <button
+            v-if="resolvedPrecomputedUrl"
+            id="btn-mode"
+            type="button"
+            class="el-button el-button--primary"
+            @click="toggleDetectionMode"
+          >
+            {{ modeToggleLabel }}
+          </button>
         </div>
 
         <canvas id="canvasw" ref="canvasw" class="canvasw" @mousedown="handleRoiCanvasClick" />
@@ -80,7 +100,8 @@
       <el-col :span="9" :xs="24" :md="24" :lg="9">
         <el-row :gutter="30" style="padding-left: 15px; padding-right: 15px; margin-bottom: 20px">
           <el-col :span="16" :xs="16">
-            <p>{{ cctv.name }}</p>
+            <p style="margin-bottom: 4px">{{ cctv.name }}</p>
+            <div id="detector-mode-status" class="detector-mode-meta">{{ detectorStatusText }}</div>
           </el-col>
           <el-col :span="8" :xs="8">
             <el-switch
@@ -105,9 +126,14 @@
 </template>
 
 <script>
+import { getSimulationConfig, resolveCameraSimulation } from "../../config/simulation";
 import { updateRoi, updateTrafficCondition } from "../../services/api/cctvApi";
 import { loadCocoSsdModel } from "../../services/traffic/cocoSsdLoader";
 import { ANALYSIS_WINDOW_SECONDS } from "../../services/traffic/ihcmClassifier";
+import {
+  fetchPrecomputedDetections,
+  getSynchronizedDetections
+} from "../../services/traffic/precomputedPlayer";
 import {
   drawRoiPolygon,
   extractRoiPoints,
@@ -116,6 +142,9 @@ import {
 } from "../../services/traffic/roiGeometry";
 import { TrafficWindowTracker } from "../../services/traffic/windowTracker";
 import TrafficCounterCards from "./TrafficCounterCards.vue";
+
+const LIVE_DETECTION_INTERVAL_MS = 400;
+const MODEL_LOAD_TIMEOUT_MS = 25000;
 
 export default {
   name: "VideoDetectorPlayer",
@@ -129,22 +158,47 @@ export default {
     }
   },
   data() {
+    const simulationConfig = getSimulationConfig();
+    const cameraSimulation = resolveCameraSimulation(this.cctv, simulationConfig);
+
     return {
       oriVideo: true,
       areaVideo: true,
       themeSetting: true,
       host: "",
+      simulationConfig,
+      cameraSimulation,
+      activeMode: simulationConfig.defaultMode || "live",
       model: null,
+      precomputedPayload: null,
+      lastPrecomputedFrameTime: null,
+      lastDetectAtMs: 0,
+      lastMatchedDetections: [],
+      detectorStatusText: "Memuat detektor...",
       roiPoints: [],
       draftRoiPoints: [],
       counts: { lv: 0, hv: 0, mc: 0 },
       conditionLabel: "No Data",
       tracker: new TrafficWindowTracker(ANALYSIS_WINDOW_SECONDS),
-      isDetecting: false
+      isDetecting: false,
+      isDestroyed: false
     };
   },
+  computed: {
+    resolvedVideoUrl() {
+      return (this.cctv && this.cctv.url) || this.cameraSimulation.videoUrl || "";
+    },
+    resolvedPrecomputedUrl() {
+      return this.cameraSimulation.precomputedUrl || "";
+    },
+    modeToggleLabel() {
+      return this.activeMode === "live" ? "Ganti ke Pra-hitung (JSON)" : "Ganti ke Live TF.js";
+    }
+  },
   created() {
-    this.roiPoints = extractRoiPoints(this.cctv);
+    const dbRoi = extractRoiPoints(this.cctv);
+    this.roiPoints =
+      dbRoi.length === 5 ? dbRoi : extractRoiPoints(this.cameraSimulation.defaultRoi);
     if (this.cctv && this.cctv.keterangan) {
       this.conditionLabel = this.cctv.keterangan;
     }
@@ -154,6 +208,7 @@ export default {
     this.setupVideoDetection();
   },
   beforeDestroy() {
+    this.isDestroyed = true;
     const video = this.$refs.videoEl;
     if (video) {
       video.removeEventListener("loadeddata", this.onVideoLoaded);
@@ -162,20 +217,20 @@ export default {
   },
   methods: {
     parseUrl() {
-      if (!this.cctv || !this.cctv.url) {
+      if (!this.resolvedVideoUrl) {
         this.host = "";
         return;
       }
 
       try {
-        const parsed = new URL(this.cctv.url, window.location.origin);
+        const parsed = new URL(this.resolvedVideoUrl, window.location.origin);
         this.host = parsed.hostname;
       } catch (_err) {
         this.host = "";
       }
     },
     manageVideo() {
-      const canvasw = this.$refs.canvasw;
+      const { canvasw, videoEl } = this.$refs;
       if (!canvasw) {
         return;
       }
@@ -184,6 +239,12 @@ export default {
         this.draftRoiPoints = [];
         canvasw.style.display = "block";
         this.areaVideo = false;
+
+        const ctw = canvasw.getContext("2d");
+        if (ctw && videoEl && videoEl.videoWidth) {
+          ctw.clearRect(0, 0, canvasw.width, canvasw.height);
+          ctw.drawImage(videoEl, 0, 0, canvasw.width, canvasw.height);
+        }
       } else {
         canvasw.style.display = "none";
         this.areaVideo = true;
@@ -194,7 +255,7 @@ export default {
     },
     saveRoi(points) {
       this.roiPoints = [...points];
-      this.applyRoiToCanvases();
+      this.renderCanvasOverlays();
 
       updateRoi(this.cctv.id, serializeRoiPoints(points))
         .then(() => {
@@ -251,25 +312,23 @@ export default {
         this.oriVideo = true;
       }
     },
-    applyRoiToCanvases() {
-      const { canvasv, canvasx } = this.$refs;
-      if (!canvasv || !canvasx || !isValidRoi(this.roiPoints)) {
-        return;
+    async toggleDetectionMode() {
+      this.tracker.reset();
+      this.counts = { lv: 0, hv: 0, mc: 0 };
+      this.lastPrecomputedFrameTime = null;
+      this.lastDetectAtMs = 0;
+      this.lastMatchedDetections = [];
+
+      if (this.activeMode === "live") {
+        this.activeMode = "precomputed";
+        await this.ensurePrecomputedLoaded();
+      } else {
+        this.activeMode = "live";
+        await this.ensureLiveModelLoaded();
       }
 
-      const ctv = canvasv.getContext("2d");
-      const ctx = canvasx.getContext("2d");
-      if (!ctv || !ctx) {
-        return;
-      }
-
-      ctv.restore();
-      ctv.save();
-      drawRoiPolygon(ctv, this.roiPoints, { clip: true });
-      drawRoiPolygon(ctv, this.roiPoints, { strokeStyle: "blue", lineWidth: 10 });
-
-      ctx.clearRect(0, 0, canvasx.width, canvasx.height);
-      drawRoiPolygon(ctx, this.roiPoints, { strokeStyle: "blue", lineWidth: 5 });
+      this.renderCanvasOverlays();
+      this.runCurrentModeStep(true);
     },
     setupVideoDetection() {
       const video = this.$refs.videoEl;
@@ -279,6 +338,10 @@ export default {
 
       video.addEventListener("loadeddata", this.onVideoLoaded);
       video.addEventListener("timeupdate", this.onVideoTimeUpdate);
+
+      if (video.readyState >= 2) {
+        this.onVideoLoaded();
+      }
     },
     async onVideoLoaded() {
       const { videoEl, canvasv, canvasx, canvasy, canvasw } = this.$refs;
@@ -286,26 +349,95 @@ export default {
         return;
       }
 
+      const targetW = videoEl.videoWidth || 640;
+      const targetH = videoEl.videoHeight || 360;
       [canvasv, canvasx, canvasy, canvasw].forEach((canvas) => {
-        canvas.width = videoEl.videoWidth;
-        canvas.height = videoEl.videoHeight;
+        canvas.width = targetW;
+        canvas.height = targetH;
       });
 
       const ctv = canvasv.getContext("2d");
       if (ctv) {
         ctv.save();
       }
-      this.applyRoiToCanvases();
 
-      try {
-        this.model = await loadCocoSsdModel();
-      } catch (_err) {
-        this.model = null;
+      this.drawVideoFrameToCanvases();
+      this.renderCanvasOverlays();
+
+      if (typeof videoEl.play === "function") {
+        videoEl.play().catch(() => {});
+      }
+
+      if (this.activeMode === "precomputed") {
+        await this.ensurePrecomputedLoaded();
+      } else {
+        await this.ensureLiveModelLoaded();
+      }
+
+      if (!this.isDestroyed) {
+        this.runCurrentModeStep(true);
       }
     },
-    onVideoTimeUpdate() {
+    async ensureLiveModelLoaded() {
+      if (this.model) {
+        this.detectorStatusText = "Mode: Live TF.js (COCO-SSD di browser)";
+        return true;
+      }
+
+      this.detectorStatusText = "Memuat model COCO-SSD di browser...";
+
+      try {
+        const timeoutPromise = new Promise((_, reject) => {
+          setTimeout(() => reject(new Error("COCO-SSD load timeout")), MODEL_LOAD_TIMEOUT_MS);
+        });
+        this.model = await Promise.race([loadCocoSsdModel(), timeoutPromise]);
+        if (!this.isDestroyed && this.activeMode === "live") {
+          this.detectorStatusText = "Mode: Live TF.js (COCO-SSD di browser)";
+        }
+        return true;
+      } catch (_err) {
+        this.model = null;
+        if (!this.isDestroyed && this.resolvedPrecomputedUrl) {
+          this.activeMode = "precomputed";
+          await this.ensurePrecomputedLoaded("otomatis fallback");
+        } else if (!this.isDestroyed) {
+          this.detectorStatusText = "Model TF.js gagal dimuat";
+        }
+        return false;
+      }
+    },
+    async ensurePrecomputedLoaded(reason = "") {
+      if (this.precomputedPayload) {
+        this.detectorStatusText = reason
+          ? `Mode: Pra-hitung JSON (${reason})`
+          : "Mode: Pra-hitung JSON (sinkron video)";
+        return true;
+      }
+
+      if (!this.resolvedPrecomputedUrl) {
+        this.detectorStatusText = "Data pra-hitung JSON tidak tersedia";
+        return false;
+      }
+
+      this.detectorStatusText = "Memuat data pra-hitung JSON...";
+      try {
+        this.precomputedPayload = await fetchPrecomputedDetections(this.resolvedPrecomputedUrl);
+        if (!this.isDestroyed) {
+          this.detectorStatusText = reason
+            ? `Mode: Pra-hitung JSON (${reason})`
+            : "Mode: Pra-hitung JSON (sinkron video)";
+        }
+        return true;
+      } catch (_err) {
+        if (!this.isDestroyed) {
+          this.detectorStatusText = "Gagal memuat data pra-hitung JSON";
+        }
+        return false;
+      }
+    },
+    drawVideoFrameToCanvases() {
       const { videoEl, canvasv, canvasy, canvasw } = this.$refs;
-      if (!videoEl || !canvasv || !canvasy || !canvasw) {
+      if (!videoEl || !canvasv || !canvasy || !canvasw || videoEl.readyState < 2) {
         return;
       }
 
@@ -316,53 +448,112 @@ export default {
         return;
       }
 
-      cty.drawImage(videoEl, 0, 0);
-      ctv.drawImage(videoEl, 0, 0);
-      ctw.drawImage(videoEl, 0, 0);
+      cty.drawImage(videoEl, 0, 0, canvasy.width, canvasy.height);
+
+      ctv.restore();
+      ctv.save();
+      ctv.clearRect(0, 0, canvasv.width, canvasv.height);
+      if (isValidRoi(this.roiPoints)) {
+        drawRoiPolygon(ctv, this.roiPoints, { clip: true });
+      }
+      ctv.drawImage(videoEl, 0, 0, canvasv.width, canvasv.height);
+
+      if (!this.areaVideo) {
+        ctw.drawImage(videoEl, 0, 0, canvasw.width, canvasw.height);
+      }
+    },
+    renderCanvasOverlays() {
+      const canvasx = this.$refs.canvasx;
+      if (!canvasx) {
+        return;
+      }
+
+      const ctx = canvasx.getContext("2d");
+      if (!ctx) {
+        return;
+      }
+
+      ctx.clearRect(0, 0, canvasx.width, canvasx.height);
+
+      if (isValidRoi(this.roiPoints)) {
+        drawRoiPolygon(ctx, this.roiPoints, { strokeStyle: "blue", lineWidth: 5 });
+      }
+
+      this.lastMatchedDetections.forEach((det) => {
+        if (!det || !Array.isArray(det.bbox) || det.bbox.length < 4) {
+          return;
+        }
+        ctx.beginPath();
+        ctx.lineWidth = 2;
+        ctx.strokeStyle = "red";
+        ctx.rect(...det.bbox);
+        ctx.stroke();
+        ctx.closePath();
+      });
+    },
+    applyDetectionResults(results, currentTime) {
+      const step = this.tracker.recordCapture(results, currentTime);
+      this.counts = step.counts;
+      this.conditionLabel = step.classification.label;
+      this.lastMatchedDetections = step.frameCounts.matchedDetections;
+      this.renderCanvasOverlays();
+
+      if (step.shouldPersist && this.cctv && this.cctv.id) {
+        updateTrafficCondition(this.cctv.id, step.classification.label).catch(() => {});
+      }
+    },
+    onVideoTimeUpdate() {
+      this.drawVideoFrameToCanvases();
+      this.runCurrentModeStep(false);
+    },
+    runCurrentModeStep(forceImmediate) {
+      const { videoEl, canvasv } = this.$refs;
+      if (!videoEl || !canvasv || videoEl.readyState < 2) {
+        return;
+      }
+
+      const currentTime = Number(videoEl.currentTime || 0);
+
+      if (this.activeMode === "precomputed") {
+        if (!this.precomputedPayload) {
+          return;
+        }
+        const synced = getSynchronizedDetections(
+          this.precomputedPayload,
+          currentTime,
+          { width: canvasv.width, height: canvasv.height },
+          this.roiPoints
+        );
+        if (forceImmediate || synced.frameTime !== this.lastPrecomputedFrameTime) {
+          this.lastPrecomputedFrameTime = synced.frameTime;
+          this.applyDetectionResults(synced.detections, currentTime);
+        }
+        return;
+      }
 
       if (!this.model || this.isDetecting) {
         return;
       }
 
+      const now = performance.now();
+      if (!forceImmediate && now - this.lastDetectAtMs < LIVE_DETECTION_INTERVAL_MS) {
+        return;
+      }
+
+      this.lastDetectAtMs = now;
       this.isDetecting = true;
-      canvasv.toBlob((blob) => {
-        if (!blob) {
-          this.isDetecting = false;
-          return;
-        }
 
-        const imgTag = document.createElement("img");
-        const objectUrl = URL.createObjectURL(blob);
-        imgTag.src = objectUrl;
-        imgTag.onload = async () => {
-          try {
-            const results = await this.model.detect(imgTag);
-            const step = this.tracker.recordCapture(results, videoEl.currentTime || 0);
-
-            this.counts = step.counts;
-            this.conditionLabel = step.classification.label;
-
-            step.frameCounts.matchedDetections.forEach((det) => {
-              ctv.beginPath();
-              ctv.rect(...det.bbox);
-              ctv.strokeStyle = "red";
-              ctv.stroke();
-              ctv.closePath();
-            });
-
-            if (step.shouldPersist && this.cctv && this.cctv.id) {
-              updateTrafficCondition(this.cctv.id, step.classification.label).catch(() => {});
-            }
-          } finally {
-            URL.revokeObjectURL(objectUrl);
-            this.isDetecting = false;
+      this.model
+        .detect(canvasv)
+        .then((results) => {
+          if (!this.isDestroyed && this.activeMode === "live") {
+            this.applyDetectionResults(results, Number(videoEl.currentTime || 0));
           }
-        };
-        imgTag.onerror = () => {
-          URL.revokeObjectURL(objectUrl);
+        })
+        .catch(() => {})
+        .finally(() => {
           this.isDetecting = false;
-        };
-      }, "image/jpeg");
+        });
     }
   }
 };
@@ -372,11 +563,22 @@ export default {
 .btn-video {
   margin-top: -20px;
   margin-bottom: 20px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.detector-mode-meta {
+  font-size: var(--size-xs);
+  color: var(--green-theme);
+  font-weight: 500;
 }
 
 .canvasw {
   background-color: var(--color-secondary);
   display: none;
   border-radius: 10px;
+  width: 100%;
+  height: auto;
 }
 </style>

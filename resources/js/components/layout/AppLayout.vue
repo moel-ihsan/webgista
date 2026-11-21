@@ -10,6 +10,7 @@
           <AppHeader :props-title="title" />
         </el-header>
         <el-main :class="mainClass" :style="mainStyle">
+          <SimulationBanner />
           <slot />
         </el-main>
       </el-container>
@@ -20,12 +21,14 @@
 <script>
 import AppSidebar from "./AppSidebar.vue";
 import AppHeader from "./AppHeader.vue";
+import SimulationBanner from "./SimulationBanner.vue";
 
 export default {
   name: "AppLayout",
   components: {
     AppSidebar,
-    AppHeader
+    AppHeader,
+    SimulationBanner
   },
   props: {
     title: {

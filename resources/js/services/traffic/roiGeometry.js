@@ -143,3 +143,65 @@ export function drawRoiPolygon(
 
   return true;
 }
+
+/**
+ * Determine whether a 2D point lies inside a polygon using ray casting.
+ *
+ * @param {{ x: number, y: number }} point
+ * @param {Array<{ x: number, y: number }>} polygon
+ * @returns {boolean}
+ */
+export function isPointInPolygon(point, polygon) {
+  if (!point || !Array.isArray(polygon) || polygon.length < 3) {
+    return false;
+  }
+
+  const px = Number(point.x);
+  const py = Number(point.y);
+  if (!Number.isFinite(px) || !Number.isFinite(py)) {
+    return false;
+  }
+
+  let inside = false;
+  for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i, i += 1) {
+    const xi = Number(polygon[i].x);
+    const yi = Number(polygon[i].y);
+    const xj = Number(polygon[j].x);
+    const yj = Number(polygon[j].y);
+
+    const intersects = yi > py !== yj > py && px < ((xj - xi) * (py - yi)) / (yj - yi) + xi;
+    if (intersects) {
+      inside = !inside;
+    }
+  }
+
+  return inside;
+}
+
+/**
+ * Keep only detections whose bounding-box center falls inside the ROI polygon.
+ * Falls back to returning all detections unchanged when no valid ROI is configured.
+ *
+ * @param {Array<{ bbox?: number[], class?: string, score?: number }>} detections
+ * @param {Array<{ x: number, y: number }>} roiPoints
+ * @returns {Array<{ bbox?: number[], class?: string, score?: number }>}
+ */
+export function filterDetectionsByRoi(detections = [], roiPoints = []) {
+  if (!Array.isArray(detections)) {
+    return [];
+  }
+
+  if (!isValidRoi(roiPoints)) {
+    return detections;
+  }
+
+  return detections.filter((det) => {
+    if (!det || !Array.isArray(det.bbox) || det.bbox.length < 4) {
+      return false;
+    }
+    const [x, y, w, h] = det.bbox;
+    const cx = Number(x) + Number(w) / 2;
+    const cy = Number(y) + Number(h) / 2;
+    return isPointInPolygon({ x: cx, y: cy }, roiPoints);
+  });
+}

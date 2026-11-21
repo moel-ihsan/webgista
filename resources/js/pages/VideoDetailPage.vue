@@ -6,6 +6,7 @@
     <el-container>
       <el-container>
         <el-main style="">
+          <SimulationBanner />
           <VideoDetectorPlayer :cctv="cctv" />
         </el-main>
       </el-container>
@@ -14,11 +15,13 @@
 </template>
 
 <script>
+import SimulationBanner from "../components/layout/SimulationBanner.vue";
 import VideoDetectorPlayer from "../components/cctv/VideoDetectorPlayer.vue";
 
 export default {
   name: "VideoDetailPage",
   components: {
+    SimulationBanner,
     VideoDetectorPlayer
   },
   props: {
