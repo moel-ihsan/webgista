@@ -9,33 +9,43 @@ import "./styles/theme-overrides.css";
 import "babel-polyfill";
 import "whatwg-fetch";
 
-import LoginPage from "./pages/LoginPage.vue";
-import DashboardPage from "./pages/DashboardPage.vue";
-import MapViewPage from "./pages/MapViewPage.vue";
-import TableViewPage from "./pages/TableViewPage.vue";
-import CctvAddPage from "./pages/CctvAddPage.vue";
-import CctvEditPage from "./pages/CctvEditPage.vue";
-import CctvDetailPage from "./pages/CctvDetailPage.vue";
-import VideoDetailPage from "./pages/VideoDetailPage.vue";
-import SettingsPage from "./pages/SettingsPage.vue";
-import ProfilePage from "./pages/ProfilePage.vue";
-import PasswordPage from "./pages/PasswordPage.vue";
+import AppIcon from "./components/common/AppIcon.vue";
+import TrafficGradeBadge from "./components/common/TrafficGradeBadge.vue";
 
 Vue.config.ignoredElements = [/^ion-/];
 Vue.use(ElementUI, { locale });
 
+Vue.component("AppIcon", AppIcon);
+Vue.component("TrafficGradeBadge", TrafficGradeBadge);
+
 /* eslint-disable vue/component-definition-name-casing */
-Vue.component("login", LoginPage);
-Vue.component("dashboard", DashboardPage);
-Vue.component("mapview", MapViewPage);
-Vue.component("tableview", TableViewPage);
-Vue.component("add", CctvAddPage);
-Vue.component("edit", CctvEditPage);
-Vue.component("detail", CctvDetailPage);
-Vue.component("videodetail", VideoDetailPage);
-Vue.component("settings", SettingsPage);
-Vue.component("profile", ProfilePage);
-Vue.component("password", PasswordPage);
+Vue.component("login", () => import(/* webpackChunkName: "page-login" */ "./pages/LoginPage.vue"));
+Vue.component("dashboard", () =>
+  import(/* webpackChunkName: "page-dashboard" */ "./pages/DashboardPage.vue")
+);
+Vue.component("mapview", () => import(/* webpackChunkName: "page-map" */ "./pages/MapViewPage.vue"));
+Vue.component("tableview", () =>
+  import(/* webpackChunkName: "page-table" */ "./pages/TableViewPage.vue")
+);
+Vue.component("add", () => import(/* webpackChunkName: "page-cctv-add" */ "./pages/CctvAddPage.vue"));
+Vue.component("edit", () =>
+  import(/* webpackChunkName: "page-cctv-edit" */ "./pages/CctvEditPage.vue")
+);
+Vue.component("detail", () =>
+  import(/* webpackChunkName: "page-cctv-detail" */ "./pages/CctvDetailPage.vue")
+);
+Vue.component("videodetail", () =>
+  import(/* webpackChunkName: "page-video-detail" */ "./pages/VideoDetailPage.vue")
+);
+Vue.component("settings", () =>
+  import(/* webpackChunkName: "page-settings" */ "./pages/SettingsPage.vue")
+);
+Vue.component("profile", () =>
+  import(/* webpackChunkName: "page-profile" */ "./pages/ProfilePage.vue")
+);
+Vue.component("password", () =>
+  import(/* webpackChunkName: "page-password" */ "./pages/PasswordPage.vue")
+);
 /* eslint-enable vue/component-definition-name-casing */
 
 new Vue({

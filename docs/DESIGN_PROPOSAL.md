@@ -105,7 +105,7 @@ Makna 6 warna asli v1 **tetap dipertahankan**. Untuk mengatasi masalah buta warn
   - Switch tema memakai `<button role="switch" aria-checked="true|false" aria-label="...">` **hanya dengan ikon Matahari/Bulan** (tanpa teks label "Light/Dark") dan ukuran sentuh `>= 44px` (menggantikan `<el-switch>` yang memicu error `nested-interactive`).
   - Mobile `< 768px`: sidebar pill kiri diganti tombol menu `44x44px` di header yang membuka laci navigasi (*slide-over drawer*) lengkap dengan teks menu.
 - **Kontrol Peta, Popup & Legenda (`/map`):**
-  - Kontrol kiri atas mempertahankan lengkap fungsi v1: **Reset Home**, **Layers & Map Style**, **Navigation (`+`, `−`, Reset Compass)**, dan **Find My Location (`GeolocateControl`)** dengan ukuran sentuh `>= 44x44px`.
+  - Kontrol kiri atas mempertahankan **urutan vertikal v1 dari atas ke bawah**: (1) `NavigationControl` (`+`, `−`, Reset Compass), (2) `GeolocateControl` (*Find My Location*), (3) tombol `Home` (*Reset Zoom*), dan (4) tombol `Layers` (*Map Style & Layer Popover* ke kanan) — semuanya berukuran sentuh `>= 44x44px`.
   - **Popup Peta** menampilkan judul persimpangan, chip kondisi, **stream `<video>` / gambar CCTV seperti v1**, status (`Good`, `Average`, dst.), dan tautan `Detail →` **tanpa** menampakkan angka internal rasio `V/C`.
   - **Legenda Peta** memakai teks v1 yang ringkas (`Terrible`, `Bad`, `Poor`, `Average`, `Good`, `Great`, `No Data`) tanpa angka rentang `V/C`, dipasangkan dengan chip huruf `A–F` / `?` untuk aksesibilitas non-warna.
 

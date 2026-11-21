@@ -1,3 +1,144 @@
-@import 'tailwindcss/base';
-@import 'tailwindcss/components';
-@import 'tailwindcss/utilities';
+@import "./fonts.css";
+@import "./tokens.css";
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    font-family: var(--font-sans);
+    font-size: 16px;
+    line-height: 1.5;
+    background-color: var(--bg-canvas);
+    color: var(--text-primary);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  body {
+    margin: 0;
+    padding: 0;
+    font-family: var(--font-sans);
+    font-size: var(--text-base);
+    line-height: 1.5;
+    background-color: var(--bg-canvas);
+    color: var(--text-primary);
+    transition: background-color 0.2s ease, color 0.2s ease;
+    overflow-x: hidden;
+  }
+
+  a {
+    color: inherit;
+    text-decoration: none;
+  }
+
+  button,
+  input,
+  select,
+  textarea {
+    font-family: inherit;
+  }
+
+  button:focus-visible,
+  a:focus-visible,
+  input:focus-visible,
+  select:focus-visible,
+  textarea:focus-visible,
+  [tabindex]:focus-visible {
+    outline: 3px solid var(--focus-ring);
+    outline-offset: 2px;
+  }
+}
+
+/* Global accessible IHCM 1997 traffic grade chips (color + letter + high-contrast ring) */
+.grade-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 28px;
+  height: 28px;
+  padding: 0 7px;
+  border-radius: var(--radius-pill);
+  font-size: var(--text-caption);
+  font-weight: 800;
+  line-height: 1;
+  border: 2px solid transparent;
+  flex-shrink: 0;
+}
+
+.grade-chip--sm {
+  min-width: 24px;
+  height: 24px;
+  padding: 0 6px;
+  font-size: 11px;
+}
+
+.grade-chip--A {
+  background-color: #98fb98;
+  color: #0f2e1a;
+  border-color: #1b6e2d;
+}
+
+.grade-chip--B {
+  background-color: #0b6623;
+  color: #ffffff;
+  border-color: #1b6e2d;
+}
+
+html.theme-dark .grade-chip--B {
+  border-color: #4ade80;
+}
+
+.grade-chip--C {
+  background-color: #ffff00;
+  color: #241f00;
+  border-color: #856404;
+}
+
+.grade-chip--D {
+  background-color: #d4a328;
+  color: #1f1500;
+  border-color: #7a5908;
+}
+
+.grade-chip--E {
+  background-color: #ff5f00;
+  color: #1f0b00;
+  border-color: #b44100;
+}
+
+.grade-chip--F {
+  background-color: #dc2626;
+  color: #ffffff;
+  border-color: #991b1b;
+}
+
+html.theme-dark .grade-chip--F {
+  border-color: #fca5a5;
+}
+
+.grade-chip--N {
+  background-color: #2563eb;
+  color: #ffffff;
+  border-color: #1d4ed8;
+}
+
+html.theme-dark .grade-chip--N {
+  border-color: #93c5fd;
+}
+
+.ui-state-box {
+  border: 1px dashed var(--border-input);
+  border-radius: var(--radius-md);
+  background: var(--bg-surface-subtle);
+  color: var(--text-secondary);
+  padding: var(--space-6);
+  text-align: center;
+  font-size: var(--text-sm);
+}
+
+.ui-state-box--error {
+  border-color: var(--danger-soft-border);
+  background: var(--danger-soft-bg);
+  color: var(--danger-text);
+}

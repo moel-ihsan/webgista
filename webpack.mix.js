@@ -1,22 +1,19 @@
-const mix = require('laravel-mix');
-const tailwindcss = require('tailwindcss')
+const mix = require("laravel-mix");
+const tailwindcss = require("tailwindcss");
 
-/*
- |--------------------------------------------------------------------------
- | Mix Asset Management
- |--------------------------------------------------------------------------
- |
- | Mix provides a clean, fluent API for defining some Webpack build steps
- | for your Laravel application. By default, we are compiling the Sass
- | file for the application as well as bundling up all the JS files.
- |
- */
-
-// mix.js('resources/js/app.js', 'public/js')
-//     .sass('resources/sass/app.scss', 'public/css')
-//     .sourceMaps();
-   
-    mix.js('resources/js/app.js', 'public/js').vue()
-    .postCss('resources/css/app.css', 'public/css', [
-        //
-    ]);
+mix
+  .js("resources/js/app.js", "public/js")
+  .vue()
+  .postCss("resources/css/app.css", "public/css", [
+    require("postcss-import"),
+    tailwindcss("./tailwind.config.js")
+  ])
+  .copy(
+    [
+      "node_modules/@fontsource/montserrat/files/montserrat-latin-400-normal.woff2",
+      "node_modules/@fontsource/montserrat/files/montserrat-latin-500-normal.woff2",
+      "node_modules/@fontsource/montserrat/files/montserrat-latin-600-normal.woff2",
+      "node_modules/@fontsource/montserrat/files/montserrat-latin-700-normal.woff2"
+    ],
+    "public/fonts/montserrat"
+  );

@@ -1,4 +1,19 @@
 {
     "/js/app.js": "/js/app.js",
-    "/css/app.css": "/css/app.css"
+    "/js/page-login.js": "/js/page-login.js",
+    "/js/page-dashboard.js": "/js/page-dashboard.js",
+    "/js/page-map.js": "/js/page-map.js",
+    "/js/page-table.js": "/js/page-table.js",
+    "/js/page-cctv-add.js": "/js/page-cctv-add.js",
+    "/js/page-cctv-edit.js": "/js/page-cctv-edit.js",
+    "/js/page-cctv-detail.js": "/js/page-cctv-detail.js",
+    "/js/page-video-detail.js": "/js/page-video-detail.js",
+    "/js/page-settings.js": "/js/page-settings.js",
+    "/js/page-profile.js": "/js/page-profile.js",
+    "/js/page-password.js": "/js/page-password.js",
+    "/css/app.css": "/css/app.css",
+    "/fonts/montserrat/montserrat-latin-400-normal.woff2": "/fonts/montserrat/montserrat-latin-400-normal.woff2",
+    "/fonts/montserrat/montserrat-latin-500-normal.woff2": "/fonts/montserrat/montserrat-latin-500-normal.woff2",
+    "/fonts/montserrat/montserrat-latin-600-normal.woff2": "/fonts/montserrat/montserrat-latin-600-normal.woff2",
+    "/fonts/montserrat/montserrat-latin-700-normal.woff2": "/fonts/montserrat/montserrat-latin-700-normal.woff2"
 }
