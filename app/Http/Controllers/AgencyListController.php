@@ -2,93 +2,51 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\StoreAgencyRequest;
+use App\Http\Resources\AgencyListResource;
 use App\Models\AgencyList;
-use Illuminate\Http\Request;
+use App\Services\AgencyService;
+use Illuminate\Http\JsonResponse;
 
 class AgencyListController extends Controller
 {
     /**
-     * Display a listing of the resource.
-     *
-     * @return \Illuminate\Http\Response
+     * @var AgencyService
      */
-    public function index()
-    {
-    }
+    private $service;
 
-    public function table_agency()
+    public function __construct(AgencyService $service)
     {
-        $all = AgencyList::get();
-        return response()->json($all);
+        $this->service = $service;
     }
 
     /**
-     * Show the form for creating a new resource.
-     *
-     * @return \Illuminate\Http\Response
+     * Return all agencies as a JSON array.
      */
-    public function create()
+    public function table_agency(): JsonResponse
     {
-        //
+        $agencies = $this->service->listAll();
+
+        return response()->json(AgencyListResource::collection($agencies)->resolve());
     }
 
     /**
-     * Store a newly created resource in storage.
-     *
-     * @param  \Illuminate\Http\Request  $request
-     * @return \Illuminate\Http\Response
+     * Store a newly created agency tag.
      */
-    public function store(Request $request)
+    public function store(StoreAgencyRequest $request): JsonResponse
     {
-        $valid = $request->validate([
-            'agency' => ['required'],
-        ]);
+        $agency = $this->service->create($request->validated()['agency']);
 
-        AgencyList::create($valid);
+        return response()->json((new AgencyListResource($agency))->resolve(), 201);
     }
 
     /**
-     * Display the specified resource.
-     *
-     * @param  \App\Models\AgencyList  $agencyList
-     * @return \Illuminate\Http\Response
+     * Remove an agency tag.
      */
-    public function show(AgencyList $agencyList)
+    public function destroy(AgencyList $agencyList): JsonResponse
     {
-        //
-    }
+        $this->service->delete($agencyList);
 
-    /**
-     * Show the form for editing the specified resource.
-     *
-     * @param  \App\Models\AgencyList  $agencyList
-     * @return \Illuminate\Http\Response
-     */
-    public function edit(AgencyList $agencyList)
-    {
-        //
-    }
-
-    /**
-     * Update the specified resource in storage.
-     *
-     * @param  \Illuminate\Http\Request  $request
-     * @param  \App\Models\AgencyList  $agencyList
-     * @return \Illuminate\Http\Response
-     */
-    public function update(Request $request, AgencyList $agencyList)
-    {
-        //
-    }
-
-    /**
-     * Remove the specified resource from storage.
-     *
-     * @param  \App\Models\AgencyList  $agencyList
-     * @return \Illuminate\Http\Response
-     */
-    public function destroy(AgencyList $agencyList)
-    {
-        $agencyList->delete();
+        return response()->json(['message' => 'deleted']);
     }
 }
