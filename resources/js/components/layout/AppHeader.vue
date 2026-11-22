@@ -10,7 +10,13 @@
       >
         <AppIcon :name="menuExpanded ? 'filter' : 'menu'" :size="20" />
       </button>
-      <h1 class="page-title">{{ resolvedTitle }}</h1>
+      <div class="header-title-group">
+        <a href="/" class="header-brand-link" aria-label="WebGIS Home" title="WebGIS Home">
+          <img src="/assets/brand/svg/webgis-icon.svg" alt="WebGIS" class="header-brand-icon" />
+        </a>
+        <span class="header-brand-divider" aria-hidden="true" />
+        <h1 class="page-title">{{ resolvedTitle }}</h1>
+      </div>
     </div>
 
     <div class="header-right">
@@ -221,6 +227,42 @@ export default {
   }
 }
 
+.header-title-group {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.header-brand-link {
+  width: 34px;
+  height: 34px;
+  border-radius: var(--radius-sm);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: transform 0.15s ease;
+}
+
+.header-brand-link:hover {
+  transform: scale(1.06);
+}
+
+.header-brand-icon {
+  width: 30px;
+  height: 30px;
+  display: block;
+  object-fit: contain;
+}
+
+.header-brand-divider {
+  width: 1px;
+  height: 20px;
+  background-color: var(--border-subtle);
+  flex-shrink: 0;
+}
+
 .page-title {
   margin: 0;
   font-size: var(--text-xl);
@@ -365,6 +407,20 @@ html.theme-dark .theme-switch-btn {
 @media screen and (max-width: 767px) {
   .app-header {
     padding: var(--space-2) var(--space-3);
+  }
+
+  .header-title-group {
+    gap: 8px;
+  }
+
+  .header-brand-link {
+    width: 28px;
+    height: 28px;
+  }
+
+  .header-brand-icon {
+    width: 26px;
+    height: 26px;
   }
 
   .page-title {

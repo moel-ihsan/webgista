@@ -15,8 +15,24 @@
         'sidebar-nav--mobile-open': mobileOpen
       }"
     >
+      <div class="sidebar-desktop-brand">
+        <a href="/" class="sidebar-brand-link" aria-label="WebGIS Home">
+          <img
+            src="/assets/brand/svg/webgis-logo-white.svg"
+            alt="WebGIS Traffic Condition"
+            class="sidebar-brand-logo"
+          />
+        </a>
+      </div>
+
       <div class="sidebar-mobile-header">
-        <span class="sidebar-brand">WebGIS</span>
+        <a href="/" class="sidebar-brand-link" aria-label="WebGIS Home">
+          <img
+            src="/assets/brand/svg/webgis-logo-white.svg"
+            alt="WebGIS Traffic Condition"
+            class="sidebar-brand-logo"
+          />
+        </a>
         <button
           type="button"
           class="sidebar-close-btn"
@@ -136,6 +152,31 @@ export default {
 .sidebar-nav--expanded {
   width: 210px;
   padding: var(--space-3);
+}
+
+.sidebar-desktop-brand {
+  display: none;
+}
+
+.sidebar-nav--expanded .sidebar-desktop-brand {
+  display: flex;
+  align-items: center;
+  padding: var(--space-1) var(--space-2) var(--space-3);
+  margin-bottom: var(--space-2);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.22);
+}
+
+.sidebar-brand-link {
+  display: inline-flex;
+  align-items: center;
+  border-radius: var(--radius-sm);
+}
+
+.sidebar-brand-logo {
+  height: 38px;
+  width: auto;
+  display: block;
+  object-fit: contain;
 }
 
 .sidebar-mobile-header {

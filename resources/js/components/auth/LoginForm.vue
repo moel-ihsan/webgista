@@ -2,7 +2,18 @@
   <div class="login-page-container">
     <div class="login-container">
       <div class="form-content">
-        <h1 class="webgis">Web<span>GIS</span></h1>
+        <a href="/" class="login-brand-wrap" aria-label="WebGIS Traffic Condition">
+          <img
+            :src="
+              isDark
+                ? '/assets/brand/svg/webgis-logo-dark.svg'
+                : '/assets/brand/svg/webgis-logo.svg'
+            "
+            alt="WebGIS Traffic Condition"
+            class="login-brand-logo"
+          />
+        </a>
+        <h1 class="sr-only">Sign In — WebGIS Traffic Condition</h1>
         <el-form
           class="register-form"
           label-position="top"
@@ -60,6 +71,7 @@
 
 <script>
 import { login } from "../../services/api/authApi";
+import { isDarkTheme, subscribeTheme } from "../../services/theme";
 
 export default {
   name: "LoginForm",
@@ -72,11 +84,24 @@ export default {
   data() {
     return {
       submitting: false,
+      isDark: isDarkTheme(),
+      unsubscribeTheme: null,
       formLabelAlign: {
         email: "",
         pass: ""
       }
     };
+  },
+  mounted() {
+    this.isDark = isDarkTheme();
+    this.unsubscribeTheme = subscribeTheme(({ isDark }) => {
+      this.isDark = isDark;
+    });
+  },
+  beforeDestroy() {
+    if (typeof this.unsubscribeTheme === "function") {
+      this.unsubscribeTheme();
+    }
   },
   methods: {
     onSubmit() {
@@ -139,17 +164,19 @@ export default {
   justify-content: center;
 }
 
-.webgis {
-  margin: 0 0 28px;
-  font-size: 1.75rem;
-  font-weight: 500;
-  text-align: center;
-  color: var(--text-primary);
+.login-brand-wrap {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 24px;
+  border-radius: var(--radius-sm);
 }
 
-.webgis span {
-  color: var(--accent-primary);
-  font-weight: 700;
+.login-brand-logo {
+  height: 54px;
+  width: auto;
+  display: block;
+  object-fit: contain;
 }
 
 .login-field-label {

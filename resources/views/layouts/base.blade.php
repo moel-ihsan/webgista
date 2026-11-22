@@ -10,6 +10,10 @@
 
     <title>{{ $title ?? 'WebGIS Traffic Banda Aceh' }}</title>
 
+    <link rel="icon" type="image/svg+xml" href="/assets/brand/svg/webgis-icon.svg">
+    <link rel="alternate icon" type="image/png" href="/assets/brand/png/webgis-icon.png">
+    <link rel="apple-touch-icon" href="/assets/brand/png/webgis-icon.png">
+
     <script>
         (function () {
             try {

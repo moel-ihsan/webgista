@@ -1,3 +1,11 @@
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="public/assets/brand/svg/webgis-logo-dark.svg">
+    <source media="(prefers-color-scheme: light)" srcset="public/assets/brand/svg/webgis-logo.svg">
+    <img src="public/assets/brand/svg/webgis-logo.svg" alt="WebGIS Traffic Condition" width="240">
+  </picture>
+</p>
+
 # Banda Aceh Traffic Conditions Real-Time Mapping at Intersections
 
 [![Live Demo](https://img.shields.io/badge/Live%20Demo-Vercel-0F9D58?logo=vercel)](https://traffic-condition-webgista.vercel.app)
