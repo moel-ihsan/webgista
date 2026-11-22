@@ -188,7 +188,7 @@ export const staticCctvStore = {
       updated_at: new Date().toISOString()
     };
     writeJson(KEYS.cctvs, rows);
-    return Promise.resolve({ message: "berhasil", keterangan });
+    return Promise.resolve({ message: "success", keterangan });
   },
   updateRoi(id, payload) {
     const targetId = Number(id);

@@ -7,7 +7,7 @@
         class="theme-switch-btn"
         role="switch"
         :aria-checked="isDark ? 'true' : 'false'"
-        :aria-label="isDark ? 'Aktifkan mode terang' : 'Aktifkan mode gelap'"
+        :aria-label="isDark ? 'Switch to light mode' : 'Switch to dark mode'"
         @click="onToggleTheme"
       >
         <span class="theme-switch-thumb" aria-hidden="true">

@@ -7,8 +7,8 @@
       :aria-expanded="isCollapsed ? 'false' : 'true'"
       :aria-label="
         isCollapsed
-          ? `Buka panel pencarian CCTV (${resolvedTotalCount} titik)`
-          : `Tutup panel pencarian CCTV (${resolvedTotalCount} titik)`
+          ? `Open CCTV search panel (${resolvedTotalCount} cameras)`
+          : `Close CCTV search panel (${resolvedTotalCount} cameras)`
       "
       @click="$emit('toggle')"
     >
@@ -21,17 +21,19 @@
       class="sidebar right"
       :class="{ collapsed: isCollapsed }"
       :aria-hidden="isCollapsed ? 'true' : 'false'"
-      aria-label="Pencarian dan daftar titik CCTV"
+      aria-label="CCTV search and camera list"
     >
       <div class="sidebar-content rounded-rect">
         <div class="map-search-header">
-          <label for="map-search-input" class="map-search-label">Cari Persimpangan / Status</label>
+          <label for="map-search-input" class="map-search-label"
+            >Search Intersection / Status</label
+          >
           <input
             id="map-search-input"
             type="search"
             class="map-search-input"
             :value="filterText"
-            placeholder="Ketik nama atau status A–F..."
+            placeholder="Search by name or grade A–F..."
             @input="$emit('update:filter-text', $event.target.value)"
           />
         </div>
@@ -46,7 +48,7 @@
             @click="$emit('select', item.id)"
           >
             <div class="search-icon">
-              <img class="search-img" :src="item.imageUrl" :alt="'Pratinjau CCTV ' + item.name" />
+              <img class="search-img" :src="item.imageUrl" :alt="'CCTV preview ' + item.name" />
             </div>
             <div class="search-content">
               <div class="name">{{ item.name }}</div>
@@ -56,7 +58,7 @@
           </button>
 
           <div v-if="items.length === 0" class="ui-state-box" style="margin-top: 8px">
-            Tidak ada titik CCTV yang cocok.
+            No matching CCTV cameras found.
           </div>
         </div>
       </div>

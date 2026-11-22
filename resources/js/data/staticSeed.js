@@ -5,7 +5,7 @@ export const STATIC_ADMIN_USER = {
   address: "Jl. T. Nyak Arief No. 1, Banda Aceh",
   lattitude: "5.552874",
   longitude: "95.327801",
-  description: "Sistem Pemetaan Real-Time Kondisi Lalu Lintas Persimpangan Kota Banda Aceh.",
+  description: "Real-Time Traffic Condition Mapping System for Banda Aceh Intersections.",
   profile_photo_path: null,
   role: "admin"
 };

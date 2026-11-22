@@ -81,13 +81,13 @@
             <el-input
               id="url"
               v-model="formLabelAlign.url"
-              placeholder="Contoh: /demo/videos/simpang-pdam.mp4 atau URL stream"
+              placeholder="e.g. /demo/videos/simpang-pdam.mp4 or stream URL"
             />
             <div class="url-field-hint">
               {{
                 isUrlRequired
-                  ? "Wajib diisi untuk CCTV Analytic (digunakan untuk deteksi lalu lintas)."
-                  : "Opsional untuk CCTV Regular (hanya pantauan; fallback ke thumbnail bila kosong atau error)."
+                  ? "Required for Analytic CCTV (used for real-time traffic detection)."
+                  : "Optional for Regular CCTV (monitoring only; falls back to thumbnail if empty or unavailable)."
               }}
             </div>
           </el-form-item>
@@ -101,7 +101,7 @@
         </el-form>
       </div>
 
-      <div class="cctv-map-panel" aria-label="Peta pemilih koordinat CCTV">
+      <div class="cctv-map-panel" aria-label="CCTV coordinate picker map">
         <CoordinatePickerMap
           :latitude="formLabelAlign.lattitude || defaultCenter[1]"
           :longitude="formLabelAlign.longitude || defaultCenter[0]"
@@ -172,7 +172,7 @@ export default {
                 this.formLabelAlign.category === "Analytic" &&
                 (!value || !String(value).trim())
               ) {
-                callback(new Error("Video URL wajib diisi untuk kategori Analytic"));
+                callback(new Error("Video URL is required for Analytic cameras"));
                 return;
               }
               callback();
@@ -192,12 +192,12 @@ export default {
     },
     previewPopupHtml() {
       if (this.previewObjectUrl) {
-        return `<img class='popup-img' src='${escapeHtml(this.previewObjectUrl)}' alt='Pratinjau foto CCTV'>`;
+        return `<img class='popup-img' src='${escapeHtml(this.previewObjectUrl)}' alt='CCTV photo preview'>`;
       }
       if (this.isEdit && this.cctv.path_image) {
-        return `<img class='popup-img' src='${escapeHtml(resolveCctvImagePath(this.cctv.path_image))}' alt='Foto CCTV terpilih'>`;
+        return `<img class='popup-img' src='${escapeHtml(resolveCctvImagePath(this.cctv.path_image))}' alt='Selected CCTV photo'>`;
       }
-      return "<div class='popup-empty-note'>Klik peta untuk memilih titik koordinat CCTV</div>";
+      return "<div class='popup-empty-note'>Click the map to select CCTV coordinates</div>";
     }
   },
   created() {

@@ -1,12 +1,12 @@
 <template>
-  <section id="state-legend" class="legend" aria-label="Legenda Peta">
+  <section id="state-legend" class="legend" aria-label="Map Legend">
     <div class="legend-header">
       <h2 class="legend-title">{{ title }}</h2>
       <button
         type="button"
         class="legend-toggle-btn"
         :aria-expanded="mobileExpanded ? 'true' : 'false'"
-        :aria-label="mobileExpanded ? 'Ciutkan legenda' : 'Buka legenda'"
+        :aria-label="mobileExpanded ? 'Collapse legend' : 'Expand legend'"
         @click="mobileExpanded = !mobileExpanded"
       >
         <AppIcon :name="mobileExpanded ? 'close' : 'layers'" :size="16" />

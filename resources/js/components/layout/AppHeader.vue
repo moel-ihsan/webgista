@@ -4,7 +4,7 @@
       <button
         type="button"
         class="header-menu-btn"
-        aria-label="Toggle menu navigasi"
+        aria-label="Toggle navigation menu"
         :aria-expanded="menuExpanded ? 'true' : 'false'"
         @click="$emit('toggle-menu')"
       >
@@ -19,7 +19,7 @@
         class="theme-switch-btn"
         role="switch"
         :aria-checked="isDark ? 'true' : 'false'"
-        :aria-label="isDark ? 'Aktifkan mode terang' : 'Aktifkan mode gelap'"
+        :aria-label="isDark ? 'Switch to light mode' : 'Switch to dark mode'"
         @click="onToggleTheme"
       >
         <span class="theme-switch-thumb" aria-hidden="true">
@@ -35,17 +35,17 @@
           class="avatar-menu-trigger"
           aria-haspopup="menu"
           :aria-expanded="profileMenuOpen ? 'true' : 'false'"
-          aria-label="Menu akun admin"
+          aria-label="Admin account menu"
           @click="toggleProfileMenu"
         >
           <img
             :src="avatarSrc"
-            :alt="userName ? `Foto profil ${userName}` : 'Foto profil admin'"
+            :alt="userName ? `Profile photo for ${userName}` : 'Admin profile photo'"
             class="avatar-menu-img"
           />
         </button>
 
-        <ul v-if="profileMenuOpen" class="profile-dropdown" role="menu" aria-label="Menu admin">
+        <ul v-if="profileMenuOpen" class="profile-dropdown" role="menu" aria-label="Admin menu">
           <li role="none">
             <a :href="'/profile/' + id" class="profile-dropdown-link" role="menuitem">
               <AppIcon name="person-circle" :size="18" />

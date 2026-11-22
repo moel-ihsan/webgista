@@ -36,7 +36,7 @@
         <img
           class="imgCont"
           :src="avatarSrc"
-          alt="Ilustrasi akun dan kamera pengawas lalu lintas"
+          alt="Account security and traffic surveillance illustration"
         />
       </div>
     </div>

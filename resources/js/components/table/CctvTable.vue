@@ -2,12 +2,12 @@
   <div class="table-container">
     <div class="table-toolbar">
       <div class="table-toolbar-left">
-        <label for="table-page-size" class="sr-only">Jumlah baris per halaman</label>
+        <label for="table-page-size" class="sr-only">Rows per page</label>
         <el-select
           id="table-page-size"
           v-model="value"
           class="count-table"
-          aria-label="Jumlah baris per halaman"
+          aria-label="Rows per page"
           @change="handleFilter"
         >
           <el-option
@@ -19,13 +19,13 @@
         </el-select>
 
         <div class="table-search-wrap">
-          <label for="table-search-input" class="sr-only">Cari titik CCTV</label>
+          <label for="table-search-input" class="sr-only">Search CCTV cameras</label>
           <el-input
             id="table-search-input"
             v-model="search"
             class="table-search"
             placeholder="Type to search"
-            aria-label="Cari titik CCTV"
+            aria-label="Search CCTV cameras"
           />
         </div>
       </div>
@@ -50,7 +50,7 @@
             <div class="table-name-cell">
               <img
                 :src="scope.row.cctvimg"
-                :alt="`Pratinjau ${scope.row.name}`"
+                :alt="`Preview of ${scope.row.name}`"
                 class="table-thumb-img"
               />
               <div class="cctv-name">
@@ -97,7 +97,7 @@
               <a
                 :href="'/detail/' + scope.row.id"
                 class="action-icon-btn"
-                :aria-label="`Lihat detail ${scope.row.name}`"
+                :aria-label="`View details for ${scope.row.name}`"
                 title="Detail"
               >
                 <AppIcon name="eye" :size="18" />
@@ -115,7 +115,7 @@
                 v-if="role === 'admin'"
                 type="button"
                 class="action-icon-btn action-icon-btn--danger"
-                :aria-label="`Hapus ${scope.row.name}`"
+                :aria-label="`Delete ${scope.row.name}`"
                 title="Delete"
                 @click="deleteRow(scope.$index, scope.row.id)"
               >
@@ -129,11 +129,11 @@
 
     <!-- Mobile Responsive Card List (< 768px) -->
     <div class="table-mobile-list">
-      <div v-if="loading" class="ui-state-box">Memuat data CCTV…</div>
+      <div v-if="loading" class="ui-state-box">Loading CCTV data…</div>
       <div v-else-if="filteredRows.length === 0" class="ui-state-box">No Data</div>
       <article v-for="row in filteredRows" v-else :key="'m-' + row.id" class="mobile-cctv-card">
         <div class="mobile-card-head">
-          <img :src="row.cctvimg" :alt="`Pratinjau ${row.name}`" class="table-thumb-img" />
+          <img :src="row.cctvimg" :alt="`Preview of ${row.name}`" class="table-thumb-img" />
           <div class="mobile-card-title-wrap">
             <h2 class="mobile-card-title">{{ row.name }}</h2>
             <div class="time-table">{{ row.time }}</div>
@@ -278,10 +278,10 @@ export default {
         const prevBtn = wrap.querySelector(".btn-prev");
         const nextBtn = wrap.querySelector(".btn-next");
         if (prevBtn) {
-          prevBtn.setAttribute("aria-label", "Halaman sebelumnya");
+          prevBtn.setAttribute("aria-label", "Previous page");
         }
         if (nextBtn) {
-          nextBtn.setAttribute("aria-label", "Halaman berikutnya");
+          nextBtn.setAttribute("aria-label", "Next page");
         }
       }
     },

@@ -119,7 +119,7 @@ class CctvPointController extends Controller
         $updated = $this->service->updateCondition($cctvPoint, $request->validated()['keterangan']);
 
         return response()->json([
-            'message' => 'berhasil',
+            'message' => 'success',
             'keterangan' => $updated->keterangan,
         ]);
     }

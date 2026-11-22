@@ -463,9 +463,9 @@ describe("Frontend smoke tests", () => {
     });
 
     await wrapper.find("#btn-manage").trigger("click");
-    expect(wrapper.find("#roi-edit-hint").text()).toContain("saat ini 0 titik");
+    expect(wrapper.find("#roi-edit-hint").text()).toContain("currently 0 selected");
 
-    // Clicking Reset Titik clears draft points while staying in edit mode
+    // Clicking Reset Points clears draft points while staying in edit mode
     await canvasx.trigger("mousedown", { clientX: 50, clientY: 50 });
     expect(wrapper.vm.draftRoiPoints).toHaveLength(1);
     await wrapper.find("#btn-reset-roi").trigger("click");
@@ -492,11 +492,11 @@ describe("Frontend smoke tests", () => {
       await canvasx.trigger("mousedown", { clientX, clientY });
     }
     expect(wrapper.vm.draftRoiPoints).toHaveLength(7);
-    expect(wrapper.find("#roi-edit-hint").text()).toContain("saat ini 7 titik");
+    expect(wrapper.find("#roi-edit-hint").text()).toContain("currently 7 selected");
 
     await wrapper.find("#btn-undo-roi").trigger("click");
     expect(wrapper.vm.draftRoiPoints).toHaveLength(6);
-    expect(wrapper.find("#roi-edit-hint").text()).toContain("saat ini 6 titik");
+    expect(wrapper.find("#roi-edit-hint").text()).toContain("currently 6 selected");
 
     await wrapper.find("#btn-drop").trigger("click");
     await Promise.resolve();
@@ -525,7 +525,7 @@ describe("Frontend smoke tests", () => {
           resolveAuth = resolve;
         })
     );
-    updateTrafficCondition.mockResolvedValue({ message: "berhasil" });
+    updateTrafficCondition.mockResolvedValue({ message: "success" });
 
     const wrapper = shallowMount(VideoDetectorPlayer, {
       localVue: buildLocalVue(),
@@ -561,7 +561,7 @@ describe("Frontend smoke tests", () => {
     await Promise.resolve();
 
     expect(wrapper.vm.isAdmin).toBe(true);
-    expect(wrapper.find("#detector-sync-status").text()).toContain("aktif (Admin)");
+    expect(wrapper.find("#detector-sync-status").text()).toContain("active (Admin)");
     expect(updateTrafficCondition).toHaveBeenCalledTimes(1);
     expect(updateTrafficCondition).toHaveBeenCalledWith(1, "Terrible");
 

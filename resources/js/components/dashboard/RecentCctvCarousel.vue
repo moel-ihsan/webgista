@@ -5,7 +5,7 @@
         <div v-for="item in items" :key="'desk-' + item.id" class="carousel-slide">
           <a :href="'/detail/' + item.id" class="carousel-cell-link">
             <div class="carousel-cell">
-              <img :src="item.imageUrl" :alt="`Pratinjau ${item.name}`" class="imageRecent" />
+              <img :src="item.imageUrl" :alt="`Preview of ${item.name}`" class="imageRecent" />
               <div class="carousel-scrim" aria-hidden="true" />
               <div class="contentRecent">
                 <div class="nameRecent">{{ item.name }}</div>
@@ -25,7 +25,7 @@
         class="carousel-cell-link"
       >
         <div class="carousel-cell carousel-cell--fluid">
-          <img :src="item.imageUrl" :alt="`Pratinjau ${item.name}`" class="imageRecent" />
+          <img :src="item.imageUrl" :alt="`Preview of ${item.name}`" class="imageRecent" />
           <div class="carousel-scrim" aria-hidden="true" />
           <div class="contentRecent">
             <div class="nameRecent">{{ item.name }}</div>

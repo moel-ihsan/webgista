@@ -38,7 +38,7 @@
         <AgencyTagManager />
       </div>
 
-      <div class="settings-map-panel" aria-label="Peta pratinjau titik tengah">
+      <div class="settings-map-panel" aria-label="Map center preview">
         <CoordinatePickerMap
           :longitude="settingform.longitude"
           :latitude="settingform.lattitude"

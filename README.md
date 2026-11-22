@@ -1,25 +1,25 @@
-# WebGISTA — Real-Time Traffic Condition Mapping
+# Banda Aceh Traffic Conditions Real-Time Mapping at Intersections
 
 [![Live Demo](https://img.shields.io/badge/Live%20Demo-Vercel-0F9D58?logo=vercel)](https://traffic-condition-webgista.vercel.app)
 [![AIP Conf. Proc. 2024](https://img.shields.io/badge/AIP%20Conf.%20Proc.%202024-10.1063%2F5.0203203-2663EB)](https://doi.org/10.1063/5.0203203)
-[![USK ETD](https://img.shields.io/badge/USK%20ETD-Skripsi%202022-0BA5A0)](https://etd.usk.ac.id/search/?p=show_detail&id=97872)
+[![USK ETD](https://img.shields.io/badge/USK%20ETD-Thesis%202022-0BA5A0)](https://etd.usk.ac.id/search/?p=show_detail&id=97872)
 [![License: MIT](https://img.shields.io/badge/License-MIT-16A349.svg)](LICENSE)
 
-Sistem WebGIS untuk memetakan tingkat kepadatan kondisi lalu lintas di persimpangan jalan Kota Banda Aceh secara *real-time* menggunakan deteksi objek kendaraan (*computer vision*) dari aliran video CCTV dan klasifikasi **Manual Kapasitas Jalan Indonesia (MKJI / IHCM 1997)**.
+A WebGIS platform for mapping intersection traffic congestion levels in Banda Aceh in real time using client-side computer vision on CCTV video streams and the **1997 Indonesian Highway Capacity Manual (IHCM / MKJI)** methodology.
 
-Proyek ini merupakan implementasi dari penelitian skripsi di Program Studi Informatika, Fakultas MIPA, Universitas Syiah Kuala (2022) dan publikasi prosiding internasional pada *AIP Conference Proceedings* Vol. 3082 (2024).
+This repository is the implementation of an undergraduate thesis from the Informatics Department, Faculty of Mathematics and Natural Sciences, Universitas Syiah Kuala (2022), and its peer-reviewed conference article published in *AIP Conference Proceedings* Vol. 3082 (2024).
 
-> **PERHATIAN:** Data lalu lintas yang ditampilkan di demo bukan kondisi lalu lintas aktual Kota Banda Aceh saat ini.
+> **NOTICE:** The traffic data shown in the live demo uses sample traffic footage and does not reflect actual real-time traffic conditions in Banda Aceh.
 
 ---
 
-## Tautan & Demo Langsung
+## Links & Live Demo
 
-- **Aplikasi Demo Live:** [https://traffic-condition-webgista.vercel.app](https://traffic-condition-webgista.vercel.app)
-- **Publikasi Artikel Ilmiah (*AIP Conf. Proc.*, 2024):** [https://doi.org/10.1063/5.0203203](https://doi.org/10.1063/5.0203203)
-- **Skripsi / Tugas Akhir (ETD USK):** [https://etd.usk.ac.id/search/?p=show_detail&id=97872](https://etd.usk.ac.id/search/?p=show_detail&id=97872)
+- **Live Demo Application:** [https://traffic-condition-webgista.vercel.app](https://traffic-condition-webgista.vercel.app)
+- **Research Article (*AIP Conf. Proc.*, 2024):** [https://doi.org/10.1063/5.0203203](https://doi.org/10.1063/5.0203203)
+- **Undergraduate Thesis (ETD USK):** [https://etd.usk.ac.id/search/?p=show_detail&id=97872](https://etd.usk.ac.id/search/?p=show_detail&id=97872)
 
-Pada aplikasi demo live, akses publik tersedia untuk eksplorasi peta, tabel, detail kamera, dan simulasi deteksi video. Untuk mencoba fitur manajemen admin (`/table/add`, `/table/edit/{id}`, `/setting/{id}`, serta sinkronisasi status deteksi ke peta), Anda dapat masuk melalui halaman `/login` menggunakan akun demo:
+Public visitors can explore the dashboard, interactive map, camera table, camera details, and live browser-based video detection. To test admin workflows (`/table/add`, `/table/edit/{id}`, `/setting/{id}`, and live status synchronization to `/map`), sign in via `/login` using the demo credentials:
 
 ```text
 Email    : admin@webgista.test
@@ -28,68 +28,70 @@ Password : password
 
 ---
 
-## Tujuan Proyek & Masalah yang Diselesaikan
+## Project Objectives & Problem Statement
 
-Persimpangan jalan di kawasan perkotaan sering mengalami lonjakan volume kendaraan yang melebihi kapasitas ruas jalan pada jam sibuk. Di Kota Banda Aceh, kamera CCTV persimpangan telah tersedia sebagai bagian dari infrastruktur *Smart City*, tetapi akses pemantauannya masih terbatas pada kalangan pengelola tertentu sehingga pengguna jalan umum belum dapat memanfaatkan informasi kondisi lalu lintas tersebut.
+Urban road intersections frequently experience severe congestion during peak hours when traffic volume exceeds road segment capacity. While Banda Aceh deploys intersection CCTV cameras as part of its Smart City initiative, access to these feeds has historically been limited to municipal authorities, leaving commuters without public visibility into intersection traffic conditions.
 
-**WebGISTA** menjembatani kebutuhan tersebut dengan:
-1. Menghitung jumlah dan jenis kendaraan yang melintasi area pantauan (*Region of Interest*) pada aliran video CCTV langsung di sisi klien.
-2. Mengonversi volume kendaraan menjadi nilai ekivalensi mobil penumpang (**smp/jam**) dan membandingkannya dengan kapasitas jalan (**MKJI 1997**) untuk menghasilkan tingkat pelayanan persimpangan (**A–F**).
-3. Menyajikan status kondisi lalu lintas tersebut ke dalam peta WebGIS interaktif yang dapat diakses publik sekaligus dikelola melalui antarmuka admin.
+**WebGISTA** addresses this gap by:
+1. Detecting and counting vehicles crossing a configurable Region of Interest (ROI) polygon directly in the browser from CCTV video streams.
+2. Converting raw vehicle counts into Passenger Car Units (**PCU/hour**) and comparing them against intersection capacity (**IHCM / MKJI 1997**) to classify Level of Service grades (**A–F**).
+3. Publishing real-time spatial congestion indicators and camera statuses through a responsive WebGIS interface for both public road users and municipal administrators.
 
 ---
 
-## Arsitektur, Metodologi, & Teknologi
+## Architecture, Methodology & Evaluation
 
-### 1. Alur Deteksi & Klasifikasi Lalu Lintas (MKJI / IHCM 1997)
+### 1. Detection & Traffic Classification Pipeline (IHCM / MKJI 1997)
 
-```text
-Aliran Video CCTV ──▶ TensorFlow.js (COCO-SSD) ──▶ Filter Poligon ROI Persimpangan
-                                                            │
-                                                            ▼
-Visualisasi Marker Peta (/map) ◀── Klasifikasi V/C (A–F) ◀── Hitung Volume (smp/jam)
+```mermaid
+flowchart LR
+    A["CCTV Video Stream\n& Camera Feed"] --> B["Browser Inference\nTensorFlow.js + COCO-SSD"]
+    B --> C["Polygon ROI Filter\nBlue Detection Zone"]
+    C --> D["PCU Weighting (IHCM 1997)\nLV 1.0 · HV 1.3 · MC 0.4"]
+    D --> E["30s Window V/C Ratio\nService Grades A–F"]
+    E --> F["Live Map Markers\nMapLibre GL JS (/map)"]
 ```
 
-- **Deteksi Kendaraan di Browser:** Menggunakan `@tensorflow/tfjs` dan model pra-latih `@tensorflow-models/coco-ssd` (serta opsi mode data pra-hitung `public/demo/detections/*.json`) untuk mendeteksi kelas `car`, `truck`, `bus`, `motorcycle`, `bicycle`, dan `person` di dalam poligon ROI berwarna biru.
-- **Pembobotan Ekivalensi Mobil Penumpang (EMP):**
-  - Kendaraan Ringan (`LV` — `car`): bobot `1,0`
-  - Kendaraan Berat (`HV` — `truck`, `bus`): bobot `1,3`
-  - Sepeda Motor (`MC` — `motorcycle`, `bicycle`, `person`): bobot `0,4`
-- **Kapasitas Ruas Persimpangan:** Dihitung dengan persamaan MKJI 1997 (`C = C₀ × FCw × FCsp × FCsf × FCcs`) untuk jalan perkotaan 3 lajur sebesar **`C = 1.650 × 1 × 1 × 1 × 0,90 × 3 = 4.455 smp/jam`**.
-- **Jendela Evaluasi:** Penghitungan dihitung dalam jendela waktu `30 detik` untuk memetakan rasio derajat kejenuhan (`V/C`) ke 6 tingkat pelayanan jalan:
+- **Browser-Based Vehicle Detection:** Powered by `@tensorflow/tfjs` and the pre-trained `@tensorflow-models/coco-ssd` model (with optional synchronized precomputed JSON playback in `public/demo/detections/*.json`), detecting `car`, `truck`, `bus`, `motorcycle`, `bicycle`, and `person` inside the intersection ROI polygon.
+- **Passenger Car Equivalence (PCE / EMP):**
+  - Light Vehicle (`LV` — `car`): `1.0`
+  - Heavy Vehicle (`HV` — `truck`, `bus`): `1.3`
+  - Motorcycle (`MC` — `motorcycle`, `bicycle`, `person`): `0.4`
+- **Intersection Capacity:** Computed via the 1997 IHCM equation (`C = C₀ × FCw × FCsp × FCsf × FCcs`) for a 3-lane urban divided roadway as **`C = 1,650 × 1 × 1 × 1 × 0.90 × 3 = 4,455 pcu/hour`**.
+- **Evaluation Window:** Vehicle counts reset every `30 seconds` to evaluate the Volume-to-Capacity ratio (`V/C`) across six Level of Service tiers:
 
-| Tingkat Pelayanan | Kategori | Rasio `V/C` | Penanda Peta |
+| Grade | Traffic Condition | `V/C` Ratio | Map Indicator |
 | :---: | :--- | :---: | :---: |
-| **A** | *Great* (Arus bebas) | `< 0,6` | Hijau muda |
-| **B** | *Good* (Arus stabil) | `0,6 – 0,7` | Hijau |
-| **C** | *Average* (Stabilitas menurun) | `0,7 – 0,8` | Kuning |
-| **D** | *Poor* (Mendekati tidak stabil) | `0,8 – 0,9` | Oranye muda |
-| **E** | *Bad* (Tidak stabil / padat) | `0,9 – 1,0` | Oranye |
-| **F** | *Terrible* (Macet / terhambat) | `> 1,0` | Merah |
+| **A** | Great (Free flow) | `< 0.6` | Light green |
+| **B** | Good (Stable flow) | `0.6 – 0.7` | Green |
+| **C** | Average (Stable, slight delay) | `0.7 – 0.8` | Yellow |
+| **D** | Poor (Approaching unstable flow) | `0.8 – 0.9` | Light orange |
+| **E** | Bad (Unstable / congested) | `0.9 – 1.0` | Orange |
+| **F** | Terrible (Forced / breakdown) | `> 1.0` | Red |
 
-### 2. Ringkasan Evaluasi Penelitian
+### 2. Research Evaluation Summary
 
-- **Kelayakan Usabilitas (*System Usability Scale* / SUS):** Evaluasi terhadap **20 responden** memperoleh skor **81** (**Grade B**, kategori *Excellent*), yang menunjukkan antarmuka dan alur WebGIS dapat diterima dengan baik dari sisi fungsionalitas maupun tampilan.
-- **Catatan Akurasi Deteksi:** Publikasi mencatat bahwa tingkat akurasi deteksi masih terbatas ketika sudut pandang kamera CCTV lapangan kurang ideal terhadap karakteristik model pra-latih COCO-SSD.
+- **Usability (System Usability Scale / SUS):** Evaluated with **20 respondents**, achieving an overall score of **81** (**Grade B**, *Excellent*), confirming strong functional usability and visual clarity.
+- **Detection Accuracy Note:** As reported in the published paper, automated vehicle-counting accuracy can degrade when field CCTV mounting angles deviate from standard COCO-SSD training perspectives.
 
-### 3. Stack Teknologi
+### 3. Technology Stack
 
 - **Backend:** Laravel 8 (`PHP ^8.2`), MySQL / SQLite, Sanctum & Session Authentication, Form Requests, Service Layer, API Resources.
-- **Frontend:** Vue `2.6`, Laravel Mix `6` (webpack 5), Tailwind CSS `2`, Element UI `2.15`, MapLibre GL JS (OpenFreeMap / OpenTopoMap; mendukung MapTiler / Stadia melalui `.env`), Chart.js, Flickity, dan Axios.
-- **Machine Learning:** `@tensorflow/tfjs` + `@tensorflow-models/coco-ssd`.
+- **Frontend:** Vue `2.6`, Laravel Mix `6` (webpack 5), Tailwind CSS `2`, Element UI `2.15`, MapLibre GL JS (OpenFreeMap / OpenTopoMap, with optional MapTiler or Stadia via `.env`), Chart.js, Flickity, and Axios.
+- **Computer Vision:** `@tensorflow/tfjs` + `@tensorflow-models/coco-ssd`.
 
 ---
 
-## Fitur Utama
+## Key Features
 
-1. **Dashboard (`/`):** Peta ringkasan sebaran titik kamera (*Analytic* dan *Regular*), kartu informasi instansi pengelola, serta carousel kamera terbaru.
-2. **Map View (`/map`):** Peta interaktif dengan 4 gaya peta (*Street*, *Light*, *Dark*, *Outdoor*), pengatur layer titik CCTV dan batas administrasi kecamatan Kota Banda Aceh (`public/geojson/bandaacehgeojson.geojson`), bilah pencarian cepat persimpangan, serta legenda terpisah antara kondisi lalu lintas (**A–F** + *No Data*) dan kategori kamera pemantau (*Regular*).
-3. **Table View (`/table`):** Daftar kamera dengan pencarian, paginasi (`5–100`), halaman detail kamera (`/detail/{id}`), halaman analisis video & editor poligon ROI (`/detail/video/{id}` untuk kamera *Analytic*), serta CRUD admin (`/table/add`, `/table/edit/{id}`).
-4. **Map Settings & Profile (`/setting/{id}`, `/profile/{id}`, Admin):** Konfigurasi koordinat pusat peta, tingkat zoom default, manajemen daftar instansi, serta pembaruan profil dan kata sandi admin.
+1. **Dashboard (`/`):** Overview map of monitored intersections (*Analytic* and *Regular* cameras), managing agency card, and recently updated camera carousel.
+2. **Map View (`/map`):** Interactive MapLibre map with 4 base styles (*Street*, *Light*, *Dark*, *Outdoor*), toggleable CCTV and Banda Aceh district boundary layers (`public/geojson/bandaacehgeojson.geojson`), quick intersection/grade search panel, and separated legends for Traffic Condition (**A–F** + *No Data*) and Camera Type (*Regular*).
+3. **Table View (`/table`):** Searchable, paginated (`5–100` rows) camera directory linking to camera details (`/detail/{id}`), live video detection + polygon ROI editor (`/detail/video/{id}`), and admin CRUD forms (`/table/add`, `/table/edit/{id}`).
+4. **Map Settings & Account (`/setting/{id}`, `/profile/{id}`, `/password`, Admin):** Configurable default map center/zoom, managing agency tags, profile photo upload, and password management.
 
 ---
 
-## Tampilan Antarmuka
+## Interface Gallery
 
 | Dashboard (`1440px`) | Video Detection & ROI (`1440px` Dark) |
 | --- | --- |
@@ -101,18 +103,18 @@ Visualisasi Marker Peta (/map) ◀── Klasifikasi V/C (A–F) ◀── Hitun
 
 ---
 
-## Panduan Instalasi & Penggunaan Lokal
+## Local Installation & Usage
 
-### Prasyarat
+### Prerequisites
 
-- **PHP `^8.2`** (ekstensi `pdo_mysql` / `pdo_sqlite`, `mbstring`, `xml`, `bcmath`)
+- **PHP `^8.2`** (`pdo_mysql` / `pdo_sqlite`, `mbstring`, `xml`, `bcmath`)
 - **Composer**
-- **Node.js `18.17.1`** atau yang sesuai pada [`.nvmrc`](.nvmrc) + **npm**
-- **MySQL** (atau **SQLite** untuk pengembangan lokal ringan)
+- **Node.js `18.17.1`** (see [`.nvmrc`](.nvmrc)) + **npm**
+- **MySQL** (or **SQLite** for lightweight local setup)
 
-### Langkah Setup
+### Setup Steps
 
-1. **Clone repositori dan pasang dependensi:**
+1. **Clone the repository and install dependencies:**
 
 ```bash
 git clone https://github.com/moel-ihsan/webgista.git
@@ -121,88 +123,76 @@ composer install
 npm install
 ```
 
-2. **Konfigurasi lingkungan (`.env`) dan kunci aplikasi:**
+2. **Configure environment variables (`.env`) and generate app key:**
 
 ```bash
 cp .env.example .env
 php artisan key:generate
 ```
 
-Sesuaikan konfigurasi database di `.env` (buat database `webgis` bila memakai MySQL, atau ubah ke `DB_CONNECTION=sqlite`) serta kredensial demo admin (`DEMO_ADMIN_EMAIL`, `DEMO_ADMIN_PASSWORD`). Variabel `MAP_PROVIDER=auto` sudah aktif memakai OpenFreeMap & OpenTopoMap, dan dapat diisi `MAPTILER_API_KEY` atau `STADIA_API_KEY` bila ingin memakai penyedia tile alternatif.
+Update `DB_*` in `.env` (create the `webgis` MySQL database, or switch to `DB_CONNECTION=sqlite`) along with `DEMO_ADMIN_EMAIL` and `DEMO_ADMIN_PASSWORD`. `MAP_PROVIDER=auto` works out of the box with OpenFreeMap & OpenTopoMap, or you may provide `MAPTILER_API_KEY` / `STADIA_API_KEY`.
 
-3. **Buat symlink storage, jalankan migrasi, dan isi data awal (*seed*):**
+3. **Create the storage symlink, migrate schema, and seed initial data:**
 
 ```bash
 php artisan storage:link
 php artisan migrate --seed
 ```
 
-4. **Kompilasi aset frontend dan jalankan server lokal:**
+4. **Compile frontend assets and start the local server:**
 
 ```bash
 npm run dev
 php artisan serve
 ```
 
-Aplikasi dapat diakses di `http://127.0.0.1:8000`.
+Visit `http://127.0.0.1:8000` in your browser.
 
-### Pengujian, Linter, & Build Statis
+### Tests, Linters & Static Build
 
 ```bash
-# Pengujian backend & gaya kode PHP (Laravel Pint)
+# Backend feature tests & PHP code style (Laravel Pint)
 php artisan test
 ./vendor/bin/pint --test app/Http/Controllers app/Services app/Http/Requests app/Http/Resources database/seeders tests/Feature
 
-# Pengujian unit frontend, ESLint, & Prettier
+# Frontend unit tests, ESLint & Prettier
 npm run test:js
 npm run lint
 npm run format:check
 
-# Build bundle statis (output ke direktori dist/)
+# Generate static bundle into dist/
 npm run build:static
 ```
 
 ---
 
-## Struktur Direktori
+## Directory Structure
 
 ```text
-├── app/                # Controller, Form Request, Model, API Resource, Service Layer Laravel
-├── config/             # Konfigurasi aplikasi, autentikasi, peta, dan simulasi
-├── database/           # Migrasi skema, factory, dan seeder titik CCTV Kota Banda Aceh
-├── public/             # Aset publik, GeoJSON batas kecamatan, video demo & JSON pra-hitung
+├── app/                # Laravel controllers, Form Requests, models, API resources & services
+├── config/             # App, auth, map provider & simulation configuration
+├── database/           # Database migrations, factories & Banda Aceh CCTV seeders
+├── public/             # Public assets, Banda Aceh district GeoJSON, sample videos & precomputed JSON
 ├── resources/
-│   ├── css/            # Token tema (Light/Dark), gaya global, & konfigurasi Tailwind
-│   ├── js/             # Halaman Vue 2, komponen peta/deteksi, layanan API, & modul MKJI 1997
-│   └── views/          # Template Blade entrypoint per halaman
-├── routes/             # Definisi rute web dan API
-├── scripts/            # Generator artefak statis (build-static.js)
-└── tests/              # Pengujian fitur Laravel (PHPUnit) dan unit test frontend (Jest)
+│   ├── css/            # Light/Dark theme tokens, shared styles & Tailwind config
+│   ├── js/             # Vue 2 pages, map & detection components, API adapters & IHCM 1997 logic
+│   └── views/          # Blade entrypoint templates per page
+├── routes/             # Web and API route definitions
+├── scripts/            # Static site bundle generator (build-static.js)
+└── tests/              # PHPUnit feature suites and Jest unit/smoke specs
 ```
 
 ---
 
-## Panduan Kontribusi
+## Citation
 
-Kontribusi untuk perbaikan bug, peningkatan akurasi deteksi, maupun pengembangan fitur baru sangat terbuka:
+If you reference or build upon this work in academic research, please cite the following publications:
 
-1. **Melaporkan Bug atau Mengajukan Fitur:** Buka [GitHub Issues](https://github.com/moel-ihsan/webgista/issues) dengan menyertakan deskripsi jelas, langkah reproduksi (jika bug), tangkapan layar, serta informasi lingkungan (`PHP`, `Node.js`, browser).
-2. **Mengirim *Pull Request*:**
-   - *Fork* repositori ini dan buat branch baru dari `main` (`git checkout -b feat/nama-fitur` atau `fix/nama-perbaikan`).
-   - Pastikan seluruh pengujian dan pemeriksaan gaya kode lolos (`php artisan test`, `pint --test`, `npm run test:js`, `npm run lint`, `npm run format:check`).
-   - Kirim *Pull Request* ke branch `main` dengan ringkasan perubahan yang terstruktur.
-
----
-
-## Sitasi (*Citation*)
-
-Apabila Anda memanfaatkan repositori, metodologi, atau temuan dari proyek ini dalam publikasi ilmiah atau pengembangan lanjutan, silakan merujuk pada kedua referensi berikut:
-
-1. **Artikel Prosiding (*AIP Conference Proceedings*, 2024):**
+1. **Conference Article (*AIP Conference Proceedings*, 2024):**
    Ahmad, M. I., Affan, M., & Ardiansyah. (2024). Banda Aceh traffic conditions real-time mapping at intersections based on WebGIS and machine learning. *AIP Conference Proceedings*, 3082, 050013. https://doi.org/10.1063/5.0203203
 
-2. **Tugas Akhir / Skripsi (Universitas Syiah Kuala, 2022):**
-   Ahmad, M. I. (2022). *Pemetaan Real Time Kondisi Lalu Lintas Pada Persimpangan Jalan di Kota Banda Aceh Berbasis Web GIS dan Machine Learning* [Skripsi, Fakultas Matematika dan Ilmu Pengetahuan Alam, Universitas Syiah Kuala]. https://etd.usk.ac.id/search/?p=show_detail&id=97872
+2. **Undergraduate Thesis (Universitas Syiah Kuala, 2022):**
+   Ahmad, M. I. (2022). *Pemetaan Real Time Kondisi Lalu Lintas Pada Persimpangan Jalan di Kota Banda Aceh Berbasis Web GIS dan Machine Learning* [Undergraduate thesis, Faculty of Mathematics and Natural Sciences, Universitas Syiah Kuala]. https://etd.usk.ac.id/search/?p=show_detail&id=97872
 
 ```bibtex
 @inproceedings{ahmad2024banda,
@@ -221,7 +211,7 @@ Apabila Anda memanfaatkan repositori, metodologi, atau temuan dari proyek ini da
 @misc{ahmad2022pemetaan,
   author       = {Ahmad, Maulana Ihsan},
   title        = {Pemetaan Real Time Kondisi Lalu Lintas Pada Persimpangan Jalan di Kota Banda Aceh Berbasis Web GIS dan Machine Learning},
-  howpublished = {Skripsi (S1), Program Studi Informatika, Fakultas MIPA, Universitas Syiah Kuala},
+  howpublished = {Undergraduate Thesis, Informatics Department, Universitas Syiah Kuala},
   year         = {2022},
   url          = {https://etd.usk.ac.id/search/?p=show_detail&id=97872}
 }
@@ -229,10 +219,10 @@ Apabila Anda memanfaatkan repositori, metodologi, atau temuan dari proyek ini da
 
 ---
 
-## Lisensi, Atribusi Media, & Kontak
+## License, Media Attribution & Contact
 
-- **Lisensi:** Kode sumber dirilis di bawah [MIT License](LICENSE).
-- **Atribusi Video Simulasi:**
-  - [`public/demo/videos/simpang-pdam.mp4`](public/demo/videos/simpang-pdam.mp4) diadaptasi dari [File:A intersection with traffic in Chiang Mai, Thailand.ogv](https://commons.wikimedia.org/wiki/File:A_intersection_with_traffic_in_Chiang_Mai,_Thailand.ogv) oleh **Amada44** ([CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0)).
-  - [`public/demo/videos/simpang-jambo-tape.mp4`](public/demo/videos/simpang-jambo-tape.mp4) diadaptasi dari [File:Changing lanes in Gothenburg ubt.ogv](https://commons.wikimedia.org/wiki/File:Changing_lanes_in_Gothenburg_ubt.ogv) oleh **Tomasz Sienicki (`User:tsca`)** ([CC BY 3.0](https://creativecommons.org/licenses/by/3.0)).
-- **Kontak Pengembang:** **Maulana Ihsan Ahmad** — Program Studi Informatika, Universitas Syiah Kuala (`moel.ihsan@usk.ac.id`).
+- **License:** Released under the [MIT License](LICENSE).
+- **Sample Video Attribution:**
+  - [`public/demo/videos/simpang-pdam.mp4`](public/demo/videos/simpang-pdam.mp4) adapted from [File:A intersection with traffic in Chiang Mai, Thailand.ogv](https://commons.wikimedia.org/wiki/File:A_intersection_with_traffic_in_Chiang_Mai,_Thailand.ogv) by **Amada44** ([CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0)).
+  - [`public/demo/videos/simpang-jambo-tape.mp4`](public/demo/videos/simpang-jambo-tape.mp4) adapted from [File:Changing lanes in Gothenburg ubt.ogv](https://commons.wikimedia.org/wiki/File:Changing_lanes_in_Gothenburg_ubt.ogv) by **Tomasz Sienicki (`User:tsca`)** ([CC BY 3.0](https://creativecommons.org/licenses/by/3.0)).
+- **Author & Contact:** **Maulana Ihsan Ahmad** — Informatics Department, Universitas Syiah Kuala (`moel.ihsan@usk.ac.id`).

@@ -31,7 +31,7 @@ const units = [
   {
     max: 518400000,
     value: 86400000,
-    name: "hari",
+    name: "days",
     past: "yesterday",
     future: "tomorrow"
   },

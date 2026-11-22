@@ -51,7 +51,7 @@
         <img
           class="imgCont"
           src="/assets/tf5.jpg"
-          alt="Ilustrasi kondisi lalu lintas persimpangan Banda Aceh"
+          alt="Traffic intersection monitoring illustration"
         />
       </div>
     </div>

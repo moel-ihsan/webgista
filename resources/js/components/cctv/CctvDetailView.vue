@@ -9,7 +9,7 @@
         muted
         loop
         playsinline
-        :aria-label="`Video streaming CCTV ${cctv.name}`"
+        :aria-label="`CCTV live video stream for ${cctv.name}`"
         @error="onVideoError"
       >
         <source :src="videoSrc" type="video/mp4" @error="onVideoError" />
@@ -17,14 +17,14 @@
       <img
         v-else
         :src="thumbnailSrc"
-        :alt="`Tangkapan kamera ${cctv.name}`"
+        :alt="`Camera capture ${cctv.name}`"
         class="detail-regular-image"
       />
     </el-card>
 
     <el-card :body-style="{ padding: '0px' }" class="cardOffice detail-info-card">
       <div class="imgBox cctvThumbnail">
-        <img class="imgCont" :src="thumbnailSrc" :alt="`Pratinjau ${cctv.name}`" />
+        <img class="imgCont" :src="thumbnailSrc" :alt="`Preview of ${cctv.name}`" />
         <div class="cctvStatus">
           <span
             class="detail-category-badge"

@@ -68,7 +68,7 @@ class AuthController extends Controller
         if (Auth::attempt($request->validated())) {
             $request->session()->regenerate();
 
-            return response()->json(['status' => 'Berhasil login', 'isAuth' => true]);
+            return response()->json(['status' => 'Login successful', 'isAuth' => true]);
         }
 
         return response()->json(['status' => 'Wrong Email / Password', 'isAuth' => false]);
@@ -129,9 +129,9 @@ class AuthController extends Controller
         $data = $request->validated();
 
         if ($this->profileService->changePassword($user, $data['curPas'], $data['newPas'])) {
-            return response()->json(['message' => 'password berhasil diubah', 'status' => 200]);
+            return response()->json(['message' => 'Password updated successfully', 'status' => 200]);
         }
 
-        return response()->json(['message' => 'password sekarang tidak sama', 'status' => 404]);
+        return response()->json(['message' => 'Current password does not match', 'status' => 404]);
     }
 }

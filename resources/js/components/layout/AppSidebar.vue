@@ -8,7 +8,7 @@
     />
 
     <nav
-      aria-label="Navigasi Utama"
+      aria-label="Main navigation"
       class="sidebar-nav"
       :class="{
         'sidebar-nav--expanded': desktopExpanded,
@@ -20,7 +20,7 @@
         <button
           type="button"
           class="sidebar-close-btn"
-          aria-label="Tutup menu navigasi"
+          aria-label="Close navigation menu"
           @click="$emit('close-mobile')"
         >
           <AppIcon name="close" :size="20" />

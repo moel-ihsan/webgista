@@ -4,7 +4,7 @@
       <img
         class="imgCont"
         :src="avatarSrc"
-        :alt="users.name ? `Foto instansi ${users.name}` : 'Foto instansi pengelola'"
+        :alt="users.name ? `Agency photo for ${users.name}` : 'Managing agency photo'"
       />
     </div>
     <div class="officeContent">

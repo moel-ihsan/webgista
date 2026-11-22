@@ -107,7 +107,7 @@ function renderHtmlShell({ title, mountTag, cssPath, jsPath, mapConfig, simulati
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="description" content="Pemetaan Kondisi Lalu Lintas Persimpangan Kota Banda Aceh secara Real-Time berbasis WebGIS dan Pembelajaran Mesin.">
+    <meta name="description" content="Real-Time Traffic Condition Mapping at Intersections in Banda Aceh Based on WebGIS and Machine Learning.">
     <meta name="csrf-token" content="">
     <meta name="map-config" content="${escapeAttr(JSON.stringify(mapConfig))}">
     <meta name="webgista-simulation" content="${escapeAttr(JSON.stringify(simulationConfig))}">

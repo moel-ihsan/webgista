@@ -5,7 +5,7 @@
       <button
         type="button"
         class="agency-chip-remove"
-        :aria-label="`Hapus agency ${tag.agency}`"
+        :aria-label="`Remove agency ${tag.agency}`"
         @click="handleClose(tag)"
       >
         <AppIcon name="close" :size="14" />
@@ -13,14 +13,14 @@
     </div>
 
     <div v-if="inputVisible" class="agency-input-wrap">
-      <label for="new-agency-input" class="sr-only">Nama agency baru</label>
+      <label for="new-agency-input" class="sr-only">New agency name</label>
       <el-input
         id="new-agency-input"
         ref="saveTagInput"
         v-model="inputValue"
         class="input-new-tag"
-        placeholder="Nama agency"
-        aria-label="Nama agency baru"
+        placeholder="Agency name"
+        aria-label="New agency name"
         @keyup.enter.native="handleInputConfirm"
         @blur="handleInputConfirm"
       />

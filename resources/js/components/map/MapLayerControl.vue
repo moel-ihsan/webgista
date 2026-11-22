@@ -29,14 +29,14 @@
           label="adm"
           @change="$emit('toggle-layer', 1)"
         >
-          Banda Aceh ADM
+          Banda Aceh Boundary
         </el-checkbox>
       </el-checkbox-group>
       <button
         slot="reference"
         type="button"
         class="map-icon-trigger"
-        aria-label="Pilih gaya dan layer peta"
+        aria-label="Select map style and layers"
         title="Map Style & Layer"
       >
         <AppIcon name="layers" :size="18" />

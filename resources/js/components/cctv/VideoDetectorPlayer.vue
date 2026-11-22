@@ -77,7 +77,7 @@
             class="el-button el-button--info"
             @click="resetDraftRoi"
           >
-            Reset Titik
+            Reset Points
           </button>
           <button
             id="btn-cancel-roi"
@@ -85,7 +85,7 @@
             class="el-button el-button--info"
             @click="cancelEditRoi"
           >
-            Batal
+            Cancel
           </button>
         </template>
 
@@ -120,8 +120,8 @@
       </div>
 
       <div v-if="!areaVideo" id="roi-edit-hint" class="roi-edit-hint" role="status">
-        Mode Edit Area Deteksi: Klik bebas titik pada video untuk membentuk poligon (minimal 3
-        titik, saat ini {{ draftRoiPoints.length }} titik), lalu klik Done.
+        Detection Area Edit Mode: Click anywhere on the video to form a polygon (minimum 3 points,
+        currently {{ draftRoiPoints.length }} selected), then click Done.
       </div>
 
       <canvas id="canvasw" ref="canvasw" class="canvasw" />
@@ -197,7 +197,7 @@ export default {
       lastPrecomputedFrameTime: null,
       lastDetectAtMs: 0,
       lastMatchedDetections: [],
-      detectorStatusText: "Memuat detektor...",
+      detectorStatusText: "Loading detector...",
       roiPoints: [],
       draftRoiPoints: [],
       counts: { lv: 0, hv: 0, mc: 0 },
@@ -219,12 +219,12 @@ export default {
       return this.cameraSimulation.precomputedUrl || "";
     },
     modeToggleLabel() {
-      return this.activeMode === "live" ? "Ganti ke Pra-hitung (JSON)" : "Ganti ke Live TF.js";
+      return this.activeMode === "live" ? "Switch to Precomputed (JSON)" : "Switch to Live TF.js";
     },
     syncStatusText() {
       return this.isAdmin
-        ? "Sinkronisasi status ke /map aktif (Admin)"
-        : "Mode tamu — login admin untuk menyinkronkan warna marker ke /map";
+        ? "Map status sync active (Admin)"
+        : "Guest mode — sign in as admin to sync marker colors to /map";
     }
   },
   created() {
@@ -335,7 +335,7 @@ export default {
 
       if (this.draftRoiPoints.length < MIN_ROI_POINTS) {
         this.$message({
-          message: "Klik minimal 3 titik pada video untuk membentuk poligon (atau klik Batal).",
+          message: "Click at least 3 points on the video to form a polygon (or click Cancel).",
           type: "warning"
         });
         return;
@@ -344,7 +344,7 @@ export default {
       if (!isValidRoi(this.draftRoiPoints)) {
         this.$message({
           message:
-            "Titik belum membentuk poligon berluas valid (tidak boleh segaris). Tambahkan atau ubah posisi titik.",
+            "Points do not form a valid polygon area (cannot be collinear). Add or adjust points.",
           type: "warning"
         });
         return;
@@ -387,11 +387,11 @@ export default {
         this.clearSessionRoi();
         updateRoi(this.cctv.id, serializeRoiPoints(points))
           .then(() => {
-            this.$message({ message: "Area deteksi biru disimpan ke database.", type: "success" });
+            this.$message({ message: "Blue detection area saved to database.", type: "success" });
           })
           .catch(() => {
             this.$message({
-              message: "Gagal menyimpan area deteksi ke database.",
+              message: "Failed to save detection area to database.",
               type: "error"
             });
           });
@@ -399,7 +399,7 @@ export default {
         this.writeSessionRoi(points);
         this.$message({
           message:
-            "Area deteksi biru diterapkan untuk sesi ini (login admin untuk simpan permanen).",
+            "Blue detection area applied for this session (sign in as admin to save permanently).",
           type: "success"
         });
       }
@@ -522,11 +522,11 @@ export default {
     },
     async ensureLiveModelLoaded() {
       if (this.model) {
-        this.detectorStatusText = "Mode: Live TF.js (COCO-SSD di browser)";
+        this.detectorStatusText = "Mode: Live TF.js (browser COCO-SSD)";
         return true;
       }
 
-      this.detectorStatusText = "Memuat model COCO-SSD di browser...";
+      this.detectorStatusText = "Loading COCO-SSD model in browser...";
 
       try {
         const timeoutPromise = new Promise((_, reject) => {
@@ -534,16 +534,16 @@ export default {
         });
         this.model = await Promise.race([loadCocoSsdModel(), timeoutPromise]);
         if (!this.isDestroyed && this.activeMode === "live") {
-          this.detectorStatusText = "Mode: Live TF.js (COCO-SSD di browser)";
+          this.detectorStatusText = "Mode: Live TF.js (browser COCO-SSD)";
         }
         return true;
       } catch (_err) {
         this.model = null;
         if (!this.isDestroyed && this.resolvedPrecomputedUrl) {
           this.activeMode = "precomputed";
-          await this.ensurePrecomputedLoaded("otomatis fallback");
+          await this.ensurePrecomputedLoaded("auto fallback");
         } else if (!this.isDestroyed) {
-          this.detectorStatusText = "Model TF.js gagal dimuat";
+          this.detectorStatusText = "TF.js model failed to load";
         }
         return false;
       }
@@ -551,28 +551,28 @@ export default {
     async ensurePrecomputedLoaded(reason = "") {
       if (this.precomputedPayload) {
         this.detectorStatusText = reason
-          ? `Mode: Pra-hitung JSON (${reason})`
-          : "Mode: Pra-hitung JSON (sinkron video)";
+          ? `Mode: Precomputed JSON (${reason})`
+          : "Mode: Precomputed JSON (video-synced)";
         return true;
       }
 
       if (!this.resolvedPrecomputedUrl) {
-        this.detectorStatusText = "Data pra-hitung JSON tidak tersedia";
+        this.detectorStatusText = "Precomputed JSON data unavailable";
         return false;
       }
 
-      this.detectorStatusText = "Memuat data pra-hitung JSON...";
+      this.detectorStatusText = "Loading precomputed JSON data...";
       try {
         this.precomputedPayload = await fetchPrecomputedDetections(this.resolvedPrecomputedUrl);
         if (!this.isDestroyed) {
           this.detectorStatusText = reason
-            ? `Mode: Pra-hitung JSON (${reason})`
-            : "Mode: Pra-hitung JSON (sinkron video)";
+            ? `Mode: Precomputed JSON (${reason})`
+            : "Mode: Precomputed JSON (video-synced)";
         }
         return true;
       } catch (_err) {
         if (!this.isDestroyed) {
-          this.detectorStatusText = "Gagal memuat data pra-hitung JSON";
+          this.detectorStatusText = "Failed to load precomputed JSON data";
         }
         return false;
       }

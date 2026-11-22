@@ -46,7 +46,11 @@
         <img
           class="imgCont profilePhoto"
           :src="profileImageSrc"
-          :alt="formLabelAlign.name ? `Foto profil ${formLabelAlign.name}` : 'Foto profil instansi'"
+          :alt="
+            formLabelAlign.name
+              ? `Profile photo for ${formLabelAlign.name}`
+              : 'Agency profile photo'
+          "
         />
         <div class="profile-photo-scrim" aria-hidden="true" />
         <el-upload
@@ -57,7 +61,7 @@
           :on-change="onHandleUpload"
           :multiple="false"
         >
-          <button type="button" class="profile-edit-photo-btn" aria-label="Ubah foto profil">
+          <button type="button" class="profile-edit-photo-btn" aria-label="Change profile photo">
             <AppIcon name="pencil" :size="18" />
           </button>
         </el-upload>

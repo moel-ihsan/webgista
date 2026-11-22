@@ -15,7 +15,7 @@
       id="zoomHome"
       type="button"
       class="sidebar-toggle rounded-rect zoomHome"
-      aria-label="Reset posisi peta ke Banda Aceh"
+      aria-label="Reset map view to Banda Aceh"
       title="Reset Zoom"
       @click="zoomHome"
     >
@@ -87,7 +87,7 @@ export default {
       cities: [
         {
           id: 1,
-          name: "Banda Aceh ADM",
+          name: "Banda Aceh Boundary",
           layers: ["state-fills"],
           vis: "none"
         },
@@ -202,15 +202,15 @@ export default {
         row.url || (category === "Analytic" ? resolveCameraSimulation(row).videoUrl : "");
 
       const mediaHtml = resolvedUrl
-        ? `<video id="my-video" class="popup-img vidcctv" controls autoplay muted loop playsinline data-fallback-src="${fallbackImgUrl}" data-fallback-alt="Pratinjau CCTV ${safeName}" aria-label="Video CCTV ${safeName}"><source src="${escapeHtml(resolvedUrl)}" type="video/mp4" /></video>`
-        : `<img id="my-img" class="popup-img vidcctv" src="${fallbackImgUrl}" alt="Pratinjau CCTV ${safeName}" />`;
+        ? `<video id="my-video" class="popup-img vidcctv" controls autoplay muted loop playsinline data-fallback-src="${fallbackImgUrl}" data-fallback-alt="CCTV Preview ${safeName}" aria-label="CCTV video ${safeName}"><source src="${escapeHtml(resolvedUrl)}" type="video/mp4" /></video>`
+        : `<img id="my-img" class="popup-img vidcctv" src="${fallbackImgUrl}" alt="CCTV Preview ${safeName}" />`;
 
-      const statusText = pointStatus.isRegular ? "Kategori: Regular" : `Status: ${safeCond}`;
+      const statusText = pointStatus.isRegular ? "Category: Regular" : `Status: ${safeCond}`;
 
       return `<div class="map-popup-card">
         <div class="map-popup-header">
           <strong class="map-popup-name">${safeName}</strong>
-          <span class="grade-chip grade-chip--sm grade-chip--${pointStatus.chipCode}" aria-label="${pointStatus.isRegular ? "CCTV Regular" : `Kondisi ${safeCond}`}">${escapeHtml(pointStatus.grade)}</span>
+          <span class="grade-chip grade-chip--sm grade-chip--${pointStatus.chipCode}" aria-label="${pointStatus.isRegular ? "Regular CCTV" : `Condition ${safeCond}`}">${escapeHtml(pointStatus.grade)}</span>
         </div>
         ${mediaHtml}
         <div class="map-popup-footer">
@@ -239,7 +239,7 @@ export default {
         img.id = "my-img";
         img.className = "popup-img vidcctv";
         img.src = video.getAttribute("data-fallback-src") || resolveCctvImagePath("");
-        img.alt = video.getAttribute("data-fallback-alt") || "Pratinjau CCTV";
+        img.alt = video.getAttribute("data-fallback-alt") || "CCTV Preview";
         video.parentNode.replaceChild(img, video);
       };
       video.addEventListener("error", swapToImage, { once: true });
