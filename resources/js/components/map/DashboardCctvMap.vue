@@ -34,7 +34,7 @@ export default {
       unsubscribeTheme: null,
       legendItems: [
         { label: "Analytic", color: "#facc15" },
-        { label: "Regular", color: "#2563eb" }
+        { label: "Regular", color: "#15803d" }
       ]
     };
   },
@@ -192,12 +192,12 @@ export default {
               paint: {
                 "circle-radius": 11,
                 "circle-stroke-width": 2,
-                "circle-stroke-color": isDarkTheme() ? "#0F172A" : "#FFFFFF",
+                "circle-stroke-color": isDarkTheme() ? "#1E1E2E" : "#FFFFFF",
                 "circle-color": [
                   "match",
                   ["get", "traffic"],
                   "Regular",
-                  "#2563eb",
+                  "#15803d",
                   "Analytic",
                   "#facc15",
                   "#dc2626"
