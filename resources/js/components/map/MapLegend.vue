@@ -187,9 +187,9 @@ export default {
   .legend {
     left: 12px;
     right: 12px;
-    bottom: 48px;
+    bottom: 12px;
     min-width: 0;
-    padding: 8px 10px;
+    padding: 10px 14px;
   }
 
   .legend-toggle-btn {
@@ -198,9 +198,19 @@ export default {
     min-height: 44px;
   }
 
+  .legend-body {
+    padding-bottom: 4px;
+  }
+
   .legend-items {
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 6px 10px;
+    gap: 8px 12px;
+    margin-top: 8px;
+  }
+
+  .legend-secondary {
+    margin-top: 10px;
+    padding-top: 10px;
   }
 
   .legend-body--mobile-hidden {
