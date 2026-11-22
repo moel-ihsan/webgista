@@ -94,7 +94,6 @@ export default {
           });
 
           const map = this.map;
-          map.addControl(new maplibregl.AttributionControl({ compact: true }), "bottom-left");
           map.on("style.load", () => {
             this.loadCctvPoints(map);
           });

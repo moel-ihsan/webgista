@@ -296,7 +296,6 @@ export default {
             }),
             "top-left"
           );
-          this.map.addControl(new maplibregl.AttributionControl({ compact: true }), "bottom-left");
 
           this.registerMapEvents();
           if (typeof window !== "undefined" && typeof window.requestAnimationFrame === "function") {

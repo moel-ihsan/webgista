@@ -69,7 +69,7 @@
             :disabled="draftRoiPoints.length === 0"
             @click="undoLastDraftPoint"
           >
-            Undo Titik
+            Undo Point
           </button>
           <button
             id="btn-reset-roi"

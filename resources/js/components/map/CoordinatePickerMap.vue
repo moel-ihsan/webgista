@@ -84,7 +84,6 @@ export default {
       interactive: this.interactive,
       attributionControl: false
     });
-    map.addControl(new maplibregl.AttributionControl({ compact: true }), "bottom-left");
     this.map = map;
 
     if (this.popupHtml) {
